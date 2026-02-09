@@ -1,75 +1,184 @@
 <script lang="ts">
-  import { Dropdown, DropdownItem } from "flowbite-svelte";
-
-  // Kategorien für Aufgaben
+  // ================================
+  // Kategorien
+  // ================================
   let categories = ["Arbeit", "Meeting", "Lernen", "Organisation", "Sport", "Privat"];
   let selectedCategory = "Arbeit";
 
-  // Eingabefelder für die Aufgabe
-  let description = ""; // Beschreibung der Aufgabe
-  let startTime = ""; // Startzeit der Aufgabe
-  let endTime = "";   // Endzeit der Aufgabe
-  let outcome = "gut"; // Erfolg der Aufgabe (gut/schlecht)
-  let difficulties = ""; // Schwierigkeiten falls Aufgabe schlecht gelaufen
-  let date = new Date().toISOString().split("T")[0]; // aktuelles Datum
+  // ================================
+  // Eingabefelder
+  // ================================
+  let description = "";   // Aufgabenbeschreibung
+  let startTime = "";     // Startzeit
+  let endTime = "";       // Endzeit
+  let outcome = "gut";    // Erfolgsauswahl
+  let difficulties = "";  // Optional – aktuell nicht sichtbar
+  let date = new Date().toISOString().split("T")[0];
 
-  let error = ""; // Fehlermeldung
+  // ================================
+  // Speech-to-Text Setup
+  // ================================
+  let recognition: any;
+  let isListening = false;
 
-  // Berechnet die Dauer zwischen Start- und Endzeit
-  function calculateDuration(start, end) {
+  if (typeof window !== "undefined") {
+    const SpeechRecognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+
+      recognition.lang = "de-DE";      // Sprache Deutsch
+      recognition.continuous = false;  // Beendet sich nach einem Satz
+      recognition.interimResults = false;
+
+      // Wenn Sprache erkannt wird
+      recognition.onresult = (event: any) => {
+        const transcript = event.results[0][0].transcript;
+        description += " " + transcript; // Text anhängen
+      };
+
+      // Wenn Aufnahme endet
+      recognition.onend = () => {
+        isListening = false;
+      };
+    }
+  }
+
+  // Aufnahme starten
+  function startListening() {
+    if (recognition) {
+      recognition.start();
+      isListening = true;
+    } else {
+      alert("Speech Recognition wird von deinem Browser nicht unterstützt.");
+    }
+  }
+
+  // ================================
+  // Dauer berechnen
+  // ================================
+  function calculateDuration(start: string, end: string) {
+    if (!start || !end) return "";
+
     const [sh, sm] = start.split(":").map(Number);
     const [eh, em] = end.split(":").map(Number);
+
     const diff = (eh * 60 + em) - (sh * 60 + sm);
     if (diff <= 0) return "";
+
     return `${Math.floor(diff / 60)}h ${diff % 60}min`;
   }
 
-  // Formular zurücksetzen nach Speichern
-  function resetForm() {
+  // ================================
+  // Speichern (aktuell nur Reset)
+  // ================================
+  function addTask() {
+    const duration = calculateDuration(startTime, endTime);
+    console.log({
+      date,
+      selectedCategory,
+      description,
+      startTime,
+      endTime,
+      duration,
+      outcome
+    });
+
+    // Formular zurücksetzen
     description = "";
     startTime = "";
     endTime = "";
     outcome = "gut";
-    difficulties = "";
-    error = "";
-  }
-
-  // Aufgabe speichern (wird intern gespeichert, aber nicht angezeigt)
-  function addTask() {
-    error = "";
-    if (!description || !startTime || !endTime) {
-      error = "Bitte alle Pflichtfelder ausfüllen.";
-      return;
-    }
-    if (endTime <= startTime) {
-      error = "Endzeit muss nach der Startzeit liegen.";
-      return;
-    }
-    // Aufgabe kann hier gespeichert werden, z.B. in einer Datenbank oder intern
-    resetForm();
   }
 </script>
 
 <style>
-  /* Container und allgemeine Styles */
-  .wrapper { max-width: 900px; margin: 2rem auto; padding: 1.5rem; font-family: 'Inter', sans-serif; }
-  h1 { text-align: center; font-size: 2rem; margin-bottom: 1rem; color: #4f46e5; }
-  .card { background: white; border-radius: 20px; padding: 2rem; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: grid; gap: 1rem; }
-  input, select, textarea, button { padding: 0.75rem; border-radius: 12px; border: 1px solid #ddd; font-size: 0.95rem; font-family: inherit; width: 100%; box-sizing: border-box; }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.2); }
-  button { background: #6366f1; color: white; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-  button:hover { background: #4f46e5; }
+  .wrapper {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    font-family: Arial, sans-serif;
+  }
+
+  h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #4f46e5;
+  }
+
+  .card {
+    background: white;
+    padding: 2rem;
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  label {
+    font-weight: 600;
+    margin-top: 0.5rem;
+  }
+
+  input, select, button {
+    padding: 0.7rem;
+    border-radius: 10px;
+    border: 1px solid #ccc;
+    font-size: 0.95rem;
+  }
+
+  input:focus, select:focus {
+    outline: none;
+    border-color: #6366f1;
+  }
+
+  button {
+    background: #6366f1;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  button:hover {
+    background: #4f46e5;
+  }
+
+  .speech-btn {
+    background: #10b981;
+  }
+
+  .speech-btn:hover {
+    background: #059669;
+  }
 </style>
 
 <div class="wrapper">
   <h1>📘 Arbeitsjournal</h1>
 
   <div class="card">
+
     <!-- Aufgabenbeschreibung -->
     <label>Was hast du heute gemacht?</label>
-    <input type="text" placeholder="Aufgabenbeschreibung eingeben" bind:value={description} />
+    <input
+      type="text"
+      placeholder="Aufgabenbeschreibung eingeben"
+      bind:value={description}
+    />
 
-    <!-- Kategorie Dropdown -->
+    <!-- Speech to Text Button -->
+    <button
+      type="button"
+      class="speech-btn"
+      on:click={startListening}
+    >
+      {isListening ? "🎙️ Höre zu..." : "🎤 Spracheingabe starten"}
+    </button>
+
+    <!-- Kategorie Auswahl -->
     <label>Kategorie auswählen</label>
     <select bind:value={selectedCategory}>
       {#each categories as category}
@@ -77,10 +186,12 @@
       {/each}
     </select>
 
-    <!-- Start- und Endzeit Eingabe -->
-    <label>Startzeit:</label>
+    <!-- Startzeit -->
+    <label>Startzeit</label>
     <input type="time" bind:value={startTime} />
-    <label>Endzeit:</label>
+
+    <!-- Endzeit -->
+    <label>Endzeit</label>
     <input type="time" bind:value={endTime} />
 
     <!-- Erfolgsauswahl -->
@@ -90,8 +201,10 @@
       <option value="schlecht">❌ Nicht gut gelaufen</option>
     </select>
 
-    <!-- Aufgabe speichern -->
-    <button on:click={addTask}>Eintrag speichern</button>
+    <!-- Speichern -->
+    <button on:click={addTask}>
+      Eintrag speichern
+    </button>
+
   </div>
 </div>
-scm-history-item:c%3A%5CUsers%5Cjana%5Ctime2log-user-ui?%7B%22repositoryId%22%3A%22scm0%22%2C%22historyItemId%22%3A%22d54e8b3dc87a3b5a4d20452887306423e5012630%22%2C%22historyItemParentId%22%3A%22bcb3232dd82f671c07feece719dd01082e0e6c51%22%2C%22historyItemDisplayId%22%3A%22d54e8b3%22%7D
