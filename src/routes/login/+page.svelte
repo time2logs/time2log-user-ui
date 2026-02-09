@@ -33,7 +33,7 @@
   <title>Time2Log Login</title>
   <!-- Using Inter as a close approximation to the sans-serif font used -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.gstatic.com" />
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
     rel="stylesheet"
@@ -133,7 +133,7 @@
   <!-- Bottom Copyright -->
   <div class="absolute bottom-6 w-full text-center">
     <p class="text-[11px] text-gray-400 font-medium tracking-wide uppercase">
-      © 2024 System Inc.
+      © {new Date().getFullYear()} BLJ
     </p>
   </div>
 
