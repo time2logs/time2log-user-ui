@@ -72,7 +72,7 @@
   }
 
   // ================================
-  // Speichern (aktuell nur Reset)
+  // Speichern (aktuell nur Reset).
   // ================================
   function addTask() {
     const duration = calculateDuration(startTime, endTime);
