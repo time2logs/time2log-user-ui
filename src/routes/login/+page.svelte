@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation';
   import { login, setAccessToken } from '$lib/api';
 
-  let username = '';
+  let email = '';
   let password = '';
   let errorMessage = '';
   let isLoading = false;
@@ -14,7 +14,7 @@
     isLoading = true;
 
     try {
-      const data = await login(username, password);
+      const data = await login(email, password);
 
       // Store the token and expiration
       setAccessToken(data.accessToken, data.expirationDate);
@@ -79,7 +79,7 @@
         </div>
       {/if}
 
-      <!-- Username Input -->
+      <!-- email Input -->
       <div class="relative group">
         <div
           class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400"
@@ -88,8 +88,8 @@
         </div>
         <input
           type="text"
-          placeholder="Benutzername"
-          bind:value={username}
+          placeholder="E-Mail"
+          bind:value={email}
           disabled={isLoading}
           required
           class="w-full h-[52px] pl-12 pr-4 bg-white border border-gray-200 rounded-[12px] text-[15px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
