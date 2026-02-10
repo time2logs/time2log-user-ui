@@ -47,6 +47,9 @@ export async function login(email: string, password: string): Promise<{
   email: string;
   userId: string;
 }> {
+  console.log('Attempting login to:', `${API_BASE}/api/login`);
+  console.log('Credentials mode:', 'include');
+
   const response = await fetch(`${API_BASE}/api/login`, {
     method: 'POST',
     headers: {
@@ -56,7 +59,16 @@ export async function login(email: string, password: string): Promise<{
     body: JSON.stringify({ email, password })
   });
 
+  console.log('Response status:', response.status);
+  console.log('Response ok:', response.ok);
+
+  // Log all response headers
+  response.headers.forEach((value, key) => {
+    console.log(`${key}: ${value}`);
+  });
+
   const data = await response.json();
+  console.log('Response data:', data);
 
   if (!response.ok) {
     throw new Error(data.message || 'Login failed');
