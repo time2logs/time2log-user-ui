@@ -4,7 +4,7 @@
   // ================================
   // Kategorien
   // ================================
-  let categories = ["Arbeit", "Meeting", "Lernen", "Organisation", "Sport", "Privat"];
+  let categories = ["Arbeit", "Meeting", "Lernen", "Kurs", "Externe Anlässe", "Private Abwesenheit"];
   let selectedCategory = "Arbeit"; // Optional
 
   // ================================
