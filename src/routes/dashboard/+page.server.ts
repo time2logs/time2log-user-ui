@@ -18,12 +18,14 @@ export async function load({ fetch, cookies }) {
 		}
 
 		// Call backend validation endpoint with the cookie
+		const headers: Record<string, string> = {
+			'Content-Type': 'application/json'
+		};
+		headers['Cookie'] = `supabase-auth-token=${authToken}`;
+
 		const response = await fetch(VALIDATE_ENDPOINT, {
 			method: 'GET',
-			headers: {
-				'Content-Type': 'application/json',
-				'Cookie': `supabase-auth-token=${authToken}`
-			}
+			headers
 		});
 
 		// If validation fails (401 or other error), redirect to login
