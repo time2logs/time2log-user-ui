@@ -23,7 +23,7 @@
 	});
 </script>
 
-<nav class="bg-gray-800 text-white p-4 flex justify-between items-center absolute top-0 left-0">
+<nav class="hidden bg-gray-800 text-white p-4 flex justify-between items-center absolute top-0 left-0">
   <span class="font-semibold">Time2Log</span>
   {#if isAuthenticated}
     <button onclick={logout} class="hover:underline">Logout</button>

@@ -42,7 +42,7 @@
 
 <!-- Main Container with subtle mesh gradient background -->
 <div
-  class="min-h-screen w-full flex flex-col items-center justify-center relative font-sans text-gray-900 bg-[#f3f5fa]"
+  class="pl-10 pr-10 min-h-screen w-full flex flex-col items-center justify-center relative font-sans text-gray-900 bg-[#f3f5fa]"
   style="background: radial-gradient(circle at 10% 20%, rgb(239, 246, 255) 0%, rgb(243, 245, 250) 40%, rgb(243, 238, 252) 90%);"
 >
   <!-- Top Right Sun Icon -->
@@ -61,10 +61,10 @@
   </div>
 
   <!-- Login Card -->
-  <div class="w-full max-w-[440px] bg-white rounded-[24px] p-10 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.06)] relative z-10 border border-white/50">
-    <div class="flex flex-col items-center mb-8">
+  <div class="w-full  max-w-[440px] bg-white rounded-[24px] p-10 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.06)] relative z-10 border border-white/50">
+    <div class="flex flex-col items-center mb-8"> 
       <h2 class="text-[26px] font-semibold text-[#1a1a1a] mb-2">
-        Willkommen zurück
+        Willkommen zurück 
       </h2>
       <p class="text-[15px] text-gray-500 font-medium">
         Bitte melden Sie sich an, um fortzufahren
@@ -74,7 +74,7 @@
     <form onsubmit={handleLogin} class="space-y-4">
       <!-- Error Message -->
       {#if errorMessage}
-        <div class="p-3 bg-red-50 border border-red-200 rounded-[12px] text-red-700 text-[14px]">
+        <div class="p-3 bg-red-50 border border-red-200 rounded-md text-red-700 text-[14px]">
           {errorMessage}
         </div>
       {/if}
@@ -92,7 +92,7 @@
           bind:value={email}
           disabled={isLoading}
           required
-          class="w-full h-[52px] pl-12 pr-4 bg-white border border-gray-200 rounded-[12px] text-[15px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="w-full h-[52px] pl-12 pr-4 bg-white border border-gray-200 rounded-md text-[15px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </div>
 
@@ -109,7 +109,7 @@
           bind:value={password}
           disabled={isLoading}
           required
-          class="w-full h-[52px] pl-12 pr-4 bg-white border border-gray-200 rounded-[12px] text-[15px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="w-full h-[52px] pl-12 pr-4 bg-white border border-gray-200 rounded-md text-[15px] text-gray-700 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 focus:ring-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </div>
 
@@ -117,7 +117,7 @@
       <button
         type="submit"
         disabled={isLoading}
-        class="w-full h-[52px] bg-[#222222] hover:bg-black text-white rounded-[12px] font-medium text-[16px] flex items-center justify-center gap-2 transition-colors mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        class="w-full h-[52px] bg-[#222222] hover:bg-black text-white rounded-md font-medium text-[16px] flex items-center justify-center gap-2 transition-colors mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {#if isLoading}
           <span class="inline-block animate-spin mr-2">⟳</span>
