@@ -1,7 +1,7 @@
 <script lang="ts">
   import { Mail, Lock, Sun, ArrowRight, HelpCircle } from 'lucide-svelte';
   import { goto } from '$app/navigation';
-  import { login, setAccessToken } from '$lib/api';
+  import { login } from '$lib/api';
 
   let email = '';
   let password = '';
@@ -14,10 +14,8 @@
     isLoading = true;
 
     try {
-      const data = await login(email, password);
-
-      // Store the token and expiration
-      setAccessToken(data.accessToken, data.expirationDate);
+      // Backend sets HTTP-only cookie automatically on successful login
+      await login(email, password);
 
       // Redirect to dashboard or home page
       goto('/dashboard');

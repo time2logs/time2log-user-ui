@@ -1,77 +1,38 @@
 /**
  * API client for making authenticated requests to the backend
+ * Uses HTTP-only cookies for authentication (managed by the backend)
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
-
-/**
- * Get the stored access token from localStorage
- */
-export function getAccessToken(): string | null {
-  return localStorage.getItem('accessToken');
-}
-
-/**
- * Check if the current token is expired
- */
-export function isTokenExpired(): boolean {
-  const expiration = localStorage.getItem('tokenExpiration');
-  if (!expiration) return false;
-  return Date.now() > parseInt(expiration);
-}
-
-/**
- * Store the access token and expiration date
- */
-export function setAccessToken(token: string, expirationDate?: number): void {
-  localStorage.setItem('accessToken', token);
-  if (expirationDate) {
-    localStorage.setItem('tokenExpiration', expirationDate.toString());
-  }
-}
-
-/**
- * Clear the access token (logout)
- */
-export function clearAccessToken(): void {
-  localStorage.removeItem('accessToken');
-  localStorage.removeItem('tokenExpiration');
-}
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 /**
  * Make an authenticated API request
- * Automatically includes the Authorization header with the Bearer token
+ * Cookies are sent automatically by the browser (HTTP-only cookies)
  */
 export async function apiRequest<T = unknown>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const token = getAccessToken();
-
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
     ...options.headers
   };
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
   const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
+    credentials: 'include', // Required for cookies to be sent
     headers
   });
 
   // Handle 401 Unauthorized - token expired or invalid
   if (response.status === 401) {
-    clearAccessToken();
     window.location.href = '/login';
     throw new Error('Unauthorized');
   }
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(error.error || error.message || 'Request failed');
+    const error = await response.json().catch(() => ({ message: 'Request failed' }));
+    throw new Error(error.message || 'Request failed');
   }
 
   return response.json();
@@ -79,32 +40,68 @@ export async function apiRequest<T = unknown>(
 
 /**
  * Login API call
+ * Backend sets HTTP-only cookie on successful login
  */
-export async function login(username: string, password: string): Promise<{
-  accessToken: string;
-  expirationDate: number;
+export async function login(email: string, password: string): Promise<{
+  message: string;
+  email: string;
+  userId: string;
 }> {
-  const response = await fetch(`${API_BASE}/login`, {
+  const response = await fetch(`${API_BASE}/api/login`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ username, password })
+    credentials: 'include',
+    body: JSON.stringify({ email, password })
   });
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || 'Login failed');
+    throw new Error(data.message || 'Login failed');
   }
 
   return data;
 }
 
 /**
- * Logout - clear token and redirect to login
+ * Verify token - check if user is authenticated
  */
-export function logout(): void {
-  clearAccessToken();
-  window.location.href = '/login';
+export async function verifyToken(): Promise<{
+  valid: boolean;
+  role?: string;
+  personId?: string;
+  personName?: string;
+  message?: string;
+}> {
+  const response = await fetch(`${API_BASE}/api/verify-token`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    credentials: 'include'
+  });
+
+  if (!response.ok) {
+    throw new Error('Token verification failed');
+  }
+
+  return response.json();
+}
+
+/**
+ * Logout - call backend to clear cookie and redirect to login
+ */
+export async function logout(): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/api/logout`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+  } finally {
+    window.location.href = '/login';
+  }
 }
