@@ -7,12 +7,12 @@ const LOGOUT_URL = "http://localhost:8080/api/logout";
   let categories = ["Arbeit", "Meeting", "Lernen", "Kurs", "Externe Anlässe", "Private Abwesenheit"];
   let selectedCategory = "Arbeit"; // Optional
 
-  let description = "";   // Aufgabenbeschreibung
-  let startTime = "";     // Startzeit
-  let endTime = "";       // Endzeit
-  let outcome = "gut";    // Erfolgsauswahl
-  let difficulties = "";  // Nur bei schlechtem Outcome sichtbar
-  let date = new Date().toISOString().split("T")[0]; // Datumsauswahlfeld
+  let description = "";
+  let startTime = "";
+  let endTime = "";
+  let outcome = "gut";
+  let difficulties = "";
+  let date = new Date().toISOString().split("T")[0];
 
 
   type Task = {
