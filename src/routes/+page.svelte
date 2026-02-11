@@ -1,4 +1,5 @@
 const API_URL = "http://localhost:8080/api/tasks";
+const LOGOUT_URL = "http://localhost:8080/api/logout";
 
 <script lang="ts">
   import { onMount } from "svelte";
@@ -102,6 +103,25 @@ const API_URL = "http://localhost:8080/api/tasks";
     difficulties = "";
     date = new Date().toISOString().split("T")[0];
   }
+
+
+  async function logout() {
+    try {
+      const response = await fetch(LOGOUT_URL, {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        window.location.href = '/login';
+      } else {
+        console.error('Logout fehlgeschlagen:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Logout fehlgeschlagen:', error);
+    }
+  }
+
 </script>
 
 <svelte:head>
@@ -240,6 +260,13 @@ const API_URL = "http://localhost:8080/api/tasks";
           <div class="mb-2 text-[14px] text-gray-700">
             <span class="font-semibold text-[#1a1a1a] mr-2">Zeit:</span> {task.startTime} – {task.endTime} ({task.duration})
           </div>
+          <div class = "button">
+          <button
+            on:click = {logout}
+            class= "py-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-[12px] font-medium transition-colors">
+            Logout
+            </button>
+            </div>
           <div class="mb-2 text-[14px] text-gray-700">
             <span class="font-semibold text-[#1a1a1a] mr-2">Status:</span> {task.outcome}
           </div>
@@ -251,6 +278,7 @@ const API_URL = "http://localhost:8080/api/tasks";
         </div>
       {/each}
     </div>
+
   {/if}
 
 </div>
