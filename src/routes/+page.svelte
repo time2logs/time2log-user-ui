@@ -3,15 +3,9 @@ const API_URL = "http://localhost:8080/api/tasks";
 <script lang="ts">
   import { onMount } from "svelte";
 
-  // ================================
-  // Kategorien
-  // ================================
   let categories = ["Arbeit", "Meeting", "Lernen", "Kurs", "Externe Anlässe", "Private Abwesenheit"];
   let selectedCategory = "Arbeit"; // Optional
 
-  // ================================
-  // Eingabefelder
-  // ================================
   let description = "";   // Aufgabenbeschreibung
   let startTime = "";     // Startzeit
   let endTime = "";       // Endzeit
@@ -20,9 +14,6 @@ const API_URL = "http://localhost:8080/api/tasks";
   let date = new Date().toISOString().split("T")[0]; // Datumsauswahlfeld
 
 
-  // ================================
-  // Gespeicherte Aufgaben
-  // ================================
   type Task = {
     date: string;
     category: string;
@@ -35,9 +26,6 @@ const API_URL = "http://localhost:8080/api/tasks";
   };
   let tasks: Task[] = [];
 
-  // ================================
-  // Speech-to-Text Setup
-  // ================================
   let recognition: any;
   let isListening = false;
 
@@ -68,9 +56,7 @@ const API_URL = "http://localhost:8080/api/tasks";
     else alert("Speech Recognition wird von deinem Browser nicht unterstützt.");
   }
 
-  // ================================
-  // Dauer berechnen
-  // ================================
+
   function calculateDuration(start: string, end: string) {
     if (!start || !end) return "";
     const [sh, sm] = start.split(":").map(Number);
@@ -80,17 +66,13 @@ const API_URL = "http://localhost:8080/api/tasks";
     return `${Math.floor(diff / 60)}h ${diff % 60}min`;
   }
 
-  // ================================
-  // Aufgabe speichern
-  // ================================
+
   function addTask() {
-    // Pflichtfelder: Beschreibung + Start- + Endzeit
     if (!description.trim() || !startTime || !endTime) {
       alert("Bitte alle Pflichtfelder ausfüllen.");
       return;
     }
 
-    // Wenn schlecht gelaufen, dann Schwierigkeiten angeben
     if (outcome === "schlecht" && !difficulties.trim()) {
       alert("Bitte beschreibe, was nicht gut gelaufen ist.");
       return;
@@ -98,7 +80,7 @@ const API_URL = "http://localhost:8080/api/tasks";
 
     const duration = calculateDuration(startTime, endTime);
 
-    // Task speichern
+
     tasks = [
       ...tasks,
       {
@@ -113,7 +95,6 @@ const API_URL = "http://localhost:8080/api/tasks";
       }
     ];
 
-    // Formular zurücksetzen
     description = "";
     startTime = "";
     endTime = "";
@@ -130,7 +111,6 @@ const API_URL = "http://localhost:8080/api/tasks";
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </svelte:head>
 
-<!-- Main Container with subtle mesh gradient background -->
 <div
   class="min-h-screen w-full flex flex-col items-center py-8 px-4 font-sans text-gray-900 bg-[#f3f5fa]"
   style="background: radial-gradient(circle at 10% 20%, rgb(239, 246, 255) 0%, rgb(243, 245, 250) 40%, rgb(243, 238, 252) 90%);"
@@ -143,9 +123,7 @@ const API_URL = "http://localhost:8080/api/tasks";
     Track your daily activities
   </p>
 
-  <!-- Login Card -->
   <div class="w-full max-w-[600px] bg-white rounded-[24px] p-10 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.06)] relative z-10 border border-white/50 flex flex-col gap-5">
-    <!-- Datumsauswahl -->
     <label for="date" class="font-semibold text-[#1a1a1a] text-[15px] block">
       Datum <span class="text-red-500 ml-0.5">*</span>
     </label>
@@ -156,7 +134,6 @@ const API_URL = "http://localhost:8080/api/tasks";
       class="h-[52px] px-4 bg-white border border-gray-200 rounded-[12px] text-[15px] text-gray-700 focus:outline-none focus:border-gray-400 focus:ring-0 transition-colors w-full"
     />
 
-    <!-- Aufgabenbeschreibung -->
     <label for="description" class="font-semibold text-[#1a1a1a] text-[15px] block">
       Was hast du heute gemacht? <span class="text-red-500 ml-0.5">*</span>
     </label>
@@ -178,7 +155,6 @@ const API_URL = "http://localhost:8080/api/tasks";
       {isListening ? "🎙️ Höre zu..." : "🎤 Spracheingabe starten"}
     </button>
 
-    <!-- Kategorie Auswahl (optional) -->
     <label for="category" class="font-semibold text-[#1a1a1a] text-[15px] block">
       Kategorie auswählen (optional)
     </label>
@@ -192,7 +168,6 @@ const API_URL = "http://localhost:8080/api/tasks";
       {/each}
     </select>
 
-    <!-- Startzeit -->
     <label for="startTime" class="font-semibold text-[#1a1a1a] text-[15px] block">
       Startzeit <span class="text-red-500 ml-0.5">*</span>
     </label>
@@ -203,7 +178,6 @@ const API_URL = "http://localhost:8080/api/tasks";
       class="h-[52px] px-4 bg-white border border-gray-200 rounded-[12px] text-[15px] text-gray-700 focus:outline-none focus:border-gray-400 focus:ring-0 transition-colors w-full"
     />
 
-    <!-- Endzeit -->
     <label for="endTime" class="font-semibold text-[#1a1a1a] text-[15px] block">
       Endzeit <span class="text-red-500 ml-0.5">*</span>
     </label>
@@ -214,7 +188,6 @@ const API_URL = "http://localhost:8080/api/tasks";
       class="h-[52px] px-4 bg-white border border-gray-200 rounded-[12px] text-[15px] text-gray-700 focus:outline-none focus:border-gray-400 focus:ring-0 transition-colors w-full"
     />
 
-    <!-- Erfolgsauswahl -->
     <label for="outcome" class="font-semibold text-[#1a1a1a] text-[15px] block">
       Wie lief die Aufgabe? <span class="text-red-500 ml-0.5">*</span>
     </label>
@@ -227,7 +200,6 @@ const API_URL = "http://localhost:8080/api/tasks";
       <option value="schlecht">❌ Nicht gut gelaufen</option>
     </select>
 
-    <!-- Schwierigkeiten nur bei 'schlecht' -->
     {#if outcome === "schlecht"}
       <label for="difficulties" class="font-semibold text-[#1a1a1a] text-[15px] block">
         Beschreibe die Schwierigkeiten
@@ -241,7 +213,6 @@ const API_URL = "http://localhost:8080/api/tasks";
       ></textarea>
     {/if}
 
-    <!-- Speichern -->
     <button
       class="h-[52px] bg-[#222222] hover:bg-black text-white rounded-[12px] font-medium text-[16px] flex items-center justify-center gap-2 transition-colors mt-2"
       on:click={addTask}
@@ -250,9 +221,6 @@ const API_URL = "http://localhost:8080/api/tasks";
     </button>
   </div>
 
-  <!-- ============================
-       Tagesübersicht der Aufgaben
-       ============================ -->
   {#if tasks.length > 0}
     <div class="mt-8 w-full max-w-[600px]">
       <h2 class="text-[24px] font-semibold text-[#1a1a1a] mb-4">
@@ -285,10 +253,4 @@ const API_URL = "http://localhost:8080/api/tasks";
     </div>
   {/if}
 
-  <!-- Bottom Copyright -->
-  <div class="fixed bottom-6 w-full text-center">
-    <p class="text-[11px] text-gray-400 font-medium tracking-wide uppercase">
-      © {new Date().getFullYear()} BLJ
-    </p>
-  </div>
 </div>
