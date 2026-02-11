@@ -1,8 +1,10 @@
 const API_URL = "http://localhost:8080/api/tasks";
-const LOGOUT_URL = "http://localhost:8080/api/logout";
 
 <script lang="ts">
   import { onMount } from "svelte";
+
+  const API_URL = "http://localhost:8080/api/tasks";
+  const LOGOUT_URL = "http://localhost:8080/api/logout";
 
   let categories = ["Arbeit", "Meeting", "Lernen", "Kurs", "Externe Anlässe", "Private Abwesenheit"];
   let selectedCategory = "Arbeit"; // Optional
