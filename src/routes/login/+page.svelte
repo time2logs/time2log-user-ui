@@ -18,7 +18,7 @@
       await login(email, password);
 
       // Redirect to dashboard or home page
-      goto('/dashboard');
+      goto('/');
     } catch (error) {
       errorMessage = error instanceof Error ? error.message : 'Ein Fehler ist aufgetreten';
     } finally {
