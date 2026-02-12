@@ -4,11 +4,12 @@ import { env } from '$env/dynamic/private';
 // Get the backend API URL from environment variable
 const API_BASE = env.API_BASE_URL || env.PRIVATE_API_BASE_URL || 'http://localhost:8080';
 const VALIDATE_ENDPOINT = `${API_BASE}/api/verify-token`;
+const COOKIE_NAME = 'supabase-auth-token';
 
 export async function load({ fetch, cookies }) {
 	try {
 		// Get the auth token from the request cookies
-		const authToken = cookies.get('supabase-auth-token');
+		const authToken = cookies.get(COOKIE_NAME);
 
 		console.log('Server-side auth check, token present:', !!authToken);
 
@@ -17,15 +18,13 @@ export async function load({ fetch, cookies }) {
 			redirect(302, '/login');
 		}
 
-		// Call backend validation endpoint with the cookie
-		const headers: Record<string, string> = {
-			'Content-Type': 'application/json'
-		};
-		headers['Cookie'] = `supabase-auth-token=${authToken}`;
-
+		// Call backend validation endpoint with Authorization header
 		const response = await fetch(VALIDATE_ENDPOINT, {
 			method: 'GET',
-			headers
+			headers: {
+				'Content-Type': 'application/json',
+				'Authorization': `Bearer ${authToken}`
+			}
 		});
 
 		// If validation fails (401 or other error), redirect to login
