@@ -3,7 +3,7 @@
  * Uses HTTP-only cookies for authentication (managed by the backend)
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 /**
  * Make an authenticated API request
