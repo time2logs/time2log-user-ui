@@ -35,7 +35,7 @@ export async function load({ fetch, cookies }) {
 
 		// Token is valid - get user data from response
 		const user = await response.json();
-		console.log('Token validated successfully for user:', user.personName);
+		console.log('Token validated successfully for user:', user.person_name);
 
 		return {
 			isAuthenticated: true,
