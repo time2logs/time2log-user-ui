@@ -2,7 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 
 // Get the backend API URL from environment variable
-const API_BASE = env.API_BASE_URL || env.PRIVATE_API_BASE_URL || 'http://localhost:8000';
+const API_BASE = env.API_BASE_URL || env.PRIVATE_API_BASE_URL || 'http://localhost:8080';
 const VALIDATE_ENDPOINT = `${API_BASE}/api/verify-token`;
 
 export async function load({ fetch, cookies }) {
