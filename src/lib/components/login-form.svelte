@@ -6,7 +6,6 @@
   import * as Card from "$lib/components/ui/card";
   import { cn } from "$lib/utils";
   import { login } from "$lib/api";
-  import { goto } from "$app/navigation";
 
   // State
   let email = $state("");
@@ -20,11 +19,15 @@
     isLoading = true;
 
     try {
-      await login(email, password);
-      goto("/");
+      console.log("Starting login...");
+      const result = await login(email, password);
+      console.log("Login successful:", result);
+      console.log("Redirecting to /...");
+      // Full page reload to ensure server-side cookie is read
+      window.location.href = "/";
     } catch (error) {
+      console.error("Login error:", error);
       errorMessage = error instanceof Error ? error.message : "Ein Fehler ist aufgetreten";
-    } finally {
       isLoading = false;
     }
   }

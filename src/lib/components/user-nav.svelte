@@ -2,11 +2,7 @@
 	import * as AlertDialog from "$lib/components/ui/alert-dialog";
 	import { Button } from "$lib/components/ui/button";
 	import { LogOut, Loader2 } from "lucide-svelte";
-	import { goto } from "$app/navigation";
-	import { env } from "$env/dynamic/public";
-
-	const API_BASE = env.API_BASE_URL || env.PRIVATE_API_BASE_URL || 'http://localhost:8080';
-	const VALIDATE_ENDPOINT = `${API_BASE}/api/logout`;
+	import { logout } from "$lib/api";
 
 	let isLoggingOut = $state(false);
 	let dialogOpen = $state(false);
@@ -14,16 +10,9 @@
 	async function handleLogout() {
 		isLoggingOut = true;
 		try {
-			const response = await fetch(VALIDATE_ENDPOINT, {
-				method: 'POST',
-				credentials: 'include',
-			});
-			if (response.ok) {
-				goto('/login');
-			}
+			await logout();
 		} catch (error) {
 			console.error('Logout failed:', error);
-		} finally {
 			isLoggingOut = false;
 		}
 	}

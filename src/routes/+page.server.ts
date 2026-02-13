@@ -1,9 +1,7 @@
 import { redirect } from '@sveltejs/kit';
-// immer env von dynamic/public importieren
-import { env } from '$env/dynamic/public'; 
 
-// Get the backend API URL from environment variable
-const API_BASE = env.API_BASE_URL || env.PRIVATE_API_BASE_URL || 'http://localhost:8080';
+// Use Vite's import.meta.env which works on both client and server
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7200';
 const VALIDATE_ENDPOINT = `${API_BASE}/api/verify-token`;
 const COOKIE_NAME = 'supabase-auth-token';
 

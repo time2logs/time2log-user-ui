@@ -33,8 +33,10 @@ function setToken(token: string, tokenType: string = 'Bearer'): void {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(TOKEN_TYPE_KEY, tokenType);
 
-  // Set cookie with the name that backend expects: 'supabase-auth-token'
-  document.cookie = `supabase-auth-token=${encodeURIComponent(token)}; path=/; max-age=${60 * 60 * 24 * 7}`; // 7 days
+  // Set cookie with proper attributes for SvelteKit server-side reading
+  // SameSite=Lax allows cookies on same-site navigations
+  const maxAge = 60 * 60 * 24 * 7; // 7 days in seconds
+  document.cookie = `supabase-auth-token=${encodeURIComponent(token)}; path=/; max-age=${maxAge}; SameSite=Lax`;
 }
 
 /**
@@ -45,8 +47,8 @@ function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(TOKEN_TYPE_KEY);
 
-  // Clear the cookie with the backend's expected name
-  document.cookie = 'supabase-auth-token=; path=/; max-age=0';
+  // Clear the cookie - must match the same attributes used when setting
+  document.cookie = 'supabase-auth-token=; path=/; max-age=0; SameSite=Lax';
 }
 
 /**
@@ -96,10 +98,11 @@ export async function apiRequest<T = unknown>(
  */
 export async function login(email: string, password: string): Promise<{
   access_token: string;
+  token_type?: string;
   user_id: string;
   email: string;
   role: string;
-  person_name: string;
+  person_name?: string | null;
 }> {
   console.log('Attempting login to:', `${API_BASE}/api/login`);
 
@@ -139,10 +142,11 @@ export async function login(email: string, password: string): Promise<{
  */
 export async function verifyToken(): Promise<{
   valid: boolean;
+  user_id?: string;
+  email?: string;
   role?: string;
-  personId?: string;
-  personName?: string;
-  message?: string;
+  person_id?: string;
+  person_name?: string;
 }> {
   const token = getAccessToken();
   const tokenType = getTokenType();
@@ -183,9 +187,11 @@ export async function logout(): Promise<void> {
   }
 
   try {
+    // Include credentials so backend can clear its HTTP-only cookie
     await fetch(`${API_BASE}/api/logout`, {
       method: 'POST',
-      headers
+      headers,
+      credentials: 'include'
     });
   } catch (error) {
     console.error('Logout error:', error);
