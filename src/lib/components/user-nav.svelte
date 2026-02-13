@@ -9,6 +9,7 @@
 	const VALIDATE_ENDPOINT = `${API_BASE}/api/logout`;
 
 	let isLoggingOut = $state(false);
+	let dialogOpen = $state(false);
 
 	async function handleLogout() {
 		isLoggingOut = true;
@@ -29,20 +30,16 @@
 </script>
 
 <div class="fixed top-6 right-6 z-50">
-	<AlertDialog.Root>
-		<AlertDialog.Trigger asChild>
-			{#snippet children({ props })}
-				<Button
-					variant="outline"
-					{...props}
-					class="rounded-[12px] border-white/50 bg-white/80 shadow-sm backdrop-blur-md hover:bg-white px-4 py-2"
-				>
-					<LogOut class="mr-2 h-4 w-4 text-gray-600" />
-					<span class="font-medium text-gray-700">Abmelden</span>
-				</Button>
-			{/snippet}
-		</AlertDialog.Trigger>
+	<Button
+		variant="outline"
+		onclick={() => dialogOpen = true}
+		class="rounded-[12px] border-white/50 bg-white/80 shadow-sm backdrop-blur-md hover:bg-white px-4 py-2"
+	>
+		<LogOut class="mr-2 h-4 w-4 text-gray-600" />
+		<span class="font-medium text-gray-700">Abmelden</span>
+	</Button>
 
+	<AlertDialog.Root bind:open={dialogOpen}>
 		<AlertDialog.Content class="rounded-[24px] border-white/50 shadow-2xl">
 			<AlertDialog.Header>
 				<AlertDialog.Title class="text-[20px] font-bold">Abmelden bestätigen</AlertDialog.Title>
