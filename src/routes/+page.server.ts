@@ -1,5 +1,6 @@
 import { redirect } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
+// immer env von dynamic/public importieren
+import { env } from '$env/dynamic/public'; 
 
 // Get the backend API URL from environment variable
 const API_BASE = env.API_BASE_URL || env.PRIVATE_API_BASE_URL || 'http://localhost:8080';
