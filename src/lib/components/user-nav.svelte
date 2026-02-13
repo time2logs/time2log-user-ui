@@ -3,13 +3,17 @@
 	import { Button } from "$lib/components/ui/button";
 	import { LogOut, Loader2 } from "lucide-svelte";
 	import { goto } from "$app/navigation";
+	import { env } from "$env/dynamic/public";
+
+	const API_BASE = env.API_BASE_URL || env.PRIVATE_API_BASE_URL || 'http://localhost:8080';
+	const VALIDATE_ENDPOINT = `${API_BASE}/api/logout`;
 
 	let isLoggingOut = $state(false);
 
 	async function handleLogout() {
 		isLoggingOut = true;
 		try {
-			const response = await fetch('http://localhost:8080/api/logout', {
+			const response = await fetch(VALIDATE_ENDPOINT, {
 				method: 'POST',
 				credentials: 'include',
 			});
