@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 
 // Use Vite's import.meta.env which works on both client and server
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:7200';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const VALIDATE_ENDPOINT = `${API_BASE}/api/verify-token`;
 const COOKIE_NAME = 'supabase-auth-token';
 
@@ -22,7 +22,7 @@ export async function load({ fetch, cookies }) {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json',
-				'Authorization': `Bearer ${authToken}`
+				Authorization: `Bearer ${authToken}`
 			}
 		});
 

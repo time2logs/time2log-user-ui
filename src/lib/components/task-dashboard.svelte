@@ -1,39 +1,52 @@
 <script lang="ts">
 	import { onMount } from "svelte";
-	import { Mic, MicOff, Save, ClipboardList, Clock, Calendar } from "lucide-svelte";
+	import { Mic, MicOff, Save, ClipboardList, Clock, Calendar, Loader2 } from "lucide-svelte";
 	import * as Card from "$lib/components/ui/card";
 	import * as Select from "$lib/components/ui/select";
+	import * as AlertDialog from "$lib/components/ui/alert-dialog";
 	import { Input } from "$lib/components/ui/input";
 	import { Label } from "$lib/components/ui/label";
 	import { Button } from "$lib/components/ui/button";
 	import { Textarea } from "$lib/components/ui/textarea";
 	import { cn } from "$lib/utils";
+	import { apiRequest } from "$lib/api";
 
-	const categories = ["Arbeit", "Meeting", "Lernen", "Kurs", "Externe Anlässe", "Private Abwesenheit"];
+	type Tag = {
+		id: string;
+		key: string;
+		label: string;
+	};
+
+	let categories = $state<Tag[]>([]);
+	let categoriesLoading = $state(true);
+	let isSubmitting = $state(false);
+	let showSuccessDialog = $state(false);
 
 	let date = $state(new Date().toISOString().split("T")[0]);
 	let description = $state("");
-	let selectedCategory = $state("Arbeit");
+	let selectedCategory = $state("");
 	let startTime = $state("");
 	let endTime = $state("");
 	let outcome = $state("gut");
 	let difficulties = $state("");
 	let isListening = $state(false);
 
-	type Task = {
-		date: string;
-		category: string;
-		description: string;
-		startTime: string;
-		endTime: string;
-		duration: string;
-		outcome: string;
-		difficulties: string;
-	};
-	let tasks = $state<Task[]>([]);
-
 	let recognition: any;
-	onMount(() => {
+	onMount(async () => {
+		// Fetch categories from API
+		try {
+			const response = await apiRequest<{ data: Tag[] }>('/api/activities/tags');
+			categories = response.data;
+			if (categories.length > 0) {
+				selectedCategory = categories[0].id;
+			}
+		} catch (error) {
+			console.error('Failed to fetch categories:', error);
+		} finally {
+			categoriesLoading = false;
+		}
+
+		// Setup speech recognition
 		const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 		if (!SpeechRecognition) return;
 		recognition = new SpeechRecognition();
@@ -48,15 +61,38 @@
 		isListening ? recognition.stop() : recognition.start();
 	}
 
-	function addTask() {
-		if (!description.trim() || !startTime || !endTime) return;
-		const [sh, sm] = startTime.split(":").map(Number);
-		const [eh, em] = endTime.split(":").map(Number);
-		const diff = (eh * 60 + em) - (sh * 60 + sm);
-		const duration = diff <= 0 ? "" : `${Math.floor(diff / 60)}h ${diff % 60}min`;
+	async function addTask() {
+		if (!description.trim() || !startTime || !endTime || !selectedCategory) return;
+		
+		isSubmitting = true;
+		try {
+			await apiRequest('/api/activities/create', {
+				method: 'POST',
+				body: JSON.stringify({
+					activity: {
+						id: selectedCategory
+					},
+					notes: description,
+					start_time: `${date}T${startTime}:00`,
+					end_time: `${date}T${endTime}:00`
+				})
+			});
+			showSuccessDialog = true;
+		} catch (error) {
+			console.error('Failed to create activity:', error);
+			alert('Fehler beim Speichern der Aktivität');
+		} finally {
+			isSubmitting = false;
+		}
+	}
 
-		tasks.push({ date, category: selectedCategory, description, startTime, endTime, duration, outcome, difficulties });
-		description = ""; startTime = ""; endTime = ""; outcome = "gut"; difficulties = "";
+	function clearForm() {
+		description = "";
+		startTime = "";
+		endTime = "";
+		outcome = "gut";
+		difficulties = "";
+		showSuccessDialog = false;
 	}
 </script>
 
@@ -85,13 +121,17 @@
 
 			<div class="grid gap-2">
 				<Label class="text-[15px] font-semibold text-[#1a1a1a]">Kategorie</Label>
-				<Select.Root type="single" bind:value={selectedCategory}>
+				<Select.Root type="single" bind:value={selectedCategory} disabled={categoriesLoading}>
 					<Select.Trigger class="h-[52px] rounded-[12px]">
-						{selectedCategory}
+						{#if categoriesLoading}
+							Loading...
+						{:else}
+							{categories.find(c => c.id === selectedCategory)?.label || selectedCategory}
+						{/if}
 					</Select.Trigger>
 					<Select.Content>
 						{#each categories as cat}
-							<Select.Item value={cat}>{cat}</Select.Item>
+							<Select.Item value={cat.id}>{cat.label}</Select.Item>
 						{/each}
 					</Select.Content>
 				</Select.Root>
@@ -116,31 +156,27 @@
 				<Textarea bind:value={difficulties} placeholder="Was war das Problem?" class="rounded-[12px]" />
 			{/if}
 
-			<Button onclick={addTask} class="h-[52px] w-full rounded-[12px] bg-[#222222] text-[16px] hover:bg-black">
-				<Save class="mr-2 h-4 w-4" /> Speichern
+			<Button onclick={addTask} disabled={isSubmitting} class="h-[52px] w-full rounded-[12px] bg-[#222222] text-[16px] hover:bg-black disabled:opacity-50">
+				{#if isSubmitting}
+					<Loader2 class="mr-2 h-4 w-4 animate-spin" /> Speichern...
+				{:else}
+					<Save class="mr-2 h-4 w-4" /> Speichern
+				{/if}
 			</Button>
 		</div>
 	</Card.Root>
 
-	{#if tasks.length > 0}
-		<div class="flex w-full flex-col gap-4">
-			{#each tasks as task}
-				<Card.Root class="overflow-hidden border-none shadow-sm rounded-[20px]">
-					<div class="flex">
-						<div class={cn("w-1.5", task.outcome === "gut" ? "bg-emerald-500" : "bg-red-500")}></div>
-						<div class="p-5 w-full">
-							<div class="flex justify-between font-bold text-[17px]">
-								<span>{task.description}</span>
-								<span class="text-[11px] text-gray-400 uppercase tracking-widest">{task.category}</span>
-							</div>
-							<div class="text-[14px] text-gray-500 mt-1 flex gap-3">
-								<span class="flex items-center gap-1"><Clock size={14}/> {task.startTime} - {task.endTime}</span>
-								<span>({task.duration})</span>
-							</div>
-						</div>
-					</div>
-				</Card.Root>
-			{/each}
-		</div>
-	{/if}
+	<AlertDialog.Root bind:open={showSuccessDialog}>
+		<AlertDialog.Content>
+			<AlertDialog.Header>
+				<AlertDialog.Title>Aktivität gespeichert</AlertDialog.Title>
+				<AlertDialog.Description>
+					Deine Aktivität wurde erfolgreich gespeichert.
+				</AlertDialog.Description>
+			</AlertDialog.Header>
+			<AlertDialog.Footer>
+				<AlertDialog.Action onclick={clearForm}>OK</AlertDialog.Action>
+			</AlertDialog.Footer>
+		</AlertDialog.Content>
+	</AlertDialog.Root>
 </div>
