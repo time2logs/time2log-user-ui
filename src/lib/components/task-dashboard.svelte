@@ -25,8 +25,7 @@
 	let date = $state(new Date().toISOString().split("T")[0]);
 	let description = $state("");
 	let selectedCategory = $state("");
-	let startTime = $state("");
-	let endTime = $state("");
+    let duration = $state(1);
 	let outcome = $state("gut");
 	let difficulties = $state("");
 	let isListening = $state(false);
@@ -62,8 +61,9 @@
 	}
 
 	async function addTask() {
-		if (!description.trim() || !startTime || !endTime || !selectedCategory) return;
-		
+if (!description.trim() || !selectedCategory ||duration < 0.5 ||duration > 9) return;
+		const start = new Date();
+
 		isSubmitting = true;
 		try {
 			await apiRequest('/api/activities/create', {
@@ -73,8 +73,9 @@
 						id: selectedCategory
 					},
 					notes: description,
-					start_time: `${date}T${startTime}:00`,
-					end_time: `${date}T${endTime}:00`
+                    start_time: start.toISOString(),
+                    end_time: end.toISOString()
+
 				})
 			});
 			showSuccessDialog = true;
@@ -88,8 +89,7 @@
 
 	function clearForm() {
 		description = "";
-		startTime = "";
-		endTime = "";
+		duration = 1;
 		outcome = "gut";
 		difficulties = "";
 		showSuccessDialog = false;
@@ -137,10 +137,22 @@
 				</Select.Root>
 			</div>
 
-			<div class="grid grid-cols-2 gap-4">
-				<Input type="time" bind:value={startTime} class="h-[52px] rounded-[12px]" />
-				<Input type="time" bind:value={endTime} class="h-[52px] rounded-[12px]" />
-			</div>
+<div class="grid gap-2">
+  <Label class="text-[15px] font-semibold text-[#1a1a1a]">
+    Dauer (Stunden) *
+  </Label>
+
+  <Input
+    type="number"
+    min="0.5"
+    max="9"
+    step="0.5"
+    bind:value={duration}
+    class="h-[52px] rounded-[12px]"
+  />
+  <p class="text-sm text-gray-500"> Zwischen 0.5 und 9 Stunden</p>
+</div>
+
 
 			<Select.Root type="single" bind:value={outcome}>
 				<Select.Trigger class="h-[52px] rounded-[12px]">
