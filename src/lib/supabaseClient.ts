@@ -1,0 +1,14 @@
+import { createBrowserClient } from '@supabase/ssr';
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
+
+export const supabase = createBrowserClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
+	db: { schema: 'app' }
+});
+
+export const supabaseAdmin = createBrowserClient(
+	PUBLIC_SUPABASE_URL,
+	PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+	{
+		db: { schema: 'admin' }
+	}
+);
