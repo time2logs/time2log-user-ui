@@ -4,7 +4,7 @@
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import * as Card from "$lib/components/ui/card";
-  import {supabaseApp} from "$lib/supabaseClient";
+  import {supabase} from "$lib/supabaseClient";
   import {error} from "@sveltejs/kit";
   import {cn} from "$lib/utils";
   import {goto} from "$app/navigation";
@@ -16,7 +16,7 @@
 
   async function signInWithEmail() {
     isLoading = true;
-    const { data, error } = await supabaseApp.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     })
