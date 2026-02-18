@@ -1,48 +1,28 @@
-import { redirect } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
 
-// Use Vite's import.meta.env which works on both client and server
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-const VALIDATE_ENDPOINT = `${API_BASE}/api/verify-token`;
-const COOKIE_NAME = 'supabase-auth-token';
+type Profile = {
+	id: number;
+	first_name: string;
+	last_name: string;
+};
 
-export async function load({ fetch, cookies }) {
-	try {
-		// Get the auth token from the request cookies
-		const authToken = cookies.get(COOKIE_NAME);
+export const load: PageServerLoad = async ({ locals }) => {
+	const session = await locals.safeGetSession();
 
-		console.log('Server-side auth check, token present:', !!authToken);
-
-		if (!authToken) {
-			console.log('No auth token found, redirecting to login');
-			redirect(302, '/login');
-		}
-
-		// Call backend validation endpoint with Authorization header
-		const response = await fetch(VALIDATE_ENDPOINT, {
-			method: 'GET',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${authToken}`
-			}
-		});
-
-		// If validation fails (401 or other error), redirect to login
-		if (!response.ok || response.status === 401) {
-			console.log('Token validation failed, redirecting to login');
-			redirect(302, '/login');
-		}
-
-		// Token is valid - get user data from response
-		const user = await response.json();
-		console.log('Token validated successfully for user:', user.person_name);
-
-		return {
-			isAuthenticated: true,
-			user
-		};
-	} catch (error) {
-		// Backend unreachable or error - redirect to login
-		console.error('Auth validation error:', error);
-		redirect(302, '/login');
+	if (!session) {
+		return { profile: null };
 	}
-}
+
+	const { data, error } = await locals.supabase
+		.from('profiles')
+		.select<'profiles', Profile>()
+		.eq('id', session.user.id)
+		.single();
+
+	if (error) {
+		console.error('Error loading profile:', error.message);
+		return { profile: null };
+	}
+
+	return { profile: data };
+};

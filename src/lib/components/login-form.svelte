@@ -4,31 +4,27 @@
   import { Input } from "$lib/components/ui/input";
   import { Label } from "$lib/components/ui/label";
   import * as Card from "$lib/components/ui/card";
-  import { cn } from "$lib/utils";
-  import { login } from "$lib/api";
+  import {supabaseApp} from "$lib/supabaseClient";
+  import {error} from "@sveltejs/kit";
+  import {cn} from "$lib/utils";
+  import {goto} from "$app/navigation";
 
-  // State
   let email = $state("");
   let password = $state("");
   let errorMessage = $state("");
   let isLoading = $state(false);
 
-  async function handleLogin(e: SubmitEvent) {
-    e.preventDefault();
-    errorMessage = "";
+  async function signInWithEmail() {
     isLoading = true;
+    const { data, error } = await supabaseApp.auth.signInWithPassword({
+      email: email,
+      password: password,
+    })
+    errorMessage = error ? error.message : "";
+    isLoading = false;
 
-    try {
-      console.log("Starting login...");
-      const result = await login(email, password);
-      console.log("Login successful:", result);
-      console.log("Redirecting to /...");
-      // Full page reload to ensure server-side cookie is read
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Login error:", error);
-      errorMessage = error instanceof Error ? error.message : "Ein Fehler ist aufgetreten";
-      isLoading = false;
+    if (!error) {
+      await goto('/');
     }
   }
 </script>
@@ -39,8 +35,8 @@
 
   </Card.Header>
   <Card.Content>
-    <form onsubmit={handleLogin} class="grid gap-4">
-      {#if errorMessage}
+    <form onsubmit={(e) => { e.preventDefault(); signInWithEmail(); }} class="grid gap-4">
+    {#if errorMessage}
         <div class="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
           {errorMessage}
         </div>
@@ -51,7 +47,7 @@
         <Input
           id="email"
           type="email"
-          placeholder="m@example.com"
+          placeholder="hans.muster@gmail.com"
           bind:value={email}
           required
           disabled={isLoading}
