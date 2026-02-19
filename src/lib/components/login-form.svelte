@@ -24,7 +24,7 @@
     isLoading = false;
 
     if (!error) {
-      await goto('/');
+      await goto('/dashboard');
     }
   }
 </script>
