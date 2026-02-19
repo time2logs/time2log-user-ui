@@ -11,5 +11,10 @@
 	"email_label": "Email",
 	"password_label": "Password",
 	"logging_in": "Accesso in corso...",
-	"login_button": "Accedi"
+	"login_button": "Accedi",
+	"logout_confirm_title": "Conferma disconnessione",
+	"logout_confirm_description": "Sei sicuro di volerti disconnettere?",
+	"cancel": "Annulla",
+	"logging_out": "Disconnessione...",
+	"logout": "Disconnetti"
 }

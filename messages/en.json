@@ -11,5 +11,10 @@
 	"email_label": "Email",
 	"password_label": "Password",
 	"logging_in": "Logging in...",
-	"login_button": "Login"
+	"login_button": "Login",
+	"logout_confirm_title": "Confirm Logout",
+	"logout_confirm_description": "Are you sure you want to log out?",
+	"cancel": "Cancel",
+	"logging_out": "Logging out...",
+	"logout": "Logout"
 }

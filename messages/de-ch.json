@@ -11,5 +11,10 @@
 	"email_label": "E-Mail",
 	"password_label": "Passwort",
 	"logging_in": "Anmeldung...",
-	"login_button": "Anmelden"
+	"login_button": "Anmelden",
+	"logout_confirm_title": "Abmelden bestätigen",
+	"logout_confirm_description": "Möchtest du dich wirklich ausloggen?",
+	"cancel": "Abbrechen",
+	"logging_out": "Abmelden...",
+	"logout": "Abmelden"
 }
