@@ -6,6 +6,7 @@ export type CurriculumNode = {
 	node_type: 'activity' | 'category';
 	key: string;
 	name: string;
+	label: string;
 };
 
 export type CurriculumTreeNode = CurriculumNode & {
