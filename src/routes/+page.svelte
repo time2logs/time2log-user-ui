@@ -3,22 +3,58 @@
 	import CurriculumTree from '$lib/components/curriculum-tree.svelte';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import * as m from '$lib/paraglide/messages.js';
+	import { Button } from '$lib/components/ui/button';
+	import { ArrowRight } from 'lucide-svelte';
 
 	let { data } = $props();
+	let isLoggedIn = $derived(data.profile !== null);
 
 	const initials = $derived(
 		data.profile ? `${data.profile.first_name[0]}${data.profile.last_name[0]}`.toUpperCase() : '?'
 	);
+	let cardElement: HTMLDivElement;
+	let cursorX = $state(0);
+	let cursorY = $state(0);
+	let cursorVisible = $state(false);
 
-	const fullName = $derived(
-		data.profile ? `${data.profile.first_name} ${data.profile.last_name}` : 'Guest'
-	);
+	function handleMouseMove(e: MouseEvent) {
+		if (!cardElement) return;
+		const rect = cardElement.getBoundingClientRect();
+		cursorX = e.clientX - rect.left;
+		cursorY = e.clientY - rect.top;
+		cursorVisible = true;
+	}
+
+	function handleMouseLeave() {
+		cursorVisible = false;
+	}
 </script>
 
-<div class="min-h-screen bg-gray-50 p-8">
-	<div class="mx-auto max-w-4xl">
-		<!-- Header with profile -->
-		<div class="mb-8 flex items-center gap-4">
+<div class="relative flex min-h-screen flex-col overflow-hidden">
+	<!-- Background gradient that covers entire page -->
+	<div class="fixed inset-0 bg-gradient-to-br from-orange-50 via-rose-50 to-white"></div>
+
+	<!-- Soft gradient orbs - more orange, less pink -->
+	<div
+		class="fixed top-0 left-1/4 h-[600px] w-[600px] rounded-full bg-orange-200/40 blur-[120px]"
+	></div>
+	<div
+		class="fixed top-1/4 right-0 h-[500px] w-[500px] rounded-full bg-orange-300/35 blur-[120px]"
+	></div>
+	<div
+		class="fixed bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-rose-200/30 blur-[100px]"
+	></div>
+
+	<section class="relative z-10 flex flex-grow items-center justify-center px-4 py-20">
+		<!-- Frosted glass card with cursor bloom inside -->
+		<div
+			bind:this={cardElement}
+			onmousemove={handleMouseMove}
+			onmouseleave={handleMouseLeave}
+			class="relative mx-auto max-w-2xl overflow-hidden rounded-3xl border border-white/50 bg-white/25 p-8 shadow-xl backdrop-blur-2xl sm:p-12"
+			style="box-shadow: 0 8px 32px 0 rgba(255, 200, 150, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.5);"
+		>
+			<!-- Cursor bloom effect - only inside card -->
 			<div
 				class="flex h-16 w-16 items-center justify-center rounded-full bg-slate-700 text-xl font-semibold text-white"
 			>
@@ -29,6 +65,7 @@
 				<p class="text-gray-500">{m.dashboard_subtitle()}</p>
 			</div>
 		</div>
+	</section>
 
 		<!-- Language Switcher -->
 		<div class="mb-6">

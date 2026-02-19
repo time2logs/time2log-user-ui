@@ -1,4 +1,4 @@
-import type { PageServerLoad } from './$types';
+import type { LayoutServerLoad } from './$types';
 import type { CurriculumNode, TeamMember, Team } from '$lib/types';
 
 type Profile = {
@@ -7,7 +7,7 @@ type Profile = {
 	last_name: string;
 };
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: LayoutServerLoad = async ({ locals }) => {
 	const session = await locals.safeGetSession();
 
 	if (!session) {
