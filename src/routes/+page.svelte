@@ -3,31 +3,16 @@
 	import CurriculumTree from '$lib/components/curriculum-tree.svelte';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import * as m from '$lib/paraglide/messages.js';
-	import { Button } from '$lib/components/ui/button';
-	import { ArrowRight } from 'lucide-svelte';
 
 	let { data } = $props();
-	let isLoggedIn = $derived(data.profile !== null);
 
 	const initials = $derived(
 		data.profile ? `${data.profile.first_name[0]}${data.profile.last_name[0]}`.toUpperCase() : '?'
 	);
-	let cardElement: HTMLDivElement;
-	let cursorX = $state(0);
-	let cursorY = $state(0);
-	let cursorVisible = $state(false);
 
-	function handleMouseMove(e: MouseEvent) {
-		if (!cardElement) return;
-		const rect = cardElement.getBoundingClientRect();
-		cursorX = e.clientX - rect.left;
-		cursorY = e.clientY - rect.top;
-		cursorVisible = true;
-	}
-
-	function handleMouseLeave() {
-		cursorVisible = false;
-	}
+	const fullName = $derived(
+		data.profile ? `${data.profile.first_name} ${data.profile.last_name}` : 'Guest'
+	);
 </script>
 
 <div class="relative flex min-h-screen flex-col overflow-hidden">
@@ -46,40 +31,38 @@
 	></div>
 
 	<section class="relative z-10 flex flex-grow items-center justify-center px-4 py-20">
-		<!-- Frosted glass card with cursor bloom inside -->
+		<!-- Frosted glass card -->
 		<div
-			bind:this={cardElement}
-			onmousemove={handleMouseMove}
-			onmouseleave={handleMouseLeave}
 			class="relative mx-auto max-w-2xl overflow-hidden rounded-3xl border border-white/50 bg-white/25 p-8 shadow-xl backdrop-blur-2xl sm:p-12"
 			style="box-shadow: 0 8px 32px 0 rgba(255, 200, 150, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.5);"
 		>
-			<!-- Cursor bloom effect - only inside card -->
-			<div
-				class="flex h-16 w-16 items-center justify-center rounded-full bg-slate-700 text-xl font-semibold text-white"
-			>
-				{initials}
+			<div class="flex items-center gap-4 mb-6">
+				<div
+					class="flex h-16 w-16 items-center justify-center rounded-full bg-slate-700 text-xl font-semibold text-white"
+				>
+					{initials}
+				</div>
+				<div>
+					<h1 class="text-2xl font-bold text-gray-900">{m.welcome({ name: fullName })}</h1>
+					<p class="text-gray-500">{m.dashboard_subtitle()}</p>
+				</div>
 			</div>
-			<div>
-				<h1 class="text-2xl font-bold text-gray-900">{m.welcome({ name: fullName })}</h1>
-				<p class="text-gray-500">{m.dashboard_subtitle()}</p>
+
+			<!-- Language Switcher -->
+			<div class="mb-6">
+				<LanguageSwitcher />
 			</div>
+
+			<Card.Root>
+				<Card.Header>
+					<Card.Title>{m.curriculum_title()}</Card.Title>
+					<Card.Description>{m.curriculum_description()}</Card.Description>
+				</Card.Header>
+				<Card.Content class="p-0">
+					<CurriculumTree nodes={data.curriculumNodes} />
+				</Card.Content>
+			</Card.Root>
 		</div>
 	</section>
-
-		<!-- Language Switcher -->
-		<div class="mb-6">
-			<LanguageSwitcher />
-		</div>
-
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>{m.curriculum_title()}</Card.Title>
-				<Card.Description>{m.curriculum_description()}</Card.Description>
-			</Card.Header>
-			<Card.Content class="p-0">
-				<CurriculumTree nodes={data.curriculumNodes} />
-			</Card.Content>
-		</Card.Root>
-	</div>
 </div>
+
