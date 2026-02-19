@@ -3,8 +3,10 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Button } from '$lib/components/ui/button';
 	import CurriculumTree from '$lib/components/curriculum-tree.svelte';
-	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import * as m from '$lib/paraglide/messages.js';
+	import GradientBackground from '$lib/components/gradient-background.svelte';
+	import SiteHeader from '$lib/components/site-header.svelte';
+	import GlassCard from '$lib/components/glass-card.svelte';
 	import { logout } from '$lib/api';
 	import { LogOut, Loader2 } from 'lucide-svelte';
 
@@ -24,7 +26,9 @@
 	}
 
 	const initials = $derived(
-		data.profile ? `${data.profile.first_name[0]}${data.profile.last_name[0]}`.toUpperCase() : '?'
+		data.profile
+			? `${data.profile.first_name[0]}${data.profile.last_name[0]}`.toUpperCase()
+			: '?'
 	);
 
 	const fullName = $derived(
@@ -32,43 +36,39 @@
 	);
 </script>
 
-<div class="min-h-screen bg-gray-50 p-8">
-	<div class="mx-auto max-w-4xl">
-		<!-- Header with profile and language switcher -->
-		<div class="mb-8 flex items-start justify-between gap-4">
-			<div class="flex items-center gap-4">
-				<div
-					class="flex h-16 w-16 items-center justify-center rounded-full bg-slate-700 text-xl font-semibold text-white"
-				>
-					{initials}
-				</div>
-				<div>
-					<h1 class="text-2xl font-bold text-gray-900">{m.welcome({ name: fullName })}</h1>
-					<p class="text-gray-500">{m.dashboard_subtitle()}</p>
-				</div>
-			</div>
-			<div class="flex items-center gap-2">
-				<LanguageSwitcher />
-				<Button
-					variant="outline"
-					onclick={() => (dialogOpen = true)}
-					class="h-10 w-10 rounded-full p-0"
-				>
-					<LogOut class="h-4 w-4" />
-				</Button>
-			</div>
-		</div>
+<GradientBackground>
+	<SiteHeader />
 
-		<Card.Root>
-			<Card.Header>
-				<Card.Title>{m.curriculum_title()}</Card.Title>
-				<Card.Description>{m.curriculum_description()}</Card.Description>
-			</Card.Header>
-			<Card.Content class="p-0">
-				<CurriculumTree nodes={data.curriculumNodes} />
-			</Card.Content>
-		</Card.Root>
-	</div>
+	<main class="flex-1 p-8">
+		<div class="mx-auto max-w-4xl">
+			<div class="mb-8 flex items-start justify-between gap-4">
+				<div class="flex items-center gap-4">
+					<div
+						class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-rose-400 text-xl font-semibold text-white shadow-lg"
+					>
+						{initials}
+					</div>
+					<div>
+						<h1 class="text-2xl font-bold text-stone-800">{m.welcome({ name: fullName })}</h1>
+						<p class="text-stone-600">{m.dashboard_subtitle()}</p>
+					</div>
+				</div>
+			</div>
+
+			<GlassCard class="mt-4">
+				<Card.Header>
+					<Card.Title class="text-lg font-bold text-stone-800 mt-4">{m.curriculum_title()}</Card.Title>
+					<Card.Description class="text-sm text-stone-600 mb-2"
+						>{m.curriculum_description()}</Card.Description
+					>
+				</Card.Header>
+				<Card.Content class="p-0 mb-2">
+					<CurriculumTree nodes={data.curriculumNodes} />
+				</Card.Content>
+			</GlassCard>
+		</div>
+	</main>
+</GradientBackground>
 
 	<AlertDialog.Root bind:open={dialogOpen}>
 		<AlertDialog.Content>

@@ -6,12 +6,40 @@
 	import * as Card from '$lib/components/ui/card';
 	import { supabase } from '$lib/supabaseClient';
 	import { cn } from '$lib/utils';
+	import { goto } from '$app/navigation';
+	import * as m from '$lib/paraglide/messages.js';
+	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 
 	let email = $state('');
 	let password = $state('');
 	let errorMessage = $state('');
 	let isLoading = $state(false);
 
+	let cardElement: HTMLDivElement;
+	let cursorX = $state(0);
+	let cursorY = $state(0);
+	let cursorVisible = $state(false);
+
+	function handleMouseMove(e: MouseEvent) {
+		if (!cardElement) return;
+		const rect = cardElement.getBoundingClientRect();
+		cursorX = e.clientX - rect.left;
+		cursorY = e.clientY - rect.top;
+		cursorVisible = true;
+	}
+
+	function handleMouseLeave() {
+		cursorVisible = false;
+	}
+
+	async function signInWithEmail() {
+		isLoading = true;
+		const { data, error } = await supabase.auth.signInWithPassword({
+			email: email,
+			password: password
+		});
+		errorMessage = error ? error.message : '';
+		isLoading = false;
 	async function signInWithEmail() {
 		isLoading = true;
 		const { data, error } = await supabase.auth.signInWithPassword({
