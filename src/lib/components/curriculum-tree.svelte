@@ -68,6 +68,7 @@
 			{/if}
 			<span class="text-sm text-gray-500 font-mono">{node.key}</span>
 			<span class="text-sm font-medium text-gray-900">{node.name}</span>
+			<span class="text-sm font-medium text-gray-900">{node.label}</span>
 		</button>
 
 		{#if node.node_type === 'category' && expanded.has(node.id)}
