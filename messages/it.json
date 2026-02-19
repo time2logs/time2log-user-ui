@@ -1,0 +1,9 @@
+{
+	"$schema": "https://inlang.com/schema/inlang-message-format",
+	"hello_world": "Hello, {name} from it!",
+	"welcome": "Benvenuto, {name}",
+	"dashboard_subtitle": "Ecco la tua dashboard",
+	"curriculum_title": "Curriculum",
+	"curriculum_description": "Il curriculum della tua professione",
+	"no_nodes_found": "Nessun nodo del programma di studi trovato"
+}
