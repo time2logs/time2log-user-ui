@@ -1,13 +1,13 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
 	import CurriculumTree from '$lib/components/curriculum-tree.svelte';
+	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
+	import * as m from '$lib/paraglide/messages.js';
 
 	let { data } = $props();
 
 	const initials = $derived(
-		data.profile
-			? `${data.profile.first_name[0]}${data.profile.last_name[0]}`.toUpperCase()
-			: '?'
+		data.profile ? `${data.profile.first_name[0]}${data.profile.last_name[0]}`.toUpperCase() : '?'
 	);
 
 	const fullName = $derived(
@@ -25,15 +25,20 @@
 				{initials}
 			</div>
 			<div>
-				<h1 class="text-2xl font-bold text-gray-900">Welcome, {fullName}</h1>
-				<p class="text-gray-500">Here's your dashboard</p>
+				<h1 class="text-2xl font-bold text-gray-900">{m.welcome({ name: fullName })}</h1>
+				<p class="text-gray-500">{m.dashboard_subtitle()}</p>
 			</div>
+		</div>
+
+		<!-- Language Switcher -->
+		<div class="mb-6">
+			<LanguageSwitcher />
 		</div>
 
 		<Card.Root>
 			<Card.Header>
-				<Card.Title>Curriculum</Card.Title>
-				<Card.Description>Your profession's curriculum</Card.Description>
+				<Card.Title>{m.curriculum_title()}</Card.Title>
+				<Card.Description>{m.curriculum_description()}</Card.Description>
 			</Card.Header>
 			<Card.Content class="p-0">
 				<CurriculumTree nodes={data.curriculumNodes} />
