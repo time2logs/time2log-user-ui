@@ -5,5 +5,16 @@
 	"dashboard_subtitle": "Here's your dashboard",
 	"curriculum_title": "Curriculum",
 	"curriculum_description": "Your profession's curriculum",
-	"no_nodes_found": "No curriculum nodes found"
+	"no_nodes_found": "No curriculum nodes found",
+	"login_title": "Welcome Back",
+	"login_description": "Sign in to your account to continue",
+	"email_label": "Email",
+	"password_label": "Password",
+	"logging_in": "Logging in...",
+	"login_button": "Login",
+	"logout_confirm_title": "Confirm Logout",
+	"logout_confirm_description": "Are you sure you want to log out?",
+	"cancel": "Cancel",
+	"logging_out": "Logging out...",
+	"logout": "Logout"
 }

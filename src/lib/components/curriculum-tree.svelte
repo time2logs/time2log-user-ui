@@ -3,7 +3,6 @@
 	import { ChevronRight, ChevronDown, Folder, FileText } from 'lucide-svelte';
 
 	let { nodes }: { nodes: CurriculumNode[] } = $props();
-    let selectedNode = $state<string | null>(null);
 
 	// Build tree from flat list
 	function buildTree(nodes: CurriculumNode[]): CurriculumTreeNode[] {
@@ -46,39 +45,30 @@
 		}
 		expanded = new Set(expanded);
 	}
-	function selectNode(id: string) {
-        selectedNode = id;
-    }
-
 </script>
 
 {#snippet treeNode(node: CurriculumTreeNode, depth: number)}
-	<div class="border-b border-gray-100 last:border-b-0">
+	<div class="border-b border-white/30 last:border-b-0">
 		<button
-            class="flex w-full items-center gap-2 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
-            style="padding-left: {depth * 24 + 16}px"
-            on:click={() => {
-                if (node.node_type === 'category') toggleExpand(node.id);
-                selectNode(node.id);
-            }}
-            class:selected={selectedNode === node.id}  <!-- neu -->
-            disabled={node.node_type === 'activity' && false} <!-- optional -->
-        >
-
+			class="flex w-full items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-white/40"
+			style="padding-left: {depth * 24 + 16}px"
+			onclick={() => node.node_type === 'category' && toggleExpand(node.id)}
+			disabled={node.node_type === 'activity'}
+		>
 			{#if node.node_type === 'category'}
 				{#if expanded.has(node.id)}
-					<ChevronDown class="h-4 w-4 text-gray-400" />
+					<ChevronDown class="h-4 w-4 text-stone-400" />
 				{:else}
-					<ChevronRight class="h-4 w-4 text-gray-400" />
+					<ChevronRight class="h-4 w-4 text-stone-400" />
 				{/if}
-				<Folder class="h-4 w-4 text-amber-500" />
+				<Folder class="h-4 w-4 text-orange-400" />
 			{:else}
 				<span class="w-4"></span>
-				<FileText class="h-4 w-4 text-blue-500" />
+				<FileText class="h-4 w-4 text-rose-400" />
 			{/if}
-			<span class="text-sm text-gray-500 font-mono">{node.key}</span>
-			<span class="text-sm font-medium text-gray-900">{node.name}</span>
-			<span class="text-sm font-medium text-gray-900">{node.label}</span>
+			<span class="font-mono text-sm text-stone-500">{node.key}</span>
+			<span class="text-sm font-medium text-stone-800">{node.name}</span>
+			<span class="text-sm font-medium text-stone-800">{node.label}</span>
 		</button>
 
 		{#if node.node_type === 'category' && expanded.has(node.id)}
@@ -91,18 +81,12 @@
 
 {#if tree.length === 0}
 	<div class="flex h-48 items-center justify-center">
-		<p class="text-gray-400">No curriculum nodes found</p>
+		<p class="text-stone-400">No curriculum nodes found</p>
 	</div>
 {:else}
-	<div class="divide-y divide-gray-100">
+	<div class="divide-y divide-white/30">
 		{#each tree as node}
 			{@render treeNode(node, 0)}
 		{/each}
 	</div>
 {/if}
-<style>
-    .selected {
-        background-color: #e5f4ff;
-    }
-</style>
-

@@ -5,5 +5,16 @@
 	"dashboard_subtitle": "Hier ist Ihr Dashboard",
 	"curriculum_title": "Lehrplan",
 	"curriculum_description": "Der Lehrplan Ihres Berufs",
-	"no_nodes_found": "Keine Lehrplanknoten gefunden"
+	"no_nodes_found": "Keine Lehrplanknoten gefunden",
+	"login_title": "Willkommen zurück",
+	"login_description": "Melden Sie sich an, um fortzufahren",
+	"email_label": "E-Mail",
+	"password_label": "Passwort",
+	"logging_in": "Anmeldung...",
+	"login_button": "Anmelden",
+	"logout_confirm_title": "Abmelden bestätigen",
+	"logout_confirm_description": "Möchtest du dich wirklich ausloggen?",
+	"cancel": "Abbrechen",
+	"logging_out": "Abmelden...",
+	"logout": "Abmelden"
 }

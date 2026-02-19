@@ -5,5 +5,16 @@
 	"dashboard_subtitle": "Ecco la tua dashboard",
 	"curriculum_title": "Curriculum",
 	"curriculum_description": "Il curriculum della tua professione",
-	"no_nodes_found": "Nessun nodo del programma di studi trovato"
+	"no_nodes_found": "Nessun nodo del programma di studi trovato",
+	"login_title": "Bentornato",
+	"login_description": "Accedi al tuo account per continuare",
+	"email_label": "Email",
+	"password_label": "Password",
+	"logging_in": "Accesso in corso...",
+	"login_button": "Accedi",
+	"logout_confirm_title": "Conferma disconnessione",
+	"logout_confirm_description": "Sei sicuro di volerti disconnettere?",
+	"cancel": "Annulla",
+	"logging_out": "Disconnessione...",
+	"logout": "Disconnetti"
 }

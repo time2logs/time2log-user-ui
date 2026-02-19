@@ -1,5 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
-import { type Handle } from '@sveltejs/kit';
+import { type Handle, redirect } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -39,9 +39,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 		return session;
 	};
 
-	return resolve(event, {
+	const response = await resolve(event, {
 		filterSerializedResponseHeaders(name) {
 			return name === 'content-range' || name === 'x-supabase-api-version';
 		}
 	});
+
+	if (response.status === 404) {
+		throw redirect(302, '/login');
+	}
+
+	return response;
 };
