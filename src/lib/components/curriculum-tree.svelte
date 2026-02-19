@@ -3,6 +3,7 @@
 	import { ChevronRight, ChevronDown, Folder, FileText } from 'lucide-svelte';
 
 	let { nodes }: { nodes: CurriculumNode[] } = $props();
+    let selectedNode = $state<string | null>(null);
 
 	// Build tree from flat list
 	function buildTree(nodes: CurriculumNode[]): CurriculumTreeNode[] {
@@ -45,16 +46,25 @@
 		}
 		expanded = new Set(expanded);
 	}
+	function selectNode(id: string) {
+        selectedNode = id;
+    }
+
 </script>
 
 {#snippet treeNode(node: CurriculumTreeNode, depth: number)}
 	<div class="border-b border-gray-100 last:border-b-0">
 		<button
-			class="flex w-full items-center gap-2 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
-			style="padding-left: {depth * 24 + 16}px"
-			onclick={() => node.node_type === 'category' && toggleExpand(node.id)}
-			disabled={node.node_type === 'activity'}
-		>
+            class="flex w-full items-center gap-2 px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+            style="padding-left: {depth * 24 + 16}px"
+            on:click={() => {
+                if (node.node_type === 'category') toggleExpand(node.id);
+                selectNode(node.id);
+            }}
+            class:selected={selectedNode === node.id}  <!-- neu -->
+            disabled={node.node_type === 'activity' && false} <!-- optional -->
+        >
+
 			{#if node.node_type === 'category'}
 				{#if expanded.has(node.id)}
 					<ChevronDown class="h-4 w-4 text-gray-400" />
@@ -90,3 +100,9 @@
 		{/each}
 	</div>
 {/if}
+<style>
+    .selected {
+        background-color: #e5f4ff;
+    }
+</style>
+

@@ -29,6 +29,7 @@
 	let outcome = $state("gut");
 	let difficulties = $state("");
 	let isListening = $state(false);
+let selectedNode = $state<string | null>(null);
 
 	let recognition: any;
 	onMount(async () => {
@@ -59,6 +60,9 @@
 		if (!recognition) return;
 		isListening ? recognition.stop() : recognition.start();
 	}
+function selectNode(id: string) {
+    selectedNode = id;
+}
 
 	async function addTask() {
 if (!description.trim() || !selectedCategory ||duration < 0.5 ||duration > 9) return;
@@ -192,3 +196,8 @@ if (!description.trim() || !selectedCategory ||duration < 0.5 ||duration > 9) re
 		</AlertDialog.Content>
 	</AlertDialog.Root>
 </div>
+<style>
+    .selected {
+        background-color: #e5f4ff;
+    }
+</style>
