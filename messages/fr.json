@@ -5,5 +5,11 @@
 	"dashboard_subtitle": "Voici votre tableau de bord",
 	"curriculum_title": "Programme",
 	"curriculum_description": "Le programme de votre profession",
-	"no_nodes_found": "Aucun nœud de programme trouvé"
+	"no_nodes_found": "Aucun nœud de programme trouvé",
+	"login_title": "Bon retour",
+	"login_description": "Connectez-vous à votre compte pour continuer",
+	"email_label": "Email",
+	"password_label": "Mot de passe",
+	"logging_in": "Connexion en cours...",
+	"login_button": "Se connecter"
 }
