@@ -33,14 +33,28 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 
 		const { data: team, error: teamError } = await locals.supabaseAdmin
 			.from('teams')
-			.select('profession_id')
+			.select('organization_id, profession_id')
 			.eq('id', teamMember.team_id)
-			.single<Pick<Team, 'profession_id'>>();
+			.single<Pick<Team, 'organization_id' | 'profession_id'>>();
 
 		if (teamError || !team) {
 			console.error('Team query error:', teamError);
-			return { profile, curriculumNodes: [] };
+			return { profile, teamMember: null, curriculumNodes: [] };
 		}
+
+		// Enrich teamMember with organization and profession info
+		const enrichedTeamMember = {
+			...teamMember,
+			organization_id: team.organization_id,
+			profession_id: team.profession_id
+		};
+
+		console.log('[Layout] Enriched teamMember:', {
+			team_id: enrichedTeamMember.team_id,
+			user_id: enrichedTeamMember.user_id,
+			organization_id: enrichedTeamMember.organization_id,
+			profession_id: enrichedTeamMember.profession_id
+		});
 
 		const { data: nodes, error: nodesError } = await locals.supabase
 			.from('curriculum_nodes')
@@ -50,12 +64,12 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 
 		if (nodesError) {
 			console.error('Curriculum nodes query error:', nodesError);
-			return { profile, curriculumNodes: [] };
+			return { profile, teamMember: enrichedTeamMember, curriculumNodes: [] };
 		}
 
 		return {
 			profile,
-			teamMember,
+			teamMember: enrichedTeamMember,
 			curriculumNodes: (nodes as CurriculumNode[]) ?? []
 		};
 	} catch (error) {

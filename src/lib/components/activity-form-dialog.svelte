@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
 	import { addActivity, getLastActivityId } from '$lib/activityStorage';
-	import { saveActivity } from '$lib/api';
+	import { supabase } from '$lib/supabaseClient';
 	import type { CurriculumNode, CurriculumTreeNode, TeamMember } from '$lib/types';
 	import { Star, ChevronRight, ChevronDown, Folder, FileText, Check, AlertCircle } from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
@@ -114,11 +114,20 @@
 		if (!selectedActivity || hours === 0 || isSubmitting) return;
 		if (!teamMember) {
 			submitError = 'Team information not found. Please contact support.';
+			console.error('[ActivityForm] teamMember is null or undefined');
 			return;
 		}
 
 		isSubmitting = true;
 		submitError = null;
+
+		console.log('[ActivityForm] teamMember data:', teamMember);
+		console.log('[ActivityForm] teamMember fields:', {
+			team_id: teamMember.team_id,
+			user_id: teamMember.user_id,
+			organization_id: teamMember.organization_id,
+			profession_id: teamMember.profession_id
+		});
 
 		try {
 			// Prepare activity data for server
@@ -134,8 +143,15 @@
 				rating: rating || null
 			};
 
+			console.log('[ActivityForm] Prepared activity data:', activityData);
+
 			// Validate data before sending
 			if (!activityData.organization_id || !activityData.profession_id || !activityData.user_id) {
+				console.error('[ActivityForm] Validation failed:', {
+					organization_id: activityData.organization_id,
+					profession_id: activityData.profession_id,
+					user_id: activityData.user_id
+				});
 				throw new Error('Missing required user information');
 			}
 
@@ -147,83 +163,30 @@
 				throw new Error('Rating must be between 1 and 5');
 			}
 
-			// Call the API
-			const response = await saveActivity(activityData);
+			// Insert directly into Supabase (client-side)
+			// Using supabaseClient with 'app' schema
+			const { data: supabaseData, error: supabaseError } = await supabase
+				.from('activity_records')
+				.insert({
+					organization_id: activityData.organization_id,
+					profession_id: activityData.profession_id,
+					user_id: activityData.user_id,
+					team_id: activityData.team_id, // Can be null
+					curriculum_activity_id: activityData.curriculum_activity_id,
+					entry_date: activityData.entry_date,
+					hours: activityData.hours,
+					notes: activityData.notes,
+					rating: activityData.rating // null or 1-5
+				})
+				.select()
+				.single();
 
-			// TODO: Add your Supabase insert logic here
-			// Insert into app.activity_records table
-			// Schema from: C:\Users\lyani\ClaudeProjects\github-repos\time2log-db\supabase\migrations\20260217100400_add_app_activity_records.sql
-			//
-			// IMPORTANT NOTES:
-			// - Table: app.activity_records (schema 'app', not 'public')
-			// - No 'minutes' column in the schema! Use only 'hours'
-			// - hours must be > 0 AND <= 24
-			// - rating must be between 1 AND 5 (or null)
-			// - team_id can be null (it's optional)
-			// - RLS is enabled: users can only insert their own records (user_id = auth.uid())
-			//
-			// Example 1: Using supabaseClient (from '$lib/supabaseClient') - Client-side
-			// const { data, error } = await supabase
-			//     .from('activity_records')
-			//     .insert({
-			//         organization_id: activityData.organization_id,
-			//         profession_id: activityData.profession_id,
-			//         user_id: activityData.user_id,
-			//         team_id: activityData.team_id,  // Can be null
-			//         curriculum_activity_id: activityData.curriculum_activity_id,
-			//         entry_date: activityData.entry_date,
-			//         hours: activityData.hours,
-			//         notes: activityData.notes,
-			//         rating: activityData.rating  // null or 1-5
-			//     })
-			//     .select()
-			//     .single();
-			//
-			// Example 2: Using server-side supabaseAdmin (from event.locals)
-			// This would be in a server action at +page.server.ts or +server.ts
-			// const { data, error } = await locals.supabaseAdmin
-			//     .from('activity_records')
-			//     .insert({
-			//         organization_id: activityData.organization_id,
-			//         profession_id: activityData.profession_id,
-			//         user_id: activityData.user_id,
-			//         team_id: activityData.team_id,
-			//         curriculum_activity_id: activityData.curriculum_activity_id,
-			//         entry_date: activityData.entry_date,
-			//         hours: activityData.hours,
-			//         notes: activityData.notes,
-			//         rating: activityData.rating
-			//     })
-			//     .select()
-			//     .single();
-			//
-			// Example 3: Using RPC (Remote Procedure Call) if you have a database function
-			// const { data, error } = await supabase.rpc('log_activity', {
-			//     p_organization_id: activityData.organization_id,
-			//     p_profession_id: activityData.profession_id,
-			//     p_user_id: activityData.user_id,
-			//     p_team_id: activityData.team_id,
-			//     p_curriculum_activity_id: activityData.curriculum_activity_id,
-			//     p_entry_date: activityData.entry_date,
-			//     p_hours: activityData.hours,
-			//     p_notes: activityData.notes,
-			//     p_rating: activityData.rating
-			// });
-			//
-			// VALIDATION NOTES from schema:
-			// - hours: CHECK (hours > 0 AND hours <= 24)
-			// - rating: CHECK (rating >= 1 AND rating <= 5)
-			// - Foreign keys: organization_id, profession_id, user_id, curriculum_activity_id are NOT NULL
-			// - team_id is optional (can be null)
-			//
-			// LOCATION: This comment is in src/lib/components/activity-form-dialog.svelte around line 154
-			// MIGRATIONS FILE: C:\Users\lyani\ClaudeProjects\github-repos\time2log-db\supabase\migrations\20260217100400_add_app_activity_records.sql
-
-
-			// Validate server response
-			if (!response.success) {
-				throw new Error(response.message || 'Failed to save activity');
+			if (supabaseError) {
+				console.error('Supabase insert error:', supabaseError);
+				throw new Error(supabaseError.message || 'Failed to save to database');
 			}
+
+			console.log('Activity saved to Supabase:', supabaseData);
 
 			// Also save to local storage as backup/sync
 			addActivity({
@@ -236,9 +199,10 @@
 				hours: activityData.hours,
 				notes: activityData.notes,
 				rating: activityData.rating,
-				activity_name: selectedActivity.name,
+				activity_name: selectedActivity.label,
 				activity_key: selectedActivity.key,
-				activity_label: selectedActivity.label,
+				activity_label: '',
+ // label is already used as name
 				created_at: new Date().toISOString(),
 				updated_at: new Date().toISOString()
 			});
@@ -305,7 +269,7 @@
 										{/if}
 										<Folder class="h-4 w-4 text-orange-400 pointer-events-none" />
 										<span class="font-mono text-sm text-stone-500">{node.key}</span>
-										<span class="text-sm font-medium text-stone-800">{node.name}</span>
+										<span class="text-sm font-medium text-stone-800">{node.label}</span>
 									</button>
 
 									{#if expanded.has(node.id)}
@@ -323,10 +287,7 @@
 										<span class="w-4"></span>
 										<FileText class="h-4 w-4 text-rose-400 pointer-events-none" />
 										<span class="font-mono text-sm text-stone-500">{node.key}</span>
-										<span class="text-sm font-medium text-stone-800">{node.name}</span>
-										{#if node.label}
-											<span class="text-sm text-stone-500">({node.label})</span>
-										{/if}
+										<span class="text-sm font-medium text-stone-800">{node.label}</span>
 										{#if selectedActivityId === node.id}
 											<Check class="ml-auto h-4 w-4 text-orange-500 pointer-events-none" />
 										{/if}
@@ -342,7 +303,7 @@
 				</div>
 				{#if selectedActivity}
 					<p class="text-sm text-stone-600">
-						{m.selected_activity({ name: `${selectedActivity.key} - ${selectedActivity.name}` })}
+						{m.selected_activity({ name: `${selectedActivity.key} - ${selectedActivity.label}` })}
 					</p>
 				{/if}
 			</div>
