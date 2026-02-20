@@ -3,16 +3,20 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
 	import { addActivity, getLastActivityId } from '$lib/activityStorage';
-	import type { CurriculumNode, CurriculumTreeNode } from '$lib/types';
-	import { Star, ChevronRight, ChevronDown, Folder, FileText, Check } from 'lucide-svelte';
+	import { saveActivity } from '$lib/api';
+	import type { CurriculumNode, CurriculumTreeNode, TeamMember } from '$lib/types';
+	import { Star, ChevronRight, ChevronDown, Folder, FileText, Check, AlertCircle } from 'lucide-svelte';
+	import * as m from '$lib/paraglide/messages.js';
 
 	let {
 		open = $bindable(),
 		curriculumNodes,
+		teamMember,
 		onActivityAdded
 	}: {
 		open: boolean;
 		curriculumNodes: CurriculumNode[];
+		teamMember: TeamMember | null;
 		onActivityAdded: () => void;
 	} = $props();
 
@@ -56,10 +60,10 @@
 	let selectedActivityId = $state<string>('');
 	let rating = $state<number>(0);
 	let hours = $state<number>(0);
-	let minutes = $state<number>(0);
 	let notes = $state<string>('');
 	let isSubmitting = $state(false);
 	let hasInitialized = $state(false);
+	let submitError = $state<string | null>(null);
 
 	// Pre-fill with last activity when dialog opens
 	$effect(() => {
@@ -81,8 +85,8 @@
 			// Reset other fields
 			rating = 0;
 			hours = 0;
-			minutes = 0;
 			notes = '';
+			submitError = null;
 			hasInitialized = true;
 		} else if (!open) {
 			hasInitialized = false;
@@ -106,35 +110,77 @@
 		selectedActivityId = id;
 	}
 
-	function handleSubmit() {
-		if (!selectedActivity || hours === 0 && minutes === 0 || isSubmitting) return;
+	async function handleSubmit() {
+		if (!selectedActivity || hours === 0 || isSubmitting) return;
+		if (!teamMember) {
+			submitError = 'Team information not found. Please contact support.';
+			return;
+		}
 
 		isSubmitting = true;
+		submitError = null;
 
 		try {
-			addActivity({
-				organization_id: '', // Will be filled from user context later
-				profession_id: '',
-				user_id: '',
-				team_id: null,
+			// Prepare activity data for server
+			const activityData = {
+				organization_id: teamMember.organization_id || '',
+				profession_id: teamMember.profession_id || '',
+				user_id: teamMember.user_id || '',
+				team_id: teamMember.team_id || null,
 				curriculum_activity_id: selectedActivity.id,
 				entry_date: new Date().toISOString().split('T')[0],
 				hours,
-				minutes,
+				minutes: 0,
 				notes: notes || null,
-				rating: rating || null,
+				rating: rating || null
+			};
+
+			// Validate data before sending
+			if (!activityData.organization_id || !activityData.profession_id || !activityData.user_id) {
+				throw new Error('Missing required user information');
+			}
+
+			if (activityData.hours <= 0) {
+				throw new Error('Hours must be greater than 0');
+			}
+
+			if (activityData.rating !== null && (activityData.rating < 1 || activityData.rating > 5)) {
+				throw new Error('Rating must be between 1 and 5');
+			}
+
+			// Call the API
+			const response = await saveActivity(activityData);
+
+			// Validate server response
+			if (!response.success) {
+				throw new Error(response.message || 'Failed to save activity');
+			}
+
+			// Also save to local storage as backup/sync
+			addActivity({
+				organization_id: activityData.organization_id,
+				profession_id: activityData.profession_id,
+				user_id: activityData.user_id,
+				team_id: activityData.team_id,
+				curriculum_activity_id: activityData.curriculum_activity_id,
+				entry_date: activityData.entry_date,
+				hours: activityData.hours,
+				minutes: activityData.minutes,
+				notes: activityData.notes,
+				rating: activityData.rating,
 				activity_name: selectedActivity.name,
 				activity_key: selectedActivity.key,
 				activity_label: selectedActivity.label,
-				created_at: '',
-				updated_at: ''
+				created_at: new Date().toISOString(),
+				updated_at: new Date().toISOString()
 			});
 
 			// Close dialog and notify parent
 			open = false;
 			onActivityAdded();
 		} catch (error) {
-			console.error('Failed to add activity:', error);
+			console.error('Failed to save activity:', error);
+			submitError = error instanceof Error ? error.message : 'Failed to save activity. Please try again.';
 		} finally {
 			isSubmitting = false;
 		}
@@ -144,24 +190,35 @@
 		rating = value;
 	}
 
-	const isValid = $derived(selectedActivityId && (hours > 0 || minutes > 0) && !isSubmitting);
+	const isValid = $derived(selectedActivityId && hours > 0 && !isSubmitting);
 </script>
 
 <Dialog.Root bind:open>
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>Log Activity</Dialog.Title>
-			<Dialog.Description>Record your completed activity with time and rating.</Dialog.Description>
+			<Dialog.Title>{m.log_activity_title()}</Dialog.Title>
+			<Dialog.Description>{m.log_activity_description()}</Dialog.Description>
 		</Dialog.Header>
+
+		<!-- Error Display -->
+		{#if submitError}
+			<div class="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 flex items-start gap-2">
+				<AlertCircle class="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+				<div class="flex-1">
+					<p class="text-sm font-medium text-red-800">Error</p>
+					<p class="text-sm text-red-600">{submitError}</p>
+				</div>
+			</div>
+		{/if}
 
 		<div class="grid gap-4 py-4">
 			<!-- Activity Tree Selector -->
 			<div class="grid gap-2">
-				<Label>Activity</Label>
+				<Label>{m.activity_label()}</Label>
 				<div class="rounded-lg border border-stone-200 bg-white/60 shadow-sm backdrop-blur-sm">
 					{#if tree.length === 0}
 						<div class="flex h-32 items-center justify-center">
-							<p class="text-stone-400">No activities available</p>
+							<p class="text-stone-400">{m.no_activities_available()}</p>
 						</div>
 					{:else}
 						<div class="divide-y divide-white/30 max-h-64 overflow-y-auto">
@@ -217,14 +274,14 @@
 				</div>
 				{#if selectedActivity}
 					<p class="text-sm text-stone-600">
-						Selected: <span class="font-medium">{selectedActivity.key} - {selectedActivity.name}</span>
+						{m.selected_activity({ name: `${selectedActivity.key} - ${selectedActivity.name}` })}
 					</p>
 				{/if}
 			</div>
 
 			<!-- Rating -->
 			<div class="grid gap-2">
-				<Label>Rating (Optional)</Label>
+				<Label>{m.rating_label()}</Label>
 				<div class="flex gap-1">
 					{#each [1, 2, 3, 4, 5] as star}
 						<button
@@ -244,38 +301,26 @@
 			</div>
 
 			<!-- Time Input -->
-			<div class="grid grid-cols-2 gap-4">
-				<div class="grid gap-2">
-					<Label for="hours">Hours</Label>
-					<input
-						id="hours"
-						type="number"
-						min="0"
-						max="23"
-						bind:value={hours}
-						class="flex h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-stone-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-stone-950 disabled:cursor-not-allowed disabled:opacity-50"
-					/>
-				</div>
-				<div class="grid gap-2">
-					<Label for="minutes">Minutes</Label>
-					<input
-						id="minutes"
-						type="number"
-						min="0"
-						max="59"
-						bind:value={minutes}
-						class="flex h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-stone-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-stone-950 disabled:cursor-not-allowed disabled:opacity-50"
-					/>
-				</div>
+			<div class="grid gap-2">
+				<Label for="hours">{m.hours_label()}</Label>
+				<input
+					id="hours"
+					type="number"
+					min="0.5"
+					step="0.5"
+					bind:value={hours}
+					placeholder={m.hours_placeholder()}
+					class="flex h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-stone-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-stone-950 disabled:cursor-not-allowed disabled:opacity-50"
+				/>
 			</div>
 
 			<!-- Notes (Optional) -->
 			<div class="grid gap-2">
-				<Label for="notes">Notes (Optional)</Label>
+				<Label for="notes">{m.notes_optional()}</Label>
 				<textarea
 					id="notes"
 					bind:value={notes}
-					placeholder="Add any additional notes..."
+					placeholder={m.notes_placeholder()}
 					rows="3"
 					class="flex min-h-[60px] w-full rounded-md border border-stone-200 bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-stone-400 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-stone-950 disabled:cursor-not-allowed disabled:opacity-50"
 				></textarea>
@@ -287,17 +332,26 @@
 				variant="outline"
 				onclick={() => {
 					open = false;
+					submitError = null;
 				}}
+				disabled={isSubmitting}
 			>
-				Cancel
+				{m.cancel()}
 			</Button>
 			<Button
 				variant="default"
 				onclick={handleSubmit}
-				disabled={!isValid}
+				disabled={!isValid || isSubmitting}
 				class="bg-gradient-to-r from-orange-400 to-rose-400 text-white hover:from-orange-500 hover:to-rose-500"
 			>
-				Log Activity
+				{#if isSubmitting}
+					<span class="flex items-center gap-2">
+						<span class="h-4 w-4 animate-spin">⟳</span>
+						Saving...
+					</span>
+				{:else}
+					{m.log_activity_button()}
+				{/if}
 			</Button>
 		</Dialog.Footer>
 	</Dialog.Content>

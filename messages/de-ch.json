@@ -16,5 +16,21 @@
 	"logout_confirm_description": "Möchtest du dich wirklich ausloggen?",
 	"cancel": "Abbrechen",
 	"logging_out": "Abmelden...",
-	"logout": "Abmelden"
+	"logout": "Abmelden",
+	"activity_log_title": "Aktivitätsprotokoll",
+	"activity_log_description": "Verfolgen Sie Ihre abgeschlossenen Aktivitäten und die verbrachte Zeit",
+	"log_activity_button": "Aktivität protokollieren",
+	"log_activity_title": "Aktivität protokollieren",
+	"log_activity_description": "Zeichnen Sie Ihre abgeschlossene Aktivität mit Zeit und Bewertung auf.",
+	"activity_label": "Aktivität",
+	"no_activities_available": "Keine Aktivitäten verfügbar",
+	"selected_activity": "Ausgewählt: {name}",
+	"rating_label": "Bewertung",
+	"hours_label": "Stunden",
+	"hours_placeholder": "Stunden eingeben (z.B. 1,5 für 1 Stunde 30 Minuten)",
+	"notes_optional": "Notizen (Optional)",
+	"notes_placeholder": "Zusätzliche Notizen hinzufügen...",
+	"no_activities_found": "Keine Aktivitäten gefunden",
+	"start_by_logging_first_activity": "Beginnen Sie mit der Protokollierung Ihrer ersten Aktivität",
+	"delete_activity_confirm": "Möchten Sie diese Aktivität wirklich löschen?"
 }

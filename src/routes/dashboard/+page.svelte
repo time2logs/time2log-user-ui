@@ -73,10 +73,10 @@
 				<Card.Header class="flex flex-row items-center justify-between">
 					<div>
 						<Card.Title class="mt-4 text-lg font-bold text-stone-800"
-							>Activity Log</Card.Title
+							>{m.activity_log_title()}</Card.Title
 						>
 						<Card.Description class="mb-2 text-sm text-stone-600"
-							>Track your completed activities and time spent</Card.Description
+							>{m.activity_log_description()}</Card.Description
 						>
 					</div>
 					<Button
@@ -85,7 +85,7 @@
 						size="lg"
 					>
 						<Plus class="mr-2 h-5 w-5" />
-						Log Activity
+						{m.log_activity_button()}
 					</Button>
 				</Card.Header>
 				<Card.Content class="p-0">
@@ -100,6 +100,7 @@
 				<ActivityFormDialog
 					bind:open={activityDialogOpen}
 					curriculumNodes={data.curriculumNodes}
+					teamMember={data.teamMember}
 					onActivityAdded={handleActivityAdded}
 				/>
 			{/if}

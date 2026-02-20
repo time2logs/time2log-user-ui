@@ -3,6 +3,7 @@
 	import { Trash2, Calendar, Clock, Star } from 'lucide-svelte';
 	import { activityStore } from '$lib/activityStorage';
 	import type { ActivityRecord, CurriculumNode, CurriculumTreeNode } from '$lib/types';
+	import * as m from '$lib/paraglide/messages.js';
 
 	let { curriculumNodes, onRefresh }: { curriculumNodes: any[]; onRefresh: () => void } = $props();
 
@@ -48,7 +49,7 @@
 	const tree = $derived(buildTree(curriculumNodes));
 
 	function handleDelete(id: string) {
-		if (confirm('Are you sure you want to delete this activity?')) {
+		if (confirm(m.delete_activity_confirm())) {
 			activityStore.delete(id);
 			onRefresh();
 		}
@@ -64,14 +65,10 @@
 	}
 
 	function formatTime(hours: number, minutes: number): string {
-		if (hours > 0 && minutes > 0) {
-			return `${hours}h ${minutes}m`;
-		} else if (hours > 0) {
+		if (hours > 0) {
 			return `${hours}h`;
-		} else if (minutes > 0) {
-			return `${minutes}m`;
 		}
-		return '0m';
+		return '0h';
 	}
 </script>
 
@@ -81,8 +78,8 @@
 		<div class="rounded-lg border border-stone-200 bg-white/60 p-12 text-center shadow-sm backdrop-blur-sm">
 			<div class="flex flex-col items-center gap-3 text-stone-400">
 				<Calendar class="h-12 w-12" />
-				<p class="text-lg font-medium">No activities found</p>
-				<p class="text-sm">Start by logging your first activity</p>
+				<p class="text-lg font-medium">{m.no_activities_found()}</p>
+				<p class="text-sm">{m.start_by_logging_first_activity()}</p>
 			</div>
 		</div>
 	{:else}

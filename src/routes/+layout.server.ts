@@ -12,14 +12,14 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		const session = await locals.safeGetSession();
 
 		if (!session) {
-			return { profile: null, curriculumNodes: [] };
+			return { profile: null, teamMember: null, curriculumNodes: [] };
 		}
 
 		const userId = session.user.id;
 
 		const [profileResult, teamMemberResult] = await Promise.all([
 			locals.supabase.from('profiles').select<'profiles', Profile>().eq('id', userId).single(),
-			locals.supabaseAdmin.from('team_members').select('team_id').eq('user_id', userId).limit(1)
+			locals.supabaseAdmin.from('team_members').select('*').eq('user_id', userId).limit(1)
 		]);
 
 		const profile = profileResult.error ? null : profileResult.data;
@@ -28,7 +28,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			teamMemberResult.data && teamMemberResult.data.length > 0 ? teamMemberResult.data[0] : null;
 
 		if (!teamMember) {
-			return { profile, curriculumNodes: [] };
+			return { profile, teamMember: null, curriculumNodes: [] };
 		}
 
 		const { data: team, error: teamError } = await locals.supabaseAdmin
@@ -55,10 +55,11 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 
 		return {
 			profile,
+			teamMember,
 			curriculumNodes: (nodes as CurriculumNode[]) ?? []
 		};
 	} catch (error) {
 		console.error('Layout load error:', error);
-		return { profile: null, curriculumNodes: [] };
+		return { profile: null, teamMember: null, curriculumNodes: [] };
 	}
 };
