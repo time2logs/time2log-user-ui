@@ -230,7 +230,6 @@ export async function saveActivity(activity: {
 	curriculum_activity_id: string;
 	entry_date: string;
 	hours: number;
-	minutes: number;
 	notes: string | null;
 	rating: number | null;
 }): Promise<{ success: boolean; message: string; activity?: any }> {

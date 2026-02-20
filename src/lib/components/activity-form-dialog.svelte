@@ -130,7 +130,6 @@
 				curriculum_activity_id: selectedActivity.id,
 				entry_date: new Date().toISOString().split('T')[0],
 				hours,
-				minutes: 0,
 				notes: notes || null,
 				rating: rating || null
 			};
@@ -151,6 +150,76 @@
 			// Call the API
 			const response = await saveActivity(activityData);
 
+			// TODO: Add your Supabase insert logic here
+			// Insert into app.activity_records table
+			// Schema from: C:\Users\lyani\ClaudeProjects\github-repos\time2log-db\supabase\migrations\20260217100400_add_app_activity_records.sql
+			//
+			// IMPORTANT NOTES:
+			// - Table: app.activity_records (schema 'app', not 'public')
+			// - No 'minutes' column in the schema! Use only 'hours'
+			// - hours must be > 0 AND <= 24
+			// - rating must be between 1 AND 5 (or null)
+			// - team_id can be null (it's optional)
+			// - RLS is enabled: users can only insert their own records (user_id = auth.uid())
+			//
+			// Example 1: Using supabaseClient (from '$lib/supabaseClient') - Client-side
+			// const { data, error } = await supabase
+			//     .from('activity_records')
+			//     .insert({
+			//         organization_id: activityData.organization_id,
+			//         profession_id: activityData.profession_id,
+			//         user_id: activityData.user_id,
+			//         team_id: activityData.team_id,  // Can be null
+			//         curriculum_activity_id: activityData.curriculum_activity_id,
+			//         entry_date: activityData.entry_date,
+			//         hours: activityData.hours,
+			//         notes: activityData.notes,
+			//         rating: activityData.rating  // null or 1-5
+			//     })
+			//     .select()
+			//     .single();
+			//
+			// Example 2: Using server-side supabaseAdmin (from event.locals)
+			// This would be in a server action at +page.server.ts or +server.ts
+			// const { data, error } = await locals.supabaseAdmin
+			//     .from('activity_records')
+			//     .insert({
+			//         organization_id: activityData.organization_id,
+			//         profession_id: activityData.profession_id,
+			//         user_id: activityData.user_id,
+			//         team_id: activityData.team_id,
+			//         curriculum_activity_id: activityData.curriculum_activity_id,
+			//         entry_date: activityData.entry_date,
+			//         hours: activityData.hours,
+			//         notes: activityData.notes,
+			//         rating: activityData.rating
+			//     })
+			//     .select()
+			//     .single();
+			//
+			// Example 3: Using RPC (Remote Procedure Call) if you have a database function
+			// const { data, error } = await supabase.rpc('log_activity', {
+			//     p_organization_id: activityData.organization_id,
+			//     p_profession_id: activityData.profession_id,
+			//     p_user_id: activityData.user_id,
+			//     p_team_id: activityData.team_id,
+			//     p_curriculum_activity_id: activityData.curriculum_activity_id,
+			//     p_entry_date: activityData.entry_date,
+			//     p_hours: activityData.hours,
+			//     p_notes: activityData.notes,
+			//     p_rating: activityData.rating
+			// });
+			//
+			// VALIDATION NOTES from schema:
+			// - hours: CHECK (hours > 0 AND hours <= 24)
+			// - rating: CHECK (rating >= 1 AND rating <= 5)
+			// - Foreign keys: organization_id, profession_id, user_id, curriculum_activity_id are NOT NULL
+			// - team_id is optional (can be null)
+			//
+			// LOCATION: This comment is in src/lib/components/activity-form-dialog.svelte around line 154
+			// MIGRATIONS FILE: C:\Users\lyani\ClaudeProjects\github-repos\time2log-db\supabase\migrations\20260217100400_add_app_activity_records.sql
+
+
 			// Validate server response
 			if (!response.success) {
 				throw new Error(response.message || 'Failed to save activity');
@@ -165,7 +234,6 @@
 				curriculum_activity_id: activityData.curriculum_activity_id,
 				entry_date: activityData.entry_date,
 				hours: activityData.hours,
-				minutes: activityData.minutes,
 				notes: activityData.notes,
 				rating: activityData.rating,
 				activity_name: selectedActivity.name,

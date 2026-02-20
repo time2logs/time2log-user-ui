@@ -35,7 +35,6 @@ export type ActivityRecord = {
 	curriculum_activity_id: string;
 	entry_date: string; // ISO date string
 	hours: number;
-	minutes: number;
 	notes: string | null;
 	rating: number | null; // 1-5
 	created_at: string;

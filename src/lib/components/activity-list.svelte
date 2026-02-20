@@ -64,7 +64,7 @@
 		});
 	}
 
-	function formatTime(hours: number, minutes: number): string {
+	function formatTime(hours: number): string {
 		if (hours > 0) {
 			return `${hours}h`;
 		}
@@ -105,7 +105,7 @@
 							</div>
 							<div class="flex items-center gap-1">
 								<Clock class="h-3.5 w-3.5" />
-								<span class="font-medium">{formatTime(activity.hours, activity.minutes)}</span>
+								<span class="font-medium">{formatTime(activity.hours)}</span>
 							</div>
 							{#if activity.rating}
 								<div class="flex items-center gap-0.5">
