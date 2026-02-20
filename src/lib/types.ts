@@ -25,3 +25,22 @@ export type Team = {
 	profession_id: string;
 	name: string;
 };
+
+export type ActivityRecord = {
+	id: string;
+	organization_id: string;
+	profession_id: string;
+	user_id: string;
+	team_id: string | null;
+	curriculum_activity_id: string;
+	entry_date: string; // ISO date string
+	hours: number;
+	minutes: number;
+	notes: string | null;
+	rating: number | null; // 1-5
+	created_at: string;
+	updated_at: string;
+	activity_name: string;
+	activity_key: string;
+	activity_label: string;
+};

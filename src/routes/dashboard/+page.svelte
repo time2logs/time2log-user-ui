@@ -2,18 +2,21 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Button } from '$lib/components/ui/button';
-	import CurriculumTree from '$lib/components/curriculum-tree.svelte';
+	import ActivityList from '$lib/components/activity-list.svelte';
+	import ActivityFormDialog from '$lib/components/activity-form-dialog.svelte';
 	import * as m from '$lib/paraglide/messages.js';
 	import GradientBackground from '$lib/components/gradient-background.svelte';
 	import GlassCard from '$lib/components/glass-card.svelte';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import { logout } from '$lib/api';
-	import { LogOut, Loader2 } from 'lucide-svelte';
+	import { LogOut, Loader2, Plus } from 'lucide-svelte';
 
 	let { data } = $props();
 
 	let isLoggingOut = $state(false);
-	let dialogOpen = $state(false);
+	let logoutDialogOpen = $state(false);
+	let activityDialogOpen = $state(false);
+	let refreshKey = $state(0);
 
 	async function handleLogout() {
 		isLoggingOut = true;
@@ -23,6 +26,10 @@
 			console.error('Logout failed:', error);
 			isLoggingOut = false;
 		}
+	}
+
+	function handleActivityAdded() {
+		refreshKey++;
 	}
 
 	const initials = $derived(
@@ -54,7 +61,7 @@
 					<LanguageSwitcher />
 					<Button
 						variant="outline"
-						onclick={() => (dialogOpen = true)}
+						onclick={() => (logoutDialogOpen = true)}
 						class="h-10 w-10 rounded-full p-0"
 					>
 						<LogOut class="h-4 w-4" />
@@ -63,23 +70,44 @@
 			</div>
 
 			<GlassCard class="mt-4">
-				<Card.Header>
-					<Card.Title class="mt-4 text-lg font-bold text-stone-800"
-						>{m.curriculum_title()}</Card.Title
+				<Card.Header class="flex flex-row items-center justify-between">
+					<div>
+						<Card.Title class="mt-4 text-lg font-bold text-stone-800"
+							>Activity Log</Card.Title
+						>
+						<Card.Description class="mb-2 text-sm text-stone-600"
+							>Track your completed activities and time spent</Card.Description
+						>
+					</div>
+					<Button
+						onclick={() => (activityDialogOpen = true)}
+						class="bg-gradient-to-r from-orange-400 to-rose-400 text-white hover:from-orange-500 hover:to-rose-500"
+						size="lg"
 					>
-					<Card.Description class="mb-2 text-sm text-stone-600"
-						>{m.curriculum_description()}</Card.Description
-					>
+						<Plus class="mr-2 h-5 w-5" />
+						Log Activity
+					</Button>
 				</Card.Header>
-				<Card.Content class="mb-2 p-0">
-					<CurriculumTree nodes={data.curriculumNodes} />
+				<Card.Content class="p-0">
+					<ActivityList
+						curriculumNodes={data.curriculumNodes}
+						onRefresh={handleActivityAdded}
+					/>
 				</Card.Content>
 			</GlassCard>
+
+			{#if refreshKey >= 0}
+				<ActivityFormDialog
+					bind:open={activityDialogOpen}
+					curriculumNodes={data.curriculumNodes}
+					onActivityAdded={handleActivityAdded}
+				/>
+			{/if}
 		</div>
 	</main>
 </GradientBackground>
 
-<AlertDialog.Root bind:open={dialogOpen}>
+<AlertDialog.Root bind:open={logoutDialogOpen}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
 			<AlertDialog.Title>{m.logout_confirm_title()}</AlertDialog.Title>
