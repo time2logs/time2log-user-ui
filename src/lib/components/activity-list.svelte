@@ -2,7 +2,6 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Trash2, Calendar, Clock, Star } from 'lucide-svelte';
 	import { activityStore } from '$lib/activityStorage';
-	import { supabase } from '$lib/supabaseClient';
 	import type { ActivityRecord, CurriculumNode, CurriculumTreeNode } from '$lib/types';
 	import * as m from '$lib/paraglide/messages.js';
 
@@ -12,65 +11,13 @@
 	let activities = $state<ActivityRecord[]>([]);
 	activityStore.subscribe((data) => {
 		activities = data;
-		console.log('[ActivityList] Store updated, now has', data.length, 'activities');
 	});
 
 	// Load activities from Supabase when component mounts
-	async function loadActivitiesFromSupabase() {
-		try {
-			console.log('[ActivityList] Loading activities from Supabase...');
-			const { data, error } = await supabase
-				.from('activity_records')
-				.select('*, curriculum_nodes!inner(id, key, label)')
-				.order('created_at', { ascending: false });
-
-			if (error) {
-				console.error('[ActivityList] Error loading from Supabase:', error);
-				// Fallback to localStorage if Supabase fails
-				const localStorageActivities = activityStore.getAll();
-				if (localStorageActivities.length > 0) {
-					console.log('[ActivityList] Falling back to localStorage, found', localStorageActivities.length, 'activities');
-					activities = localStorageActivities;
-				}
-				return;
-			}
-
-			console.log('[ActivityList] Loaded', data?.length || 0, 'activities from Supabase');
-
-			// Update both state and store with Supabase data
-			if (data && data.length > 0) {
-				const formattedActivities = data.map((record: any) => ({
-					id: record.id,
-					organization_id: record.organization_id,
-					profession_id: record.profession_id,
-					user_id: record.user_id,
-					team_id: record.team_id,
-					curriculum_activity_id: record.curriculum_activity_id,
-					entry_date: record.entry_date,
-					hours: record.hours,
-					notes: record.notes,
-					rating: record.rating,
-					created_at: record.created_at,
-					updated_at: record.updated_at,
-					activity_name: record.curriculum_nodes?.label || '',
-					activity_key: record.curriculum_nodes?.key || '',
-					activity_label: '' // label is already used as name
-				}));
-
-				activities = formattedActivities;
-				console.log('[ActivityList] Activities loaded and formatted');
-			} else {
-				activities = [];
-			}
-		} catch (error) {
-			console.error('[ActivityList] Exception loading from Supabase:', error);
-		}
-	}
-
-	// Load activities on mount
 	$effect(() => {
-		loadActivitiesFromSupabase();
+		activityStore.load();
 	});
+
 	function buildTree(nodes: CurriculumNode[]): CurriculumTreeNode[] {
 		const map = new Map<string, CurriculumTreeNode>();
 		const roots: CurriculumTreeNode[] = [];
@@ -104,28 +51,11 @@
 	async function handleDelete(id: string) {
 		if (confirm(m.delete_activity_confirm())) {
 			try {
-				// Delete from Supabase
-				const { error } = await supabase
-					.from('activity_records')
-					.delete()
-					.eq('id', id);
-
-				if (error) {
-					console.error('[ActivityList] Error deleting from Supabase:', error);
-					// Fallback to localStorage deletion
-					activityStore.delete(id);
-				} else {
-					console.log('[ActivityList] Deleted from Supabase:', id);
-					// Also remove from local state
-					activities = activities.filter(a => a.id !== id);
-				}
-
+				await activityStore.delete(id);
 				onRefresh();
 			} catch (error) {
 				console.error('[ActivityList] Exception deleting:', error);
-				// Fallback to localStorage
-				activityStore.delete(id);
-				onRefresh();
+				alert(error instanceof Error ? error.message : 'Failed to delete activity');
 			}
 		}
 	}

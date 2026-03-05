@@ -49,13 +49,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 			profession_id: team.profession_id
 		};
 
-		console.log('[Layout] Enriched teamMember:', {
-			team_id: enrichedTeamMember.team_id,
-			user_id: enrichedTeamMember.user_id,
-			organization_id: enrichedTeamMember.organization_id,
-			profession_id: enrichedTeamMember.profession_id
-		});
-
 		const { data: nodes, error: nodesError } = await locals.supabase
 			.from('curriculum_nodes')
 			.select('*')

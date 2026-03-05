@@ -2,8 +2,7 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
-	import { addActivity, getLastActivityId } from '$lib/activityStorage';
-	import { supabase } from '$lib/supabaseClient';
+	import { activityStore, getLastActivityId } from '$lib/activityStorage';
 	import type { CurriculumNode, CurriculumTreeNode, TeamMember } from '$lib/types';
 	import { Star, ChevronRight, ChevronDown, Folder, FileText, Check, AlertCircle } from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
@@ -121,16 +120,8 @@
 		isSubmitting = true;
 		submitError = null;
 
-		console.log('[ActivityForm] teamMember data:', teamMember);
-		console.log('[ActivityForm] teamMember fields:', {
-			team_id: teamMember.team_id,
-			user_id: teamMember.user_id,
-			organization_id: teamMember.organization_id,
-			profession_id: teamMember.profession_id
-		});
-
 		try {
-			// Prepare activity data for server
+			// Prepare activity data
 			const activityData = {
 				organization_id: teamMember.organization_id || '',
 				profession_id: teamMember.profession_id || '',
@@ -140,10 +131,11 @@
 				entry_date: new Date().toISOString().split('T')[0],
 				hours,
 				notes: notes || null,
-				rating: rating || null
+				rating: rating || null,
+				activity_name: selectedActivity.label,
+				activity_key: selectedActivity.key,
+				activity_label: ''
 			};
-
-			console.log('[ActivityForm] Prepared activity data:', activityData);
 
 			// Validate data before sending
 			if (!activityData.organization_id || !activityData.profession_id || !activityData.user_id) {
@@ -163,55 +155,14 @@
 				throw new Error('Rating must be between 1 and 5');
 			}
 
-			// Insert directly into Supabase (client-side)
-			// Using supabaseClient with 'app' schema
-			const { data: supabaseData, error: supabaseError } = await supabase
-				.from('activity_records')
-				.insert({
-					organization_id: activityData.organization_id,
-					profession_id: activityData.profession_id,
-					user_id: activityData.user_id,
-					team_id: activityData.team_id, // Can be null
-					curriculum_activity_id: activityData.curriculum_activity_id,
-					entry_date: activityData.entry_date,
-					hours: activityData.hours,
-					notes: activityData.notes,
-					rating: activityData.rating // null or 1-5
-				})
-				.select()
-				.single();
-
-			if (supabaseError) {
-				console.error('Supabase insert error:', supabaseError);
-				throw new Error(supabaseError.message || 'Failed to save to database');
-			}
-
-			console.log('Activity saved to Supabase:', supabaseData);
-
-			// Also save to local storage as backup/sync
-			addActivity({
-				organization_id: activityData.organization_id,
-				profession_id: activityData.profession_id,
-				user_id: activityData.user_id,
-				team_id: activityData.team_id,
-				curriculum_activity_id: activityData.curriculum_activity_id,
-				entry_date: activityData.entry_date,
-				hours: activityData.hours,
-				notes: activityData.notes,
-				rating: activityData.rating,
-				activity_name: selectedActivity.label,
-				activity_key: selectedActivity.key,
-				activity_label: '',
- // label is already used as name
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString()
-			});
+			// Add activity via centralized store (writes to Supabase)
+			await activityStore.add(activityData);
 
 			// Close dialog and notify parent
 			open = false;
 			onActivityAdded();
 		} catch (error) {
-			console.error('Failed to save activity:', error);
+			console.error('[ActivityForm] Failed to save activity:', error);
 			submitError = error instanceof Error ? error.message : 'Failed to save activity. Please try again.';
 		} finally {
 			isSubmitting = false;
