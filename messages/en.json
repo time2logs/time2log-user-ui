@@ -32,7 +32,7 @@
 	"notes_placeholder": "Add any additional notes...",
 	"no_activities_found": "No activities found",
 	"start_by_logging_first_activity": "Start by logging your first activity",
-	"delete_activity_confirm": "Are you sure you want to delete this activity?"
+	"delete_activity_confirm": "Are you sure you want to delete this activity?",
 	"onboarding_invalid_invite": "Invalid Invitation",
 	"onboarding_no_invite_token": "No invitation token present.",
 	"onboarding_invalid_token_message": "Please open the link you received via email.",
