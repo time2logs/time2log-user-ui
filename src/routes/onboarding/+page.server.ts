@@ -1,6 +1,7 @@
 import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { InviteDetails } from '$lib/types';
+import * as m from '$lib/paraglide/messages.js';
 
 export const load: PageServerLoad = async ({
 	url,
@@ -31,7 +32,7 @@ export const load: PageServerLoad = async ({
 		return {
 			token: null,
 			inviteDetails: null,
-			inviteError: 'Kein Einladungstoken vorhanden.'
+			inviteError: m.onboarding_no_invite_token()
 		};
 	}
 
@@ -76,53 +77,53 @@ export const actions: Actions = {
 		// Validate required fields
 		if (!firstName || !lastName) {
 			return fail(400, {
-				error: 'Vor- und Nachname sind erforderlich.',
+				error: m.onboarding_error_name_required(),
 				values: { firstName, lastName }
 			});
 		}
 
 		if (!password || password.length < 8) {
 			return fail(400, {
-				error: 'Passwort muss mindestens 8 Zeichen lang sein.',
+				error: m.onboarding_error_password_length(),
 				values: { firstName, lastName }
 			});
 		}
 
 		const hasUppercase = /[A-Z]/.test(password);
 		const hasNumber = /[0-9]/.test(password);
-		const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+		const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password);
 
 		if (!hasUppercase) {
 			return fail(400, {
-				error: 'Passwort muss mindestens einen Großbuchstaben enthalten.',
+				error: m.onboarding_error_password_uppercase(),
 				values: { firstName, lastName }
 			});
 		}
 
 		if (!hasNumber) {
 			return fail(400, {
-				error: 'Passwort muss mindestens eine Ziffer enthalten.',
+				error: m.onboarding_error_password_number(),
 				values: { firstName, lastName }
 			});
 		}
 
 		if (!hasSpecialChar) {
 			return fail(400, {
-				error: 'Passwort muss mindestens ein Sonderzeichen enthalten (!@#$%^&*(), etc.).',
+				error: m.onboarding_error_password_special(),
 				values: { firstName, lastName }
 			});
 		}
 
 		if (!token) {
 			return fail(400, {
-				error: 'Einladungstoken fehlt.',
+				error: m.onboarding_error_token_missing(),
 				values: { firstName, lastName }
 			});
 		}
 
 		if (!email) {
 			return fail(400, {
-				error: 'E-Mail-Adresse fehlt.',
+				error: m.onboarding_error_email_missing(),
 				values: { firstName, lastName }
 			});
 		}
@@ -155,9 +156,14 @@ export const actions: Actions = {
 		});
 
 		if (signInError) {
-			await locals.supabaseServiceRole.auth.admin.deleteUser(newUser.user.id);
+			const { error: deleteError } = await locals.supabaseServiceRole.auth.admin.deleteUser(
+				newUser.user.id
+			);
+			if (deleteError) {
+				console.error('Failed to cleanup user after sign-in error:', deleteError);
+			}
 			return fail(500, {
-				error: 'Konto wurde erstellt, aber Anmeldung fehlgeschlagen: ' + signInError.message,
+				error: m.onboarding_error_signin_failed() + signInError.message,
 				values: { firstName, lastName }
 			});
 		}
@@ -169,7 +175,12 @@ export const actions: Actions = {
 		});
 
 		if (acceptError) {
-			await locals.supabaseServiceRole.auth.admin.deleteUser(newUser.user.id);
+			const { error: deleteError } = await locals.supabaseServiceRole.auth.admin.deleteUser(
+				newUser.user.id
+			);
+			if (deleteError) {
+				console.error('Failed to cleanup user after accept_invite error:', deleteError);
+			}
 			return fail(400, {
 				error: acceptError.message,
 				values: { firstName, lastName }

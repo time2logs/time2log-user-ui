@@ -8,6 +8,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { enhance } from '$app/forms';
 	import { Loader2 } from 'lucide-svelte';
+	import * as m from '$lib/paraglide/messages.js';
 
 	let { data, form } = $props();
 
@@ -33,25 +34,28 @@
 				{#if data.inviteError || !data.token}
 					<!-- Error state: invalid or expired token -->
 					<Card.Header>
-						<Card.Title class="text-lg font-bold text-stone-800">Einladung ungültig</Card.Title>
+						<Card.Title class="text-lg font-bold text-stone-800">
+							{m.onboarding_invalid_invite()}
+						</Card.Title>
 						<Card.Description class="text-sm text-stone-600">
-							{data.inviteError ?? 'Kein Einladungstoken vorhanden.'}
+							{data.inviteError ?? m.onboarding_no_invite_token()}
 						</Card.Description>
 					</Card.Header>
 					<Card.Content class="pt-4">
 						<p class="text-sm text-stone-500">
-							Bitte öffne den Link, den du per E-Mail erhalten hast.
+							{m.onboarding_invalid_token_message()}
 						</p>
 					</Card.Content>
 				{:else}
 					<!-- Valid invite: show onboarding form -->
 					<Card.Header>
 						<Card.Title class="text-lg font-bold text-stone-800">
-							Willkommen bei Time2Log!
+							{m.onboarding_welcome_title()}
 						</Card.Title>
 						<Card.Description class="text-sm text-stone-600">
-							Du wurdest zu <strong>{data.inviteDetails.organization_name}</strong> eingeladen. Erstelle
-							dein Konto, um loszulegen.
+							{@html m.onboarding_welcome_description({
+								orgName: data.inviteDetails.organization_name
+							})}
 						</Card.Description>
 					</Card.Header>
 					<Card.Content class="pt-4">
@@ -78,7 +82,7 @@
 							<input type="hidden" name="invite_token" value={data.token} />
 
 							<div>
-								<Label for="email">E-Mail</Label>
+								<Label for="email">{m.onboarding_email_label()}</Label>
 								<Input
 									id="email"
 									name="email"
@@ -91,37 +95,37 @@
 							</div>
 
 							<div>
-								<Label for="first_name">Vorname</Label>
+								<Label for="first_name">{m.onboarding_first_name_label()}</Label>
 								<Input
 									id="first_name"
 									name="first_name"
 									bind:value={firstName}
-									placeholder="Vorname"
+									placeholder={m.onboarding_first_name_placeholder()}
 									required
 									disabled={isSubmitting}
 								/>
 							</div>
 
 							<div>
-								<Label for="last_name">Nachname</Label>
+								<Label for="last_name">{m.onboarding_last_name_label()}</Label>
 								<Input
 									id="last_name"
 									name="last_name"
 									bind:value={lastName}
-									placeholder="Nachname"
+									placeholder={m.onboarding_last_name_placeholder()}
 									required
 									disabled={isSubmitting}
 								/>
 							</div>
 
 							<div>
-								<Label for="password">Passwort</Label>
+								<Label for="password">{m.onboarding_password_label()}</Label>
 								<Input
 									id="password"
 									name="password"
 									type="password"
 									bind:value={password}
-									placeholder="Mindestens 8 Zeichen"
+									placeholder={m.onboarding_password_placeholder()}
 									required
 									minlength={8}
 									disabled={isSubmitting}
@@ -131,9 +135,9 @@
 							<Button type="submit" class="w-full" disabled={isSubmitting}>
 								{#if isSubmitting}
 									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
-									Konto wird erstellt...
+									{m.onboarding_creating_account()}
 								{:else}
-									Konto erstellen
+									{m.onboarding_create_account()}
 								{/if}
 							</Button>
 						</form>

@@ -33,7 +33,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (!serviceRoleKey) {
 		throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured');
 	}
-	event.locals.supabaseServiceRole = createClient(PUBLIC_SUPABASE_URL, serviceRoleKey ?? '', {
+	event.locals.supabaseServiceRole = createClient(PUBLIC_SUPABASE_URL, serviceRoleKey, {
 		db: { schema: 'admin' }
 	});
 

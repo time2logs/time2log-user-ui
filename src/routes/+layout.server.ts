@@ -28,11 +28,12 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 	const profile = profileResult.error ? null : profileResult.data;
 
 	// Global onboarding enforcement: incomplete users can only access allowed paths
-	if (
-		profile &&
-		profile.onboarding_status !== 'completed' &&
-		!ONBOARDING_ALLOWED_PATHS.some((p) => url.pathname.startsWith(p))
-	) {
+	const isAllowedPath =
+		url.pathname === '/onboarding' ||
+		url.pathname.startsWith('/onboarding/') ||
+		url.pathname === '/login' ||
+		url.pathname.startsWith('/login/');
+	if (profile && profile.onboarding_status !== 'completed' && !isAllowedPath) {
 		throw redirect(303, '/onboarding');
 	}
 
