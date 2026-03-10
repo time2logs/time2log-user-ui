@@ -67,7 +67,6 @@
 				<FileText class="h-4 w-4 text-rose-400" />
 			{/if}
 			<span class="font-mono text-sm text-stone-500">{node.key}</span>
-			<span class="text-sm font-medium text-stone-800">{node.name}</span>
 			<span class="text-sm font-medium text-stone-800">{node.label}</span>
 		</button>
 

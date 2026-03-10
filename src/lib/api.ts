@@ -217,3 +217,39 @@ export async function logout(): Promise<void> {
 	// Force a full page reload to /login
 	window.location.href = '/login';
 }
+
+/**
+ * Save activity to server
+ * Validates and stores activity data
+ */
+export async function saveActivity(activity: {
+	organization_id: string;
+	profession_id: string;
+	user_id: string;
+	team_id: string | null;
+	curriculum_activity_id: string;
+	entry_date: string;
+	hours: number;
+	notes: string | null;
+	rating: number | null;
+}): Promise<{ success: boolean; message: string; activity?: any }> {
+	try {
+		const result = await apiRequest<{ success: boolean; message: string; activity?: any }>(
+			'/api/activities',
+			{
+				method: 'POST',
+				body: JSON.stringify(activity)
+			}
+		);
+
+		// Validate server response
+		if (!result.success) {
+			throw new Error(result.message || 'Failed to save activity');
+		}
+
+		return result;
+	} catch (error) {
+		console.error('Error saving activity to server:', error);
+		throw error;
+	}
+}
