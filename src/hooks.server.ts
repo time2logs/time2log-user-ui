@@ -1,7 +1,6 @@
 import { createServerClient } from '@supabase/ssr';
 import { type Handle, redirect } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
-import { type Handle } from '@sveltejs/kit';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
 import { env } from '$env/dynamic/private';
 
@@ -31,6 +30,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 	// Service role client — bypasses RLS, used for admin operations (e.g. creating users, invite lookups)
 	const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
+	if (!serviceRoleKey) {
+		throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured');
+	}
 	event.locals.supabaseServiceRole = createClient(PUBLIC_SUPABASE_URL, serviceRoleKey ?? '', {
 		db: { schema: 'admin' }
 	});

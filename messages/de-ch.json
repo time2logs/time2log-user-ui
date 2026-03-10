@@ -14,7 +14,7 @@
 	"logout_confirm_description": "Möchtest du dich wirklich ausloggen?",
 	"cancel": "Abbrechen",
 	"logging_out": "Abmelden...",
-	"logout": "Abmelden"
+	"logout": "Abmelden",
 	"logging_in": "Anmeldung wird durchgeführt...",
 	"login_button": "Anmelden"
 }

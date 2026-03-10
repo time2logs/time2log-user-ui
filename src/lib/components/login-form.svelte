@@ -6,12 +6,9 @@
 	import * as Card from '$lib/components/ui/card';
 	import { supabase } from '$lib/supabaseClient';
 	import { cn } from '$lib/utils';
-	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import * as m from '$lib/paraglide/messages.js';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
-
-	const redirectTo = page.url.searchParams.get('redirectTo') ?? '/dashboard';
 
 	let email = $state('');
 	let password = $state('');
