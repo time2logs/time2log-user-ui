@@ -51,3 +51,9 @@ export type ActivityRecord = {
 	activity_key: string;
 	activity_label: string;
 };
+
+export type InviteDetails = {
+	organization_name: string;
+	email: string;
+	role: string;
+};

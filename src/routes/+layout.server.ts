@@ -1,3 +1,4 @@
+import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import type { CurriculumNode, TeamMember, Team } from '$lib/types';
 
@@ -5,11 +6,14 @@ type Profile = {
 	id: number;
 	first_name: string;
 	last_name: string;
+	onboarding_status: string;
 };
 
-export const load: LayoutServerLoad = async ({ locals }) => {
+export const load: LayoutServerLoad = async ({ locals, url }) => {
 	try {
 		const session = await locals.safeGetSession();
+    const ONBOARDING_ALLOWED_PATHS = ['/onboarding', '/login'];
+
 
 		if (!session) {
 			return { profile: null, teamMember: null, curriculumNodes: [] };
@@ -24,8 +28,18 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 
 		const profile = profileResult.error ? null : profileResult.data;
 
-		const teamMember =
-			teamMemberResult.data && teamMemberResult.data.length > 0 ? teamMemberResult.data[0] : null;
+	// Global onboarding enforcement: incomplete users can only access allowed paths
+	const isAllowedPath =
+		url.pathname === '/onboarding' ||
+		url.pathname.startsWith('/onboarding/') ||
+		url.pathname === '/login' ||
+		url.pathname.startsWith('/login/');
+	if (profile && profile.onboarding_status !== 'completed' && !isAllowedPath) {
+		throw redirect(303, '/onboarding');
+	}
+
+	const teamMember =
+		teamMemberResult.data && teamMemberResult.data.length > 0 ? teamMemberResult.data[0] : null;
 
 		if (!teamMember) {
 			return { profile, teamMember: null, curriculumNodes: [] };
