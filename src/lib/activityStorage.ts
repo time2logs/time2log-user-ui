@@ -22,52 +22,55 @@ function validateActivity(activity: { hours: number }): boolean {
 // Create a writable store for activities
 function createActivityStore() {
 	const { subscribe, set, update } = writable<ActivityRecord[]>([]);
+	const load = async () => {
+		if (typeof window === 'undefined') return;
+
+		debugLog('Loading activities from Supabase...');
+
+		const { data, error } = await supabase
+			.from('activity_records')
+			.select('*, curriculum_nodes!inner(id, key, label)')
+			.order('created_at', { ascending: false });
+
+		if (error) {
+			console.error('[ActivityStorage] Error loading from Supabase:', error);
+			set([]);
+			return;
+		}
+
+		debugLog(`Loaded ${data?.length || 0} activities from Supabase`);
+
+		if (data && data.length > 0) {
+			const formattedActivities: ActivityRecord[] = data.map((record: any) => ({
+				id: record.id,
+				organization_id: record.organization_id,
+				profession_id: record.profession_id,
+				user_id: record.user_id,
+				team_id: record.team_id,
+				curriculum_activity_id: record.curriculum_activity_id,
+				entry_date: record.entry_date,
+				hours: record.hours,
+				notes: record.notes,
+				rating: record.rating,
+				created_at: record.created_at,
+				updated_at: record.updated_at,
+				activity_name: record.curriculum_nodes?.label || '',
+				activity_key: record.curriculum_nodes?.key || '',
+				activity_label: ''
+			}));
+			set(formattedActivities);
+		} else {
+			set([]);
+		}
+	};
 
 	return {
 		subscribe,
 		// Load activities from Supabase
-		load: async () => {
-			if (typeof window === 'undefined') return;
-
-			debugLog('Loading activities from Supabase...');
-
-			const { data, error } = await supabase
-				.from('activity_records')
-				.select('*, curriculum_nodes!inner(id, key, label)')
-				.order('created_at', { ascending: false });
-
-			if (error) {
-				console.error('[ActivityStorage] Error loading from Supabase:', error);
-				set([]);
-				return;
-			}
-
-			debugLog(`Loaded ${data?.length || 0} activities from Supabase`);
-
-			if (data && data.length > 0) {
-				const formattedActivities: ActivityRecord[] = data.map((record: any) => ({
-					id: record.id,
-					organization_id: record.organization_id,
-					profession_id: record.profession_id,
-					user_id: record.user_id,
-					team_id: record.team_id,
-					curriculum_activity_id: record.curriculum_activity_id,
-					entry_date: record.entry_date,
-					hours: record.hours,
-					notes: record.notes,
-					rating: record.rating,
-					created_at: record.created_at,
-					updated_at: record.updated_at,
-					activity_name: record.curriculum_nodes?.label || '',
-					activity_key: record.curriculum_nodes?.key || '',
-					activity_label: ''
-				}));
-				set(formattedActivities);
-			} else {
-				set([]);
-			}
-		},
-		add: async (activity: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>): Promise<ActivityRecord | null> => {
+		load,
+		add: async (
+			activity: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>
+		): Promise<ActivityRecord | null> => {
 			debugLog('Adding new activity via store', activity);
 
 			if (!validateActivity(activity)) {
@@ -117,10 +120,7 @@ function createActivityStore() {
 		delete: async (id: string): Promise<boolean> => {
 			debugLog('Deleting activity via store', { id });
 
-			const { error } = await supabase
-				.from('activity_records')
-				.delete()
-				.eq('id', id);
+			const { error } = await supabase.from('activity_records').delete().eq('id', id);
 
 			if (error) {
 				console.error('[ActivityStorage] Error deleting from Supabase:', error);
@@ -135,7 +135,7 @@ function createActivityStore() {
 		},
 		refresh: async () => {
 			debugLog('Refreshing activity store from Supabase');
-			await createActivityStore().load();
+			await load();
 		}
 	};
 }
@@ -180,7 +180,9 @@ export async function getActivities(): Promise<ActivityRecord[]> {
 	return [];
 }
 
-export async function addActivity(activity: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>): Promise<ActivityRecord> {
+export async function addActivity(
+	activity: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>
+): Promise<ActivityRecord> {
 	debugLog('Adding new activity', activity);
 
 	if (!validateActivity(activity)) {
@@ -227,10 +229,7 @@ export async function addActivity(activity: Omit<ActivityRecord, 'id' | 'created
 export async function deleteActivity(id: string): Promise<void> {
 	debugLog('Deleting activity', { id });
 
-	const { error } = await supabase
-		.from('activity_records')
-		.delete()
-		.eq('id', id);
+	const { error } = await supabase.from('activity_records').delete().eq('id', id);
 
 	if (error) {
 		console.error('[ActivityStorage] Error deleting from Supabase:', error);
