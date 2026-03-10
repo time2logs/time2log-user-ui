@@ -25,3 +25,9 @@ export type Team = {
 	profession_id: string;
 	name: string;
 };
+
+export type InviteDetails = {
+	organization_name: string;
+	email: string;
+	role: string;
+};
