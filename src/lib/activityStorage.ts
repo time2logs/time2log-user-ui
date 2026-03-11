@@ -1,0 +1,312 @@
+import type { ActivityRecord } from './types';
+import { writable } from 'svelte/store';
+import { supabase } from './supabaseClient';
+
+const LAST_ACTIVITY_KEY = 'last_activity_id';
+const DEBUG = import.meta.env.DEV ?? false;
+
+function debugLog(message: string, data?: any) {
+	if (DEBUG && typeof window !== 'undefined') {
+		console.log(`[ActivityStorage] ${message}`, data || '');
+	}
+}
+
+function validateActivity(activity: { hours: number }): boolean {
+	if (typeof activity.hours !== 'number' || isNaN(activity.hours) || activity.hours <= 0) {
+		console.error('[ActivityStorage] Invalid hours value:', activity.hours);
+		return false;
+	}
+	return true;
+}
+
+// Create a writable store for activities
+function createActivityStore() {
+	const { subscribe, set, update } = writable<ActivityRecord[]>([]);
+	const load = async () => {
+		if (typeof window === 'undefined') return;
+
+		debugLog('Loading activities from Supabase...');
+
+		const { data, error } = await supabase
+			.from('activity_records')
+			.select('*, curriculum_nodes!inner(id, key, label)')
+			.order('created_at', { ascending: false });
+
+		if (error) {
+			console.error('[ActivityStorage] Error loading from Supabase:', error);
+			set([]);
+			return;
+		}
+
+		debugLog(`Loaded ${data?.length || 0} activities from Supabase`);
+
+		if (data && data.length > 0) {
+			const formattedActivities: ActivityRecord[] = data.map((record: any) => ({
+				id: record.id,
+				organization_id: record.organization_id,
+				profession_id: record.profession_id,
+				user_id: record.user_id,
+				team_id: record.team_id,
+				curriculum_activity_id: record.curriculum_activity_id,
+				entry_date: record.entry_date,
+				hours: record.hours,
+				notes: record.notes,
+				rating: record.rating,
+				created_at: record.created_at,
+				updated_at: record.updated_at,
+				activity_name: record.curriculum_nodes?.label || '',
+				activity_key: record.curriculum_nodes?.key || '',
+				activity_label: ''
+			}));
+			set(formattedActivities);
+		} else {
+			set([]);
+		}
+	};
+
+	return {
+		subscribe,
+		// Load activities from Supabase
+		load,
+		add: async (
+			activity: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>
+		): Promise<ActivityRecord | null> => {
+			debugLog('Adding new activity via store', activity);
+
+			if (!validateActivity(activity)) {
+				console.warn('[ActivityStorage] Activity validation failed, not adding');
+				return null;
+			}
+
+			const { data, error } = await supabase
+				.from('activity_records')
+				.insert({
+					organization_id: activity.organization_id,
+					profession_id: activity.profession_id,
+					user_id: activity.user_id,
+					team_id: activity.team_id,
+					curriculum_activity_id: activity.curriculum_activity_id,
+					entry_date: activity.entry_date,
+					hours: activity.hours,
+					notes: activity.notes,
+					rating: activity.rating
+				})
+				.select()
+				.single();
+
+			if (error) {
+				console.error('[ActivityStorage] Error inserting to Supabase:', error);
+				throw new Error(error.message || 'Failed to save activity');
+			}
+
+			debugLog('Activity saved to Supabase:', data);
+
+			// Store last activity ID for pre-filling (localStorage is fine for this)
+			if (typeof window !== 'undefined') {
+				localStorage.setItem(LAST_ACTIVITY_KEY, activity.curriculum_activity_id);
+			}
+
+			// Add to local store with the activity name info
+			const newActivity: ActivityRecord = {
+				...data,
+				activity_name: activity.activity_name || '',
+				activity_key: activity.activity_key || '',
+				activity_label: activity.activity_label || ''
+			};
+
+			update((activities) => [newActivity, ...activities]);
+			return newActivity;
+		},
+		delete: async (id: string): Promise<boolean> => {
+			debugLog('Deleting activity via store', { id });
+
+			const { error } = await supabase.from('activity_records').delete().eq('id', id);
+
+			if (error) {
+				console.error('[ActivityStorage] Error deleting from Supabase:', error);
+				throw new Error(error.message || 'Failed to delete activity');
+			}
+
+			debugLog('Activity deleted from Supabase:', id);
+
+			// Remove from local store
+			update((activities) => activities.filter((a) => a.id !== id));
+			return true;
+		},
+		refresh: async () => {
+			debugLog('Refreshing activity store from Supabase');
+			await load();
+		}
+	};
+}
+
+// Export the store instance
+export const activityStore = createActivityStore();
+
+// Backward compatible functions that use the store
+export async function getActivities(): Promise<ActivityRecord[]> {
+	debugLog('Fetching activities from Supabase...');
+
+	const { data, error } = await supabase
+		.from('activity_records')
+		.select('*, curriculum_nodes!inner(id, key, label)')
+		.order('created_at', { ascending: false });
+
+	if (error) {
+		console.error('[ActivityStorage] Error fetching from Supabase:', error);
+		return [];
+	}
+
+	if (data && data.length > 0) {
+		return data.map((record: any) => ({
+			id: record.id,
+			organization_id: record.organization_id,
+			profession_id: record.profession_id,
+			user_id: record.user_id,
+			team_id: record.team_id,
+			curriculum_activity_id: record.curriculum_activity_id,
+			entry_date: record.entry_date,
+			hours: record.hours,
+			notes: record.notes,
+			rating: record.rating,
+			created_at: record.created_at,
+			updated_at: record.updated_at,
+			activity_name: record.curriculum_nodes?.label || '',
+			activity_key: record.curriculum_nodes?.key || '',
+			activity_label: ''
+		}));
+	}
+
+	return [];
+}
+
+export async function addActivity(
+	activity: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>
+): Promise<ActivityRecord> {
+	debugLog('Adding new activity', activity);
+
+	if (!validateActivity(activity)) {
+		throw new Error('Invalid activity: hours must be a positive number');
+	}
+
+	const { data, error } = await supabase
+		.from('activity_records')
+		.insert({
+			organization_id: activity.organization_id,
+			profession_id: activity.profession_id,
+			user_id: activity.user_id,
+			team_id: activity.team_id,
+			curriculum_activity_id: activity.curriculum_activity_id,
+			entry_date: activity.entry_date,
+			hours: activity.hours,
+			notes: activity.notes,
+			rating: activity.rating
+		})
+		.select()
+		.single();
+
+	if (error) {
+		console.error('[ActivityStorage] Error inserting to Supabase:', error);
+		throw new Error(error.message || 'Failed to save activity');
+	}
+
+	// Store last activity ID for pre-filling
+	if (typeof window !== 'undefined') {
+		localStorage.setItem(LAST_ACTIVITY_KEY, activity.curriculum_activity_id);
+		debugLog('Stored last activity ID', activity.curriculum_activity_id);
+	}
+
+	debugLog('New activity created', data);
+
+	return {
+		...data,
+		activity_name: activity.activity_name || '',
+		activity_key: activity.activity_key || '',
+		activity_label: activity.activity_label || ''
+	};
+}
+
+export async function deleteActivity(id: string): Promise<void> {
+	debugLog('Deleting activity', { id });
+
+	const { error } = await supabase.from('activity_records').delete().eq('id', id);
+
+	if (error) {
+		console.error('[ActivityStorage] Error deleting from Supabase:', error);
+		throw new Error(error.message || 'Failed to delete activity');
+	}
+
+	debugLog('Activity deleted successfully', { id });
+}
+
+export function getLastActivityId(): string | null {
+	if (typeof window === 'undefined') return null;
+
+	const lastId = localStorage.getItem(LAST_ACTIVITY_KEY);
+	debugLog('Retrieved last activity ID', lastId);
+	return lastId;
+}
+
+export async function getActivityById(id: string): Promise<ActivityRecord | undefined> {
+	const { data, error } = await supabase
+		.from('activity_records')
+		.select('*, curriculum_nodes!inner(id, key, label)')
+		.eq('id', id)
+		.single();
+
+	if (error) {
+		console.error('[ActivityStorage] Error fetching activity by ID:', error);
+		return undefined;
+	}
+
+	if (!data) return undefined;
+
+	return {
+		...data,
+		activity_name: data.curriculum_nodes?.label || '',
+		activity_key: data.curriculum_nodes?.key || '',
+		activity_label: ''
+	};
+}
+
+// Debug functions to expose to console for debugging
+export async function debugGetAllActivities() {
+	const activities = await getActivities();
+	console.table(activities);
+	return activities;
+}
+
+export function debugShowStorageInfo() {
+	if (typeof window === 'undefined') {
+		console.log('[ActivityStorage] Storage Info not available during SSR');
+		return null;
+	}
+
+	const lastId = localStorage.getItem(LAST_ACTIVITY_KEY);
+	const info = {
+		lastActivityId: lastId,
+		note: 'Activities are now stored in Supabase, not localStorage'
+	};
+	console.log('[ActivityStorage] Storage Info:', info);
+	return info;
+}
+
+// Expose debug functions to window object for easy console access
+if (typeof window !== 'undefined') {
+	(window as any).activityDebug = {
+		getAll: debugGetAllActivities,
+		info: debugShowStorageInfo,
+		help: () => {
+			console.log(`
+Activity Storage Debug Commands:
+  activityDebug.getAll()     - Display all activities in a table
+  activityDebug.info()       - Show storage info
+  activityDebug.help()       - Show this help message
+
+Note: Activities are stored in Supabase, not localStorage.
+			`);
+		}
+	};
+
+	debugLog('Debug functions exposed to window.activityDebug');
+}
