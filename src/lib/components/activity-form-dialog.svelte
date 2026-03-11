@@ -14,6 +14,16 @@
 		AlertCircle
 	} from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
+	import { getLocale } from '$lib/paraglide/runtime.js';
+
+	const localeMap: Record<string, string> = {
+		en: 'en-GB',
+		'de-ch': 'de-CH',
+		it: 'it-IT',
+		fr: 'fr-FR'
+	};
+
+	const dateLocale = $derived(localeMap[getLocale()] ?? 'en-GB');
 
 	let {
 		open = $bindable(),
@@ -183,12 +193,12 @@
 	const isValid = $derived(selectedActivityId && hours > 0 && !isSubmitting);
 	const selectedDateLabel = $derived(
 		selectedDate
-			? new Date(`${selectedDate}T12:00:00`).toLocaleDateString('en-US', {
+			? new Intl.DateTimeFormat(dateLocale, {
 					weekday: 'long',
 					month: 'long',
 					day: 'numeric',
 					year: 'numeric'
-				})
+				}).format(new Date(`${selectedDate}T12:00:00`))
 			: null
 	);
 </script>
@@ -216,7 +226,7 @@
 				<div
 					class="rounded-lg border border-orange-200 bg-orange-50/80 px-4 py-3 text-sm text-stone-700"
 				>
-					This activity will be saved for <span class="font-semibold">{selectedDateLabel}</span>.
+					{m.activity_saved_for_date({ date: selectedDateLabel })}
 				</div>
 			{/if}
 

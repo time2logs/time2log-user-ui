@@ -54,5 +54,16 @@
 	"onboarding_error_email_missing": "L'adresse e-mail est manquante.",
 	"onboarding_error_signin_failed": "Compte créé mais connexion échouée : ",
 	"onboarding_first_name_placeholder": "Prénom",
-	"onboarding_last_name_placeholder": "Nom"
+	"onboarding_last_name_placeholder": "Nom",
+	"calendar_title": "Calendrier",
+	"calendar_description": "Sélectionnez un jour de travail pour voir et enregistrer des activités",
+	"calendar_selected": "Sélectionné",
+	"calendar_no_date_selected": "Aucune date sélectionnée",
+	"calendar_previous_month": "Afficher le mois précédent",
+	"calendar_next_month": "Afficher le mois suivant",
+	"activity_log_showing_for": "Affichage des activités pour {date}",
+	"welcome_back": "Bon retour",
+	"settings_title": "Paramètres",
+	"page_under_construction": "Page en construction",
+	"activity_saved_for_date": "Cette activité sera enregistrée pour le {date}."
 }

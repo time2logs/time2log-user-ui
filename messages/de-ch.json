@@ -54,5 +54,16 @@
 	"onboarding_error_email_missing": "E-Mail-Adresse fehlt.",
 	"onboarding_error_signin_failed": "Konto wurde erstellt, aber Anmeldung fehlgeschlagen: ",
 	"onboarding_first_name_placeholder": "Vorname",
-	"onboarding_last_name_placeholder": "Nachname"
+	"onboarding_last_name_placeholder": "Nachname",
+	"calendar_title": "Kalender",
+	"calendar_description": "Wählen Sie einen Arbeitstag aus, um Aktivitäten anzuzeigen und zu protokollieren",
+	"calendar_selected": "Ausgewählt",
+	"calendar_no_date_selected": "Kein Datum ausgewählt",
+	"calendar_previous_month": "Vorherigen Monat anzeigen",
+	"calendar_next_month": "Nächsten Monat anzeigen",
+	"activity_log_showing_for": "Aktivitäten für {date}",
+	"welcome_back": "Willkommen zurück",
+	"settings_title": "Einstellungen",
+	"page_under_construction": "Seite im Aufbau",
+	"activity_saved_for_date": "Diese Aktivität wird für {date} gespeichert."
 }
