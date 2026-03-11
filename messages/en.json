@@ -54,5 +54,16 @@
 	"onboarding_error_email_missing": "Email address is missing.",
 	"onboarding_error_signin_failed": "Account created but sign in failed: ",
 	"onboarding_first_name_placeholder": "First Name",
-	"onboarding_last_name_placeholder": "Last Name"
+	"onboarding_last_name_placeholder": "Last Name",
+	"calendar_title": "Calendar",
+	"calendar_description": "Select a workday to view and log activities",
+	"calendar_selected": "Selected",
+	"calendar_no_date_selected": "No date selected",
+	"calendar_previous_month": "Show previous month",
+	"calendar_next_month": "Show next month",
+	"activity_log_showing_for": "Showing activities for {date}",
+	"welcome_back": "Welcome back",
+	"settings_title": "Settings",
+	"page_under_construction": "Page under construction",
+	"activity_saved_for_date": "This activity will be saved for {date}."
 }
