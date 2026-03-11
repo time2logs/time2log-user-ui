@@ -30,13 +30,15 @@
 		curriculumNodes,
 		teamMember,
 		onActivityAdded,
-		selectedDate
+		selectedDate,
+		activityToEdit = null
 	}: {
 		open: boolean;
 		curriculumNodes: CurriculumNode[];
 		teamMember: TeamMember | null;
 		onActivityAdded: () => void;
 		selectedDate?: string;
+		activityToEdit?: import('$lib/types').ActivityRecord | null;
 	} = $props();
 
 	// Build tree from flat list
@@ -82,14 +84,24 @@
 	let hasInitialized = $state(false);
 	let submitError = $state<string | null>(null);
 
-	// Pre-fill with last activity when dialog opens
+	// Pre-fill with last activity or edit activity when dialog opens
 	$effect(() => {
 		if (open && !hasInitialized) {
-			const lastActivityId = getLastActivityId();
-			if (lastActivityId && activityNodes.find((n) => n.id === lastActivityId)) {
-				selectedActivityId = lastActivityId;
-			} else if (activityNodes.length > 0) {
-				selectedActivityId = activityNodes[0].id;
+			if (activityToEdit) {
+				selectedActivityId = activityToEdit.curriculum_activity_id;
+				rating = activityToEdit.rating || 0;
+				hours = activityToEdit.hours;
+				notes = activityToEdit.notes || '';
+			} else {
+				const lastActivityId = getLastActivityId();
+				if (lastActivityId && activityNodes.find((n) => n.id === lastActivityId)) {
+					selectedActivityId = lastActivityId;
+				} else if (activityNodes.length > 0) {
+					selectedActivityId = activityNodes[0].id;
+				}
+				rating = 0;
+				hours = 0;
+				notes = '';
 			}
 			// Auto-expand all categories to show activities
 			const newExpanded = new Set<string>();
@@ -99,10 +111,6 @@
 				}
 			});
 			expanded = newExpanded;
-			// Reset other fields
-			rating = 0;
-			hours = 0;
-			notes = '';
 			submitError = null;
 			hasInitialized = true;
 		} else if (!open) {
@@ -137,44 +145,63 @@
 		submitError = null;
 
 		try {
-			// Prepare activity data
-			const activityData = {
-				organization_id: teamMember.organization_id || '',
-				profession_id: teamMember.profession_id || '',
-				user_id: teamMember.user_id || '',
-				team_id: teamMember.team_id || null,
-				curriculum_activity_id: selectedActivity.id,
-				entry_date: selectedDate || new Date().toISOString().split('T')[0],
-				hours,
-				notes: notes || null,
-				rating: rating || null,
-				activity_name: selectedActivity.label,
-				activity_key: selectedActivity.key,
-				activity_label: ''
-			};
+			if (activityToEdit) {
+				const updateData = {
+					curriculum_activity_id: selectedActivity.id,
+					entry_date: selectedDate || activityToEdit.entry_date,
+					hours,
+					notes: notes || null,
+					rating: rating || null,
+					activity_name: selectedActivity.label,
+					activity_key: selectedActivity.key,
+					activity_label: ''
+				};
 
-			// Validate data before sending
-			if (!activityData.organization_id || !activityData.profession_id || !activityData.user_id) {
-				console.error('[ActivityForm] Validation failed:', {
-					organization_id: activityData.organization_id,
-					profession_id: activityData.profession_id,
-					user_id: activityData.user_id
-				});
-				throw new Error('Missing required user information');
+				if (updateData.hours <= 0) {
+					throw new Error('Hours must be greater than 0');
+				}
+
+				if (updateData.rating !== null && (updateData.rating < 1 || updateData.rating > 5)) {
+					throw new Error('Rating must be between 1 and 5');
+				}
+
+				await activityStore.update(activityToEdit.id, updateData);
+			} else {
+				const activityData = {
+					organization_id: teamMember.organization_id || '',
+					profession_id: teamMember.profession_id || '',
+					user_id: teamMember.user_id || '',
+					team_id: teamMember.team_id || null,
+					curriculum_activity_id: selectedActivity.id,
+					entry_date: selectedDate || new Date().toISOString().split('T')[0],
+					hours,
+					notes: notes || null,
+					rating: rating || null,
+					activity_name: selectedActivity.label,
+					activity_key: selectedActivity.key,
+					activity_label: ''
+				};
+
+				if (!activityData.organization_id || !activityData.profession_id || !activityData.user_id) {
+					console.error('[ActivityForm] Validation failed:', {
+						organization_id: activityData.organization_id,
+						profession_id: activityData.profession_id,
+						user_id: activityData.user_id
+					});
+					throw new Error('Missing required user information');
+				}
+
+				if (activityData.hours <= 0) {
+					throw new Error('Hours must be greater than 0');
+				}
+
+				if (activityData.rating !== null && (activityData.rating < 1 || activityData.rating > 5)) {
+					throw new Error('Rating must be between 1 and 5');
+				}
+
+				await activityStore.add(activityData);
 			}
 
-			if (activityData.hours <= 0) {
-				throw new Error('Hours must be greater than 0');
-			}
-
-			if (activityData.rating !== null && (activityData.rating < 1 || activityData.rating > 5)) {
-				throw new Error('Rating must be between 1 and 5');
-			}
-
-			// Add activity via centralized store (writes to Supabase)
-			await activityStore.add(activityData);
-
-			// Close dialog and notify parent
 			open = false;
 			onActivityAdded();
 		} catch (error) {
@@ -206,8 +233,14 @@
 <Dialog.Root bind:open>
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>{m.log_activity_title()}</Dialog.Title>
-			<Dialog.Description>{m.log_activity_description()}</Dialog.Description>
+			<Dialog.Title
+				>{activityToEdit ? m.edit_activity_title() : m.log_activity_title()}</Dialog.Title
+			>
+			<Dialog.Description
+				>{activityToEdit
+					? m.edit_activity_description()
+					: m.log_activity_description()}</Dialog.Description
+			>
 		</Dialog.Header>
 
 		<!-- Error Display -->
@@ -368,7 +401,7 @@
 						Saving...
 					</span>
 				{:else}
-					{m.log_activity_button()}
+					{activityToEdit ? m.save_changes_button() : m.log_activity_button()}
 				{/if}
 			</Button>
 		</Dialog.Footer>

@@ -34,6 +34,7 @@
 	let activityDialogOpen = $state(false);
 	let mobileMenuOpen = $state(false);
 	let refreshKey = $state(0);
+	let editingActivity = $state<ActivityRecord | null>(null);
 	const timeZone = getLocalTimeZone();
 
 	function getDefaultSelectedDate(): DateValue {
@@ -88,6 +89,12 @@
 
 	function handleActivityAdded() {
 		refreshKey++;
+		editingActivity = null;
+	}
+
+	function handleEditActivity(activity: ActivityRecord) {
+		editingActivity = activity;
+		activityDialogOpen = true;
 	}
 
 	const initials = $derived(
@@ -109,14 +116,14 @@
 					{#if data.profile?.avatar_url}
 						<div class="h-16 w-16 overflow-hidden rounded-full border-2 border-white shadow-lg">
 							<img
-									src={data.profile.avatar_url}
-									alt={fullName}
-									class="h-full w-full object-cover"
+								src={data.profile.avatar_url}
+								alt={fullName}
+								class="h-full w-full object-cover"
 							/>
 						</div>
 					{:else}
 						<div
-								class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-rose-400 text-xl font-semibold text-white shadow-lg"
+							class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-rose-400 text-xl font-semibold text-white shadow-lg"
 						>
 							{initials}
 						</div>
@@ -174,7 +181,11 @@
 						</Button>
 					</Card.Header>
 					<Card.Content class="p-0">
-						<ActivityList onRefresh={handleActivityAdded} selectedDate={selectedDateIso} />
+						<ActivityList
+							onRefresh={handleActivityAdded}
+							selectedDate={selectedDateIso}
+							onEdit={handleEditActivity}
+						/>
 					</Card.Content>
 				</GlassCard>
 			</div>
@@ -186,6 +197,7 @@
 					teamMember={data.teamMember}
 					onActivityAdded={handleActivityAdded}
 					selectedDate={selectedDateIso}
+					activityToEdit={editingActivity}
 				/>
 			{/if}
 		</div>

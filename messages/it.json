@@ -65,5 +65,8 @@
 	"welcome_back": "Bentornato",
 	"settings_title": "Impostazioni",
 	"page_under_construction": "Pagina in costruzione",
-	"activity_saved_for_date": "Questa attività verrà salvata per {date}."
+	"activity_saved_for_date": "Questa attività verrà salvata per {date}.",
+	"edit_activity_title": "Modifica Attività",
+	"edit_activity_description": "Aggiorna i dettagli della tua attività.",
+	"save_changes_button": "Salva Modifiche"
 }

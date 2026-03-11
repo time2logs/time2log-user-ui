@@ -21,7 +21,7 @@ function validateActivity(activity: { hours: number }): boolean {
 
 // Create a writable store for activities
 function createActivityStore() {
-	const { subscribe, set, update } = writable<ActivityRecord[]>([]);
+	const { subscribe, set, update: updateStore } = writable<ActivityRecord[]>([]);
 	const load = async () => {
 		if (typeof window === 'undefined') return;
 
@@ -114,7 +114,7 @@ function createActivityStore() {
 				activity_label: activity.activity_label || ''
 			};
 
-			update((activities) => [newActivity, ...activities]);
+			updateStore((activities) => [newActivity, ...activities]);
 			return newActivity;
 		},
 		delete: async (id: string): Promise<boolean> => {
@@ -130,8 +130,64 @@ function createActivityStore() {
 			debugLog('Activity deleted from Supabase:', id);
 
 			// Remove from local store
-			update((activities) => activities.filter((a) => a.id !== id));
+			updateStore((activities) => activities.filter((a) => a.id !== id));
 			return true;
+		},
+		update: async (
+			id: string,
+			activity: Partial<
+				Pick<
+					ActivityRecord,
+					| 'curriculum_activity_id'
+					| 'entry_date'
+					| 'hours'
+					| 'notes'
+					| 'rating'
+					| 'activity_name'
+					| 'activity_key'
+					| 'activity_label'
+				>
+			>
+		): Promise<ActivityRecord | null> => {
+			debugLog('Updating activity via store', { id, activity });
+
+			if (activity.hours !== undefined && !validateActivity({ hours: activity.hours })) {
+				console.warn('[ActivityStorage] Activity validation failed, not updating');
+				return null;
+			}
+
+			const updateData: Record<string, any> = {};
+			if (activity.curriculum_activity_id !== undefined)
+				updateData.curriculum_activity_id = activity.curriculum_activity_id;
+			if (activity.entry_date !== undefined) updateData.entry_date = activity.entry_date;
+			if (activity.hours !== undefined) updateData.hours = activity.hours;
+			if (activity.notes !== undefined) updateData.notes = activity.notes;
+			if (activity.rating !== undefined) updateData.rating = activity.rating;
+
+			const { data, error } = await supabase
+				.from('activity_records')
+				.update(updateData)
+				.eq('id', id)
+				.select('*, curriculum_nodes!inner(id, key, label)')
+				.single();
+
+			if (error) {
+				console.error('[ActivityStorage] Error updating in Supabase:', error);
+				throw new Error(error.message || 'Failed to update activity');
+			}
+
+			debugLog('Activity updated in Supabase:', data);
+
+			const updatedActivity: ActivityRecord = {
+				...data,
+				activity_name: data.curriculum_nodes?.label || activity.activity_name || '',
+				activity_key: data.curriculum_nodes?.key || activity.activity_key || '',
+				activity_label: activity.activity_label || ''
+			};
+
+			updateStore((activities) => activities.map((a) => (a.id === id ? updatedActivity : a)));
+
+			return updatedActivity;
 		},
 		refresh: async () => {
 			debugLog('Refreshing activity store from Supabase');
