@@ -1,16 +1,18 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { Trash2, Calendar, Clock, Star } from 'lucide-svelte';
+	import { Trash2, Calendar, Clock, Star, Pencil } from 'lucide-svelte';
 	import { activityStore } from '$lib/activityStorage';
 	import type { ActivityRecord } from '$lib/types';
 	import * as m from '$lib/paraglide/messages.js';
 
 	let {
 		onRefresh,
-		selectedDate
+		selectedDate,
+		onEdit
 	}: {
 		onRefresh: () => void;
 		selectedDate?: string;
+		onEdit?: (activity: ActivityRecord) => void;
 	} = $props();
 
 	// Subscribe to the store for automatic updates
@@ -120,15 +122,25 @@
 						{/if}
 					</div>
 
-					<!-- Delete Button -->
-					<Button
-						variant="ghost"
-						size="icon"
-						onclick={() => handleDelete(activity.id)}
-						class="text-stone-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
-					>
-						<Trash2 class="h-4 w-4" />
-					</Button>
+					<!-- Action Buttons -->
+					<div class="flex items-center gap-1">
+						<Button
+							variant="ghost"
+							size="icon"
+							onclick={() => onEdit?.(activity)}
+							class="text-stone-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-500"
+						>
+							<Pencil class="h-4 w-4" />
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon"
+							onclick={() => handleDelete(activity.id)}
+							class="text-stone-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500"
+						>
+							<Trash2 class="h-4 w-4" />
+						</Button>
+					</div>
 				</div>
 			{/each}
 		</div>

@@ -65,5 +65,8 @@
 	"welcome_back": "Bon retour",
 	"settings_title": "Paramètres",
 	"page_under_construction": "Page en construction",
-	"activity_saved_for_date": "Cette activité sera enregistrée pour le {date}."
+	"activity_saved_for_date": "Cette activité sera enregistrée pour le {date}.",
+	"edit_activity_title": "Modifier l'Activité",
+	"edit_activity_description": "Mettez à jour les détails de votre activité.",
+	"save_changes_button": "Enregistrer les Modifications"
 }
