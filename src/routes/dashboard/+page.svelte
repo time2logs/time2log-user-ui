@@ -106,11 +106,21 @@
 		<div class="mx-auto max-w-4xl">
 			<div class="mb-8 flex items-center justify-between gap-4">
 				<div class="flex items-center gap-3 sm:gap-4">
-					<div
-						class="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-rose-400 text-base font-semibold text-white shadow-lg sm:h-16 sm:w-16 sm:text-xl"
-					>
-						{initials}
-					</div>
+					{#if data.profile?.avatar_url}
+						<div class="h-16 w-16 overflow-hidden rounded-full border-2 border-white shadow-lg">
+							<img
+									src={data.profile.avatar_url}
+									alt={fullName}
+									class="h-full w-full object-cover"
+							/>
+						</div>
+					{:else}
+						<div
+								class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-rose-400 text-xl font-semibold text-white shadow-lg"
+						>
+							{initials}
+						</div>
+					{/if}
 					<div class="min-w-0">
 						<h1 class="truncate text-xl font-bold text-stone-800 sm:text-2xl">
 							{m.welcome({ name: firstName })}
