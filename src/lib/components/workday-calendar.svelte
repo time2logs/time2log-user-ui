@@ -173,13 +173,7 @@
 					cell.selected &&
 						'border-rose-400 bg-gradient-to-br from-orange-400 to-rose-400 text-white shadow-[0_10px_30px_rgba(244,114,182,0.28)]',
 					cell.disabled &&
-						'cursor-not-allowed opacity-45 hover:translate-y-0 hover:border-orange-100/80 hover:bg-white/85 hover:text-stone-700',
-					!cell.hasActivity &&
-						!cell.selected &&
-						!cell.isToday &&
-						!cell.disabled &&
-						!cell.outsideMonth &&
-						'opacity-55'
+						'cursor-not-allowed opacity-45 hover:translate-y-0 hover:border-orange-100/80 hover:bg-white/85 hover:text-stone-700'
 				)}
 				onclick={() => selectDate(cell.date, cell.disabled)}
 				disabled={cell.disabled}
