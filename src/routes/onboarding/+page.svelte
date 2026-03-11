@@ -17,6 +17,46 @@
 	let password = $state('');
 	let isSubmitting = $state(false);
 
+	let avatarFile: File | null = $state(null);
+	let avatarPreviewUrl = $state('');
+	let avatarError = $state('');
+
+	function handleAvatarChange(e: Event) {
+		const target = e.target as HTMLInputElement;
+		const file = target.files?.[0];
+		avatarError = '';
+		
+		if (file) {
+			if (file.size > 5 * 1024 * 1024) {
+				avatarError = 'File size exceeds 5MB limit. Please choose a smaller image.';
+				avatarFile = null;
+				avatarPreviewUrl = '';
+				target.value = ''; // reset input
+				return;
+			}
+			
+			if (!file.type.startsWith('image/')) {
+				avatarError = 'Unsupported file type. Please use JPEG, PNG, or WEBP.';
+				avatarFile = null;
+				avatarPreviewUrl = '';
+				target.value = ''; // reset input
+				return;
+			}
+			
+			avatarFile = file;
+			avatarPreviewUrl = URL.createObjectURL(file);
+		} else {
+			avatarFile = null;
+			avatarPreviewUrl = '';
+		}
+	}
+
+	$effect(() => {
+		return () => {
+			if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+		};
+	});
+
 	// Reactively sync initial values from form (on action failure)
 	$effect(() => {
 		firstName = form?.values?.firstName ?? '';
@@ -70,6 +110,7 @@
 						<form
 							method="POST"
 							action="?/complete"
+							enctype="multipart/form-data"
 							use:enhance={() => {
 								isSubmitting = true;
 								return async ({ update }) => {
@@ -82,6 +123,35 @@
 							<input type="hidden" name="invite_token" value={data.token} />
 
 							<div>
+								<Label for="avatar">Profile Picture (Optional)</Label>
+								<div class="mt-2 flex items-center gap-4">
+									{#if avatarPreviewUrl}
+										<div class="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-stone-200">
+											<img src={avatarPreviewUrl} alt="Avatar preview" class="h-full w-full object-cover" />
+										</div>
+									{:else}
+										<div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-dashed border-stone-300 bg-stone-50 text-stone-400">
+											<span class="text-xs">No image</span>
+										</div>
+									{/if}
+									<div class="flex-1">
+										<Input
+											id="avatar"
+											name="avatar"
+											type="file"
+											accept="image/jpeg, image/png, image/webp"
+											onchange={handleAvatarChange}
+											disabled={isSubmitting}
+											class="text-sm file:mr-4 file:rounded-md file:border-0 file:bg-stone-100 file:px-4 file:py-2 file:text-sm file:font-semibold hover:file:bg-stone-200"
+										/>
+									</div>
+								</div>
+								{#if avatarError}
+									<p class="mt-1 text-sm text-red-600">{avatarError}</p>
+								{/if}
+							</div>
+
+							<div>
 								<Label for="email">{m.onboarding_email_label()}</Label>
 								<Input
 									id="email"
@@ -89,7 +159,6 @@
 									type="email"
 									value={data.inviteDetails.email}
 									readonly
-									disabled
 									class="bg-stone-100 text-stone-500"
 								/>
 							</div>

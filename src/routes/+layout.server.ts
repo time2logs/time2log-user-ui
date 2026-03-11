@@ -3,10 +3,11 @@ import type { LayoutServerLoad } from './$types';
 import type { CurriculumNode, TeamMember, Team } from '$lib/types';
 
 type Profile = {
-	id: number;
+	id: string;
 	first_name: string;
 	last_name: string;
 	onboarding_status: string;
+	avatar_url: string | null;
 };
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
@@ -22,7 +23,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		const userId = session.user.id;
 
 		const [profileResult, teamMemberResult] = await Promise.all([
-			locals.supabase.from('profiles').select<'profiles', Profile>().eq('id', userId).single(),
+			locals.supabase.from('profiles').select('*').eq('id', userId).single(),
 			locals.supabaseAdmin.from('team_members').select('*').eq('user_id', userId).limit(1)
 		]);
 

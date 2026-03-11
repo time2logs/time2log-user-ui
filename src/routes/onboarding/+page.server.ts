@@ -73,6 +73,22 @@ export const actions: Actions = {
 		const password = formData.get('password')?.toString() ?? '';
 		const token = formData.get('invite_token')?.toString() ?? '';
 		const email = formData.get('email')?.toString().trim() ?? '';
+		const avatarFile = formData.get('avatar') as File | null;
+
+		if (avatarFile && avatarFile.size > 0) {
+			if (avatarFile.size > 5 * 1024 * 1024) {
+				return fail(400, {
+					error: 'File size exceeds 5MB limit. Please choose a smaller image.',
+					values: { firstName, lastName }
+				});
+			}
+			if (!avatarFile.type.startsWith('image/')) {
+				return fail(400, {
+					error: 'Unsupported file type. Please use JPEG, PNG, or WEBP.',
+					values: { firstName, lastName }
+				});
+			}
+		}
 
 		// Validate required fields
 		if (!firstName || !lastName) {
@@ -185,6 +201,32 @@ export const actions: Actions = {
 				error: acceptError.message,
 				values: { firstName, lastName }
 			});
+		}
+
+		// 4. Upload avatar if provided
+		if (avatarFile && avatarFile.size > 0) {
+			const fileExt = avatarFile.name.split('.').pop() || 'jpg';
+			const filePath = `${newUser.user.id}/avatar-${Date.now()}.${fileExt}`;
+
+			const { error: uploadError } = await locals.supabase.storage
+				.from('avatars')
+				.upload(filePath, avatarFile);
+
+			if (uploadError) {
+				console.error('Avatar upload failed:', uploadError);
+				// We don't fail the whole onboarding process if just the avatar fails
+			} else {
+				const { data: publicUrlData } = locals.supabase.storage
+					.from('avatars')
+					.getPublicUrl(filePath);
+
+				if (publicUrlData) {
+					await locals.supabase
+						.from('profiles')
+						.update({ avatar_url: publicUrlData.publicUrl })
+						.eq('id', newUser.user.id);
+				}
+			}
 		}
 
 		throw redirect(303, '/dashboard');
