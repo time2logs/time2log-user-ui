@@ -232,6 +232,7 @@ export async function saveActivity(activity: {
 	hours: number;
 	notes: string | null;
 	rating: number | null;
+	location: string;
 }): Promise<{ success: boolean; message: string; activity?: any }> {
 	try {
 		const result = await apiRequest<{ success: boolean; message: string; activity?: any }>(
