@@ -79,6 +79,7 @@
 	let selectedActivityId = $state<string>('');
 	let rating = $state<number>(0);
 	let hours = $state<number>(0);
+	let location = $state<string>('');
 	let notes = $state<string>('');
 	let isSubmitting = $state(false);
 	let hasInitialized = $state(false);
@@ -91,6 +92,7 @@
 				selectedActivityId = activityToEdit.curriculum_activity_id;
 				rating = activityToEdit.rating || 0;
 				hours = activityToEdit.hours;
+				location = activityToEdit.location || '';
 				notes = activityToEdit.notes || '';
 			} else {
 				const lastActivityId = getLastActivityId();
@@ -101,6 +103,7 @@
 				}
 				rating = 0;
 				hours = 0;
+				location = '';
 				notes = '';
 			}
 			// Auto-expand all categories to show activities
@@ -152,6 +155,7 @@
 					hours,
 					notes: notes || null,
 					rating: rating || null,
+					location,
 					activity_name: selectedActivity.label,
 					activity_key: selectedActivity.key,
 					activity_label: ''
@@ -159,6 +163,10 @@
 
 				if (updateData.hours <= 0) {
 					throw new Error('Hours must be greater than 0');
+				}
+
+				if (!updateData.location.trim()) {
+					throw new Error('Location is required');
 				}
 
 				if (updateData.rating !== null && (updateData.rating < 1 || updateData.rating > 5)) {
@@ -177,6 +185,7 @@
 					hours,
 					notes: notes || null,
 					rating: rating || null,
+					location,
 					activity_name: selectedActivity.label,
 					activity_key: selectedActivity.key,
 					activity_label: ''
@@ -193,6 +202,10 @@
 
 				if (activityData.hours <= 0) {
 					throw new Error('Hours must be greater than 0');
+				}
+
+				if (!activityData.location.trim()) {
+					throw new Error('Location is required');
 				}
 
 				if (activityData.rating !== null && (activityData.rating < 1 || activityData.rating > 5)) {
@@ -217,7 +230,7 @@
 		rating = value;
 	}
 
-	const isValid = $derived(selectedActivityId && hours > 0 && !isSubmitting);
+	const isValid = $derived(selectedActivityId && hours > 0 && location.trim() && !isSubmitting);
 	const selectedDateLabel = $derived(
 		selectedDate
 			? new Intl.DateTimeFormat(dateLocale, {
@@ -361,6 +374,18 @@
 					step="0.5"
 					bind:value={hours}
 					placeholder={m.hours_placeholder()}
+					class="flex h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-stone-500 focus-visible:ring-1 focus-visible:ring-stone-950 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+				/>
+			</div>
+
+			<!-- Location -->
+			<div class="grid gap-2">
+				<Label for="location">{m.location_label()}</Label>
+				<input
+					id="location"
+					type="text"
+					bind:value={location}
+					placeholder={m.location_placeholder()}
 					class="flex h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-stone-500 focus-visible:ring-1 focus-visible:ring-stone-950 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 				/>
 			</div>

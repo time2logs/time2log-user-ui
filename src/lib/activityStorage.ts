@@ -52,6 +52,7 @@ function createActivityStore() {
 				hours: record.hours,
 				notes: record.notes,
 				rating: record.rating,
+				location: record.location || '',
 				created_at: record.created_at,
 				updated_at: record.updated_at,
 				activity_name: record.curriculum_nodes?.label || '',
@@ -89,7 +90,8 @@ function createActivityStore() {
 					entry_date: activity.entry_date,
 					hours: activity.hours,
 					notes: activity.notes,
-					rating: activity.rating
+					rating: activity.rating,
+					location: activity.location
 				})
 				.select()
 				.single();
@@ -143,6 +145,7 @@ function createActivityStore() {
 					| 'hours'
 					| 'notes'
 					| 'rating'
+					| 'location'
 					| 'activity_name'
 					| 'activity_key'
 					| 'activity_label'
@@ -163,6 +166,7 @@ function createActivityStore() {
 			if (activity.hours !== undefined) updateData.hours = activity.hours;
 			if (activity.notes !== undefined) updateData.notes = activity.notes;
 			if (activity.rating !== undefined) updateData.rating = activity.rating;
+			if (activity.location !== undefined) updateData.location = activity.location;
 
 			const { data, error } = await supabase
 				.from('activity_records')
@@ -225,6 +229,7 @@ export async function getActivities(): Promise<ActivityRecord[]> {
 			hours: record.hours,
 			notes: record.notes,
 			rating: record.rating,
+			location: record.location || '',
 			created_at: record.created_at,
 			updated_at: record.updated_at,
 			activity_name: record.curriculum_nodes?.label || '',
@@ -256,7 +261,8 @@ export async function addActivity(
 			entry_date: activity.entry_date,
 			hours: activity.hours,
 			notes: activity.notes,
-			rating: activity.rating
+			rating: activity.rating,
+			location: activity.location
 		})
 		.select()
 		.single();
@@ -276,6 +282,7 @@ export async function addActivity(
 
 	return {
 		...data,
+		location: data.location || activity.location || '',
 		activity_name: activity.activity_name || '',
 		activity_key: activity.activity_key || '',
 		activity_label: activity.activity_label || ''
@@ -319,6 +326,7 @@ export async function getActivityById(id: string): Promise<ActivityRecord | unde
 
 	return {
 		...data,
+		location: data.location || '',
 		activity_name: data.curriculum_nodes?.label || '',
 		activity_key: data.curriculum_nodes?.key || '',
 		activity_label: ''

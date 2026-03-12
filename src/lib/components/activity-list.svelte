@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { Trash2, Calendar, Clock, Star, Pencil } from 'lucide-svelte';
+	import { Trash2, Calendar, Clock, Star, Pencil, MapPin } from 'lucide-svelte';
 	import { activityStore } from '$lib/activityStorage';
 	import type { ActivityRecord } from '$lib/types';
 	import * as m from '$lib/paraglide/messages.js';
@@ -110,6 +110,12 @@
 								<Clock class="h-3.5 w-3.5" />
 								<span class="font-medium">{formatTime(activity.hours)}</span>
 							</div>
+							{#if activity.location}
+								<div class="flex items-center gap-1">
+									<MapPin class="h-3.5 w-3.5" />
+									<span>{activity.location}</span>
+								</div>
+							{/if}
 							{#if activity.rating}
 								<div class="flex items-center gap-0.5">
 									<Star class="h-3.5 w-3.5 fill-orange-400 text-orange-400" />
