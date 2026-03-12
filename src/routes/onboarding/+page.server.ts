@@ -76,9 +76,9 @@ export const actions: Actions = {
 		const avatarFile = formData.get('avatar') as File | null;
 
 		if (avatarFile && avatarFile.size > 0) {
-			if (avatarFile.size > 5 * 1024 * 1024) {
+			if (avatarFile.size > 512 * 1024) {
 				return fail(400, {
-					error: 'File size exceeds 5MB limit. Please choose a smaller image.',
+					error: 'File size exceeds 0.5MB limit. Please choose a smaller image.',
 					values: { firstName, lastName }
 				});
 			}

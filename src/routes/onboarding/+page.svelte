@@ -7,7 +7,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
 	import { enhance } from '$app/forms';
-	import { Loader2 } from 'lucide-svelte';
+	import { Loader2, Plus } from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
 
 	let { data, form } = $props();
@@ -16,35 +16,125 @@
 	let lastName = $state('');
 	let password = $state('');
 	let isSubmitting = $state(false);
+	let isCompressing = $state(false);
 
 	let avatarFile: File | null = $state(null);
 	let avatarPreviewUrl = $state('');
 	let avatarError = $state('');
+	let fileInput: HTMLInputElement;
 
-	function handleAvatarChange(e: Event) {
+	async function compressImage(file: File): Promise<Blob> {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.readAsDataURL(file);
+			reader.onload = (event) => {
+				const img = new Image();
+				img.src = event.target?.result as string;
+				img.onload = () => {
+					const canvas = document.createElement('canvas');
+					let MAX_WIDTH = 800;
+					let MAX_HEIGHT = 800;
+					let width = img.width;
+					let height = img.height;
+
+					if (width > height) {
+						if (width > MAX_WIDTH) {
+							height *= MAX_WIDTH / width;
+							width = MAX_WIDTH;
+						}
+					} else {
+						if (height > MAX_HEIGHT) {
+							width *= MAX_HEIGHT / height;
+							height = MAX_HEIGHT;
+						}
+					}
+
+					canvas.width = width;
+					canvas.height = height;
+					const ctx = canvas.getContext('2d');
+					ctx?.drawImage(img, 0, 0, width, height);
+
+					// Start with high quality and decrease until under 0.5MB
+					let quality = 0.9;
+					const targetSize = 500 * 1024; // 0.5MB
+
+					const attemptBlob = () => {
+						canvas.toBlob(
+							(blob) => {
+								if (blob) {
+									if (blob.size > targetSize && quality > 0.1) {
+										quality -= 0.1;
+										attemptBlob();
+									} else if (blob.size > targetSize && (MAX_WIDTH > 200)) {
+										// If still too big, try resizing even smaller
+										MAX_WIDTH -= 200;
+										MAX_HEIGHT -= 200;
+										
+										let newWidth = img.width;
+										let newHeight = img.height;
+										if (newWidth > newHeight) {
+											if (newWidth > MAX_WIDTH) {
+												newHeight *= MAX_WIDTH / newWidth;
+												newWidth = MAX_WIDTH;
+											}
+										} else {
+											if (newHeight > MAX_HEIGHT) {
+												newWidth *= MAX_HEIGHT / newHeight;
+												newHeight = MAX_HEIGHT;
+											}
+										}
+										canvas.width = newWidth;
+										canvas.height = newHeight;
+										ctx?.drawImage(img, 0, 0, newWidth, newHeight);
+										quality = 0.7; // Reset quality for smaller dimensions
+										attemptBlob();
+									} else {
+										resolve(blob);
+									}
+								} else {
+									reject(new Error('Canvas to Blob failed'));
+								}
+							},
+							'image/jpeg',
+							quality
+						);
+					};
+					attemptBlob();
+				};
+				img.onerror = () => reject(new Error('Image load failed'));
+			};
+			reader.onerror = () => reject(new Error('FileReader failed'));
+		});
+	}
+
+	async function handleAvatarChange(e: Event) {
 		const target = e.target as HTMLInputElement;
 		const file = target.files?.[0];
 		avatarError = '';
-		
+
 		if (file) {
-			if (file.size > 5 * 1024 * 1024) {
-				avatarError = 'File size exceeds 5MB limit. Please choose a smaller image.';
-				avatarFile = null;
-				avatarPreviewUrl = '';
-				target.value = ''; // reset input
-				return;
-			}
-			
 			if (!file.type.startsWith('image/')) {
 				avatarError = 'Unsupported file type. Please use JPEG, PNG, or WEBP.';
 				avatarFile = null;
 				avatarPreviewUrl = '';
-				target.value = ''; // reset input
+				target.value = '';
 				return;
 			}
-			
-			avatarFile = file;
-			avatarPreviewUrl = URL.createObjectURL(file);
+
+			try {
+				isCompressing = true;
+				const compressedBlob = await compressImage(file);
+				const compressedFile = new File([compressedBlob], 'avatar.jpg', { type: 'image/jpeg' });
+				
+				avatarFile = compressedFile;
+				if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
+				avatarPreviewUrl = URL.createObjectURL(compressedFile);
+			} catch (err) {
+				console.error('Compression failed:', err);
+				avatarError = 'Failed to process image. Please try another one.';
+			} finally {
+				isCompressing = false;
+			}
 		} else {
 			avatarFile = null;
 			avatarPreviewUrl = '';
@@ -111,8 +201,11 @@
 							method="POST"
 							action="?/complete"
 							enctype="multipart/form-data"
-							use:enhance={() => {
+							use:enhance={({ formData }) => {
 								isSubmitting = true;
+								if (avatarFile) {
+									formData.set('avatar', avatarFile);
+								}
 								return async ({ update }) => {
 									isSubmitting = false;
 									await update();
@@ -124,30 +217,49 @@
 
 							<div>
 								<Label for="avatar">Profile Picture (Optional)</Label>
-								<div class="mt-2 flex items-center gap-4">
-									{#if avatarPreviewUrl}
-										<div class="relative h-16 w-16 shrink-0 overflow-hidden rounded-full border border-stone-200">
-											<img src={avatarPreviewUrl} alt="Avatar preview" class="h-full w-full object-cover" />
+								<div class="mt-2 flex flex-col items-center gap-4">
+									<button
+										type="button"
+										onclick={() => fileInput.click()}
+										class="group relative h-24 w-24 overflow-hidden rounded-full border-2 border-dashed border-stone-300 bg-stone-50 transition-all hover:border-orange-400 hover:bg-stone-100 disabled:cursor-not-allowed"
+										disabled={isSubmitting}
+									>
+										{#if avatarPreviewUrl}
+											<img
+												src={avatarPreviewUrl}
+												alt="Avatar preview"
+												class="h-full w-full object-cover transition-opacity group-hover:opacity-50"
+											/>
+										{:else}
+											<div class="flex h-full w-full items-center justify-center text-stone-400 group-hover:text-orange-500">
+												<Plus class="h-8 w-8" />
+											</div>
+										{/if}
+										
+										<div class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
+											<div class="rounded-full bg-white/80 p-2 shadow-sm">
+												<Plus class="h-5 w-5 text-orange-600" />
+											</div>
 										</div>
-									{:else}
-										<div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-dashed border-stone-300 bg-stone-50 text-stone-400">
-											<span class="text-xs">No image</span>
-										</div>
-									{/if}
-									<div class="flex-1">
-										<Input
-											id="avatar"
-											name="avatar"
-											type="file"
-											accept="image/jpeg, image/png, image/webp"
-											onchange={handleAvatarChange}
-											disabled={isSubmitting}
-											class="text-sm file:mr-4 file:rounded-md file:border-0 file:bg-stone-100 file:px-4 file:py-2 file:text-sm file:font-semibold hover:file:bg-stone-200"
-										/>
-									</div>
+									</button>
+
+									<input
+										bind:this={fileInput}
+										id="avatar"
+										name="avatar"
+										type="file"
+										accept="image/jpeg, image/png, image/webp"
+										onchange={handleAvatarChange}
+										class="hidden"
+										disabled={isSubmitting}
+									/>
+									
+									<p class="text-xs text-stone-500">
+										Click to upload. JPG, PNG or WEBP (max. 0.5MB after auto-compression)
+									</p>
 								</div>
 								{#if avatarError}
-									<p class="mt-1 text-sm text-red-600">{avatarError}</p>
+									<p class="mt-2 text-center text-sm text-red-600">{avatarError}</p>
 								{/if}
 							</div>
 
@@ -201,10 +313,13 @@
 								/>
 							</div>
 
-							<Button type="submit" class="w-full" disabled={isSubmitting}>
+							<Button type="submit" class="w-full" disabled={isSubmitting || isCompressing}>
 								{#if isSubmitting}
 									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 									{m.onboarding_creating_account()}
+								{:else if isCompressing}
+									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+									Processing image...
 								{:else}
 									{m.onboarding_create_account()}
 								{/if}
