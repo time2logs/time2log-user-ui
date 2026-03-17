@@ -68,5 +68,7 @@
 	"activity_saved_for_date": "Questa attività verrà salvata per {date}.",
 	"edit_activity_title": "Modifica Attività",
 	"edit_activity_description": "Aggiorna i dettagli della tua attività.",
-	"save_changes_button": "Salva Modifiche"
+	"save_changes_button": "Salva Modifiche",
+	"location_label": "Luogo",
+	"location_placeholder": "Inserisci il luogo"
 }
