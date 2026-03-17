@@ -42,7 +42,7 @@
 	}
 </script>
 
-<Select.Root bind:value={selectedLocale} bind:open={open} onValueChange={handleChange} type="single">
+<Select.Root bind:value={selectedLocale} bind:open onValueChange={handleChange} type="single">
 	<Select.Trigger class="w-[140px]">
 		{#if selectedLocale}
 			{@const locale = locales.find((l) => l.code === selectedLocale)}
@@ -57,7 +57,7 @@
 				<span class="flex items-center gap-2">
 					<span class="text-lg">{locale.flag}</span>
 					<span>{locale.name}</span>
-					<span class="text-gray-400 text-xs">{locale.display}</span>
+					<span class="text-xs text-gray-400">{locale.display}</span>
 				</span>
 			</Select.Item>
 		{/each}

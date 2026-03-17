@@ -1,5 +1,5 @@
 <script lang="ts">
-	let { class: className = '' } = $props();
+	let { class: className = '', children } = $props();
 </script>
 
 <div class={`relative flex min-h-screen flex-col overflow-hidden ${className}`}>
@@ -16,6 +16,6 @@
 	></div>
 
 	<div class="relative z-10 flex min-h-screen flex-col">
-		<slot />
+		{@render children()}
 	</div>
 </div>
