@@ -8,5 +8,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(302, '/login');
 	}
 
-	return {};
+	const userId = session.user.id;
+	const email = session.user.email;
+
+	const [profileResult] = await Promise.all([
+		locals.supabase.from('profiles').select('*').eq('id', userId).single()
+	]);
+
+	const profile = profileResult.error ? null : profileResult.data;
+
+	return { profile, email };
 };

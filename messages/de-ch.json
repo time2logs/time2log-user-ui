@@ -68,5 +68,11 @@
 	"activity_saved_for_date": "Diese Aktivität wird für {date} gespeichert.",
 	"edit_activity_title": "Aktivität bearbeiten",
 	"edit_activity_description": "Aktualisieren Sie Ihre Aktivitätsdetails.",
-	"save_changes_button": "Änderungen speichern"
+	"save_changes_button": "Änderungen speichern",
+	"back_to_dashboard": "Zurück zum Dashboard",
+	"profile_settings": "Profileinstellungen",
+	"first_name": "Vorname",
+	"last_name": "Nachname",
+	"language_settings": "Spracheinstellungen",
+	"account": "Konto"
 }
