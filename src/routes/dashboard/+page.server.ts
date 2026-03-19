@@ -10,13 +10,21 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const userId = session.user.id;
 
-	const { data: locations } = await locals.supabase
-		.from('user_locations')
-		.select('location, is_default')
-		.eq('user_id', userId)
-		.order('created_at', { ascending: false });
+	let defaultLocation = null;
 
-	const defaultLocation = locations?.find((l: any) => l.is_default)?.location ?? null;
+	try {
+		const { data: locations } = await locals.supabase
+			.from('user_locations')
+			.select('location, is_default')
+			.eq('user_id', userId)
+			.order('created_at', { ascending: false });
+
+		if (locations) {
+			defaultLocation = locations.find((l: any) => l.is_default)?.location ?? null;
+		}
+	} catch (e) {
+		console.warn('user_locations table not available:', e);
+	}
 
 	return { defaultLocation };
 };

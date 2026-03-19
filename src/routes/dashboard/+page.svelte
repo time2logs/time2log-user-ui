@@ -137,15 +137,21 @@
 				</div>
 				<div class="hidden items-center gap-2 sm:flex">
 					<LanguageSwitcher />
-					<Button variant="outline" href="/settings" class="h-10 w-10 rounded-full p-0">
-						<Settings class="h-4 w-4" />
+					<Button
+						variant="ghost"
+						href="/settings"
+						size="icon"
+						class="text-stone-600 hover:text-stone-800"
+					>
+						<Settings class="h-5 w-5" />
 					</Button>
 					<Button
-						variant="outline"
+						variant="ghost"
 						onclick={() => (logoutDialogOpen = true)}
-						class="h-10 w-10 rounded-full p-0"
+						size="icon"
+						class="text-stone-600 hover:text-red-600"
 					>
-						<LogOut class="h-4 w-4" />
+						<LogOut class="h-5 w-5" />
 					</Button>
 				</div>
 				<Button
