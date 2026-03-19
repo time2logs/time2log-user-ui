@@ -137,14 +137,12 @@
 				</div>
 				<div class="hidden items-center gap-2 sm:flex">
 					<LanguageSwitcher />
-					<Button
-						variant="ghost"
+					<a
 						href="/settings"
-						size="icon"
-						class="text-stone-600 hover:text-stone-800"
+						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-accent hover:text-stone-800"
 					>
 						<Settings class="h-5 w-5" />
-					</Button>
+					</a>
 					<Button
 						variant="ghost"
 						onclick={() => (logoutDialogOpen = true)}
