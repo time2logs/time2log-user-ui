@@ -70,5 +70,8 @@
 	"edit_activity_description": "Mettez à jour les détails de votre activité.",
 	"save_changes_button": "Enregistrer les Modifications",
 	"location_label": "Lieu",
-	"location_placeholder": "Entrez le lieu"
+	"location_placeholder": "Entrez le lieu",
+	"error_hours_min": "Minimum {min} heure(s) requis(e)s",
+	"error_hours_max_entry": "Maximum {max} heures par entrée autorisées",
+	"error_hours_max_day": "La limite quotidienne de {max} heures serait dépassée. Restant: {remaining}h"
 }

@@ -70,5 +70,8 @@
 	"edit_activity_description": "Update your activity details.",
 	"save_changes_button": "Save Changes",
 	"location_label": "Location",
-	"location_placeholder": "Enter the location"
+	"location_placeholder": "Enter the location",
+	"error_hours_min": "Minimum {min} hour(s) required",
+	"error_hours_max_entry": "Maximum {max} hours per entry allowed",
+	"error_hours_max_day": "Daily limit of {max} hours would be exceeded. Remaining: {remaining}h"
 }

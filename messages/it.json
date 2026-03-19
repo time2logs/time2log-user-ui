@@ -70,5 +70,8 @@
 	"edit_activity_description": "Aggiorna i dettagli della tua attività.",
 	"save_changes_button": "Salva Modifiche",
 	"location_label": "Luogo",
-	"location_placeholder": "Inserisci il luogo"
+	"location_placeholder": "Inserisci il luogo",
+	"error_hours_min": "Minimo {min} ora(e) richieste",
+	"error_hours_max_entry": "Massimo {max} ore per voce consentite",
+	"error_hours_max_day": "Il limite giornaliero di {max} ore verrebbe superato. Rimanenti: {remaining}h"
 }

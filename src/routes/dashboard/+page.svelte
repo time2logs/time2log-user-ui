@@ -198,6 +198,7 @@
 					onActivityAdded={handleActivityAdded}
 					selectedDate={selectedDateIso}
 					activityToEdit={editingActivity}
+					existingActivities={activities}
 				/>
 			{/if}
 		</div>
