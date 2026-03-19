@@ -146,7 +146,6 @@
 		if (!selectedActivity || hours === 0 || isSubmitting) return;
 		if (!teamMember) {
 			submitError = 'Team information not found. Please contact support.';
-			console.error('[ActivityForm] teamMember is null or undefined');
 			return;
 		}
 
@@ -217,11 +216,6 @@
 				};
 
 				if (!activityData.organization_id || !activityData.profession_id || !activityData.user_id) {
-					console.error('[ActivityForm] Validation failed:', {
-						organization_id: activityData.organization_id,
-						profession_id: activityData.profession_id,
-						user_id: activityData.user_id
-					});
 					throw new Error('Missing required user information');
 				}
 
@@ -243,7 +237,6 @@
 			open = false;
 			onActivityAdded();
 		} catch (error) {
-			console.error('[ActivityForm] Failed to save activity:', error);
 			submitError =
 				error instanceof Error ? error.message : 'Failed to save activity. Please try again.';
 		} finally {
