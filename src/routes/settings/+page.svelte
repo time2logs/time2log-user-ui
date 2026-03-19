@@ -46,18 +46,26 @@
 <GradientBackground>
 	<main class="flex flex-1 flex-col items-center justify-center p-4 sm:p-8">
 		<div class="w-full max-w-md">
-			<Button variant="ghost" href="/dashboard" class="mb-6 gap-2 self-start text-stone-600">
+			<Button
+				variant="ghost"
+				href="/dashboard"
+				class="mb-6 gap-2 self-start text-stone-600 dark:text-slate-400"
+			>
 				<ArrowLeft class="h-4 w-4" />
 				{m.back_to_dashboard()}
 			</Button>
 
-			<h1 class="mb-8 text-3xl font-bold text-stone-800">{m.settings_title()}</h1>
+			<h1 class="mb-8 text-3xl font-bold text-stone-800 dark:text-slate-100">
+				{m.settings_title()}
+			</h1>
 
 			<div class="space-y-6">
 				<GlassCard>
 					<div class="flex items-center gap-4 p-4">
 						{#if data.profile?.avatar_url}
-							<div class="h-16 w-16 overflow-hidden rounded-full border-2 border-white shadow-lg">
+							<div
+								class="h-16 w-16 overflow-hidden rounded-full border-2 border-white shadow-lg dark:border-slate-600"
+							>
 								<img
 									src={data.profile.avatar_url}
 									alt={fullName}
@@ -72,27 +80,31 @@
 							</div>
 						{/if}
 						<div>
-							<h2 class="text-lg font-semibold text-stone-800">{fullName}</h2>
-							<p class="text-sm text-stone-600">{data.email ?? ''}</p>
+							<h2 class="text-lg font-semibold text-stone-800 dark:text-slate-100">{fullName}</h2>
+							<p class="text-sm text-stone-600 dark:text-slate-400">{data.email ?? ''}</p>
 						</div>
 					</div>
 				</GlassCard>
 
 				<GlassCard>
 					<div class="p-4">
-						<div class="mb-4 flex items-center gap-2 text-stone-800">
+						<div class="mb-4 flex items-center gap-2 text-stone-800 dark:text-slate-100">
 							<User class="h-5 w-5" />
 							<h3 class="font-semibold">{m.profile_settings()}</h3>
 						</div>
 						<div class="space-y-3">
 							<div class="flex justify-between">
-								<span class="text-stone-600">{m.first_name()}</span>
-								<span class="font-medium text-stone-800">{data.profile?.first_name ?? '-'}</span>
+								<span class="text-stone-600 dark:text-slate-400">{m.first_name()}</span>
+								<span class="font-medium text-stone-800 dark:text-slate-200"
+									>{data.profile?.first_name ?? '-'}</span
+								>
 							</div>
 							<Separator />
 							<div class="flex justify-between">
-								<span class="text-stone-600">{m.last_name()}</span>
-								<span class="font-medium text-stone-800">{data.profile?.last_name ?? '-'}</span>
+								<span class="text-stone-600 dark:text-slate-400">{m.last_name()}</span>
+								<span class="font-medium text-stone-800 dark:text-slate-200"
+									>{data.profile?.last_name ?? '-'}</span
+								>
 							</div>
 						</div>
 					</div>
@@ -100,19 +112,19 @@
 
 				<GlassCard>
 					<div class="p-4">
-						<div class="mb-4 flex items-center gap-2 text-stone-800">
+						<div class="mb-4 flex items-center gap-2 text-stone-800 dark:text-slate-100">
 							<Moon class="h-5 w-5" />
 							<h3 class="font-semibold">{m.appearance_settings()}</h3>
 						</div>
 						<div class="flex items-center justify-between">
-							<span class="text-stone-600">
+							<span class="text-stone-600 dark:text-slate-400">
 								{currentTheme === 'dark' ? m.dark_mode() : m.light_mode()}
 							</span>
 							<button
 								type="button"
 								onclick={toggleTheme}
 								class="relative h-6 w-12 rounded-full transition-colors {currentTheme === 'dark'
-									? 'bg-orange-400'
+									? 'bg-blue-600'
 									: 'bg-stone-300'}"
 							>
 								<span
@@ -122,7 +134,7 @@
 										: 'left-0.5'}"
 								>
 									{#if currentTheme === 'dark'}
-										<Moon class="mt-0.5 ml-0.5 h-4 w-4 text-orange-400" />
+										<Moon class="mt-0.5 ml-0.5 h-4 w-4 text-blue-400" />
 									{:else}
 										<Sun class="mt-0.5 ml-0.5 h-4 w-4 text-orange-400" />
 									{/if}
@@ -134,7 +146,7 @@
 
 				<GlassCard>
 					<div class="p-4">
-						<div class="mb-4 flex items-center gap-2 text-stone-800">
+						<div class="mb-4 flex items-center gap-2 text-stone-800 dark:text-slate-100">
 							<Globe class="h-5 w-5" />
 							<h3 class="font-semibold">{m.language_settings()}</h3>
 						</div>
@@ -144,14 +156,14 @@
 
 				<GlassCard>
 					<div class="p-4">
-						<div class="mb-4 flex items-center gap-2 text-stone-800">
+						<div class="mb-4 flex items-center gap-2 text-stone-800 dark:text-slate-100">
 							<LogOut class="h-5 w-5" />
 							<h3 class="font-semibold">{m.account()}</h3>
 						</div>
 						<Button
 							variant="outline"
 							onclick={() => (logoutDialogOpen = true)}
-							class="w-full justify-start gap-2 border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+							class="w-full justify-start gap-2 border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900"
 						>
 							<LogOut class="h-4 w-4" />
 							{m.logout()}
