@@ -201,6 +201,7 @@
 					onActivityAdded={handleActivityAdded}
 					selectedDate={selectedDateIso}
 					activityToEdit={editingActivity}
+					defaultLocation={data.defaultLocation}
 				/>
 			{/if}
 		</div>

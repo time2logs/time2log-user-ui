@@ -31,7 +31,8 @@
 		teamMember,
 		onActivityAdded,
 		selectedDate,
-		activityToEdit = null
+		activityToEdit = null,
+		defaultLocation = null
 	}: {
 		open: boolean;
 		curriculumNodes: CurriculumNode[];
@@ -39,6 +40,7 @@
 		onActivityAdded: () => void;
 		selectedDate?: string;
 		activityToEdit?: import('$lib/types').ActivityRecord | null;
+		defaultLocation?: string | null;
 	} = $props();
 
 	// Build tree from flat list
@@ -103,7 +105,7 @@
 				}
 				rating = 0;
 				hours = 0;
-				location = '';
+				location = defaultLocation || '';
 				notes = '';
 			}
 			// Auto-expand all categories to show activities

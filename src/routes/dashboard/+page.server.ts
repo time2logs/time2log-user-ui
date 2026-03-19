@@ -8,5 +8,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 		throw redirect(302, '/login');
 	}
 
-	return {};
+	const userId = session.user.id;
+
+	const { data: locations } = await locals.supabase
+		.from('user_locations')
+		.select('location, is_default')
+		.eq('user_id', userId)
+		.order('created_at', { ascending: false });
+
+	const defaultLocation = locations?.find((l: any) => l.is_default)?.location ?? null;
+
+	return { defaultLocation };
 };
