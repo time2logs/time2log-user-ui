@@ -1,9 +1,10 @@
-<script>import "../app.css";
-import './layout.css';
-import favicon from '$lib/assets/favicon.svg';
-import { logout } from '$lib/api';
+<script>
+	import '../app.css';
+	import './layout.css';
+	import favicon from '$lib/assets/favicon.svg';
 
-let { children } = $props();</script>
+	let { children } = $props();
+</script>
 
-<svelte:head><link rel="icon" href="{favicon}" /></svelte:head>
+<svelte:head><link rel="icon" href={favicon} /></svelte:head>
 {@render children()}

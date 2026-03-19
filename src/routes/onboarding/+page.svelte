@@ -65,11 +65,11 @@
 									if (blob.size > targetSize && quality > 0.1) {
 										quality -= 0.1;
 										attemptBlob();
-									} else if (blob.size > targetSize && (MAX_WIDTH > 200)) {
+									} else if (blob.size > targetSize && MAX_WIDTH > 200) {
 										// If still too big, try resizing even smaller
 										MAX_WIDTH -= 200;
 										MAX_HEIGHT -= 200;
-										
+
 										let newWidth = img.width;
 										let newHeight = img.height;
 										if (newWidth > newHeight) {
@@ -125,7 +125,7 @@
 				isCompressing = true;
 				const compressedBlob = await compressImage(file);
 				const compressedFile = new File([compressedBlob], 'avatar.jpg', { type: 'image/jpeg' });
-				
+
 				avatarFile = compressedFile;
 				if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
 				avatarPreviewUrl = URL.createObjectURL(compressedFile);
@@ -183,6 +183,7 @@
 							{m.onboarding_welcome_title()}
 						</Card.Title>
 						<Card.Description class="text-sm text-stone-600">
+							<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 							{@html m.onboarding_welcome_description({
 								orgName: data.inviteDetails.organization_name
 							})}
@@ -231,12 +232,16 @@
 												class="h-full w-full object-cover transition-opacity group-hover:opacity-50"
 											/>
 										{:else}
-											<div class="flex h-full w-full items-center justify-center text-stone-400 group-hover:text-orange-500">
+											<div
+												class="flex h-full w-full items-center justify-center text-stone-400 group-hover:text-orange-500"
+											>
 												<Plus class="h-8 w-8" />
 											</div>
 										{/if}
-										
-										<div class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
+
+										<div
+											class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
+										>
 											<div class="rounded-full bg-white/80 p-2 shadow-sm">
 												<Plus class="h-5 w-5 text-orange-600" />
 											</div>
@@ -253,7 +258,7 @@
 										class="hidden"
 										disabled={isSubmitting}
 									/>
-									
+
 									<p class="text-xs text-stone-500">
 										Click to upload. JPG, PNG or WEBP (max. 0.5MB after auto-compression)
 									</p>

@@ -4,7 +4,6 @@
 	import GradientBackground from '$lib/components/gradient-background.svelte';
 	import GlassCard from '$lib/components/glass-card.svelte';
 	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
 
 	const status = $derived($page.status);
 	const message = $derived($page.error?.message || 'Page not found');

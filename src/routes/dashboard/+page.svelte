@@ -15,6 +15,7 @@
 	import { logout } from '$lib/api';
 	import { activityStore } from '$lib/activityStorage';
 	import type { ActivityRecord } from '$lib/types';
+	import { resolve } from '$app/paths';
 	import { LogOut, Loader2, Plus, Menu, Settings } from 'lucide-svelte';
 	import { DateFormatter, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
 
@@ -248,7 +249,7 @@
 		<div class="flex flex-col gap-3 p-4">
 			<LanguageSwitcher />
 			<a
-				href="/settings"
+				href={resolve('/settings')}
 				class="flex items-center gap-2 rounded-md px-3 py-2 text-stone-700 transition-colors hover:bg-stone-100"
 			>
 				<Settings class="h-4 w-4" />

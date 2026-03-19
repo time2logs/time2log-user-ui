@@ -7,7 +7,13 @@ import { env } from '$env/dynamic/private';
 export const handle: Handle = async ({ event, resolve }) => {
 	const cookieOptions = {
 		getAll: () => event.cookies.getAll(),
-		setAll: (cookiesToSet: { name: string; value: string; options: any }[]) => {
+		setAll: (
+			cookiesToSet: {
+				name: string;
+				value: string;
+				options: Parameters<typeof event.cookies.set>[2];
+			}[]
+		) => {
 			cookiesToSet.forEach(({ name, value, options }) => {
 				event.cookies.set(name, value, { ...options, path: '/' });
 			});

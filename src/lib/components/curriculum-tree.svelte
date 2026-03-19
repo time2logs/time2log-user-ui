@@ -1,12 +1,13 @@
 <script lang="ts">
 	import type { CurriculumNode, CurriculumTreeNode } from '$lib/types';
 	import { ChevronRight, ChevronDown, Folder, FileText } from 'lucide-svelte';
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 	let { nodes }: { nodes: CurriculumNode[] } = $props();
 
 	// Build tree from flat list
 	function buildTree(nodes: CurriculumNode[]): CurriculumTreeNode[] {
-		const map = new Map<string, CurriculumTreeNode>();
+		const map = new SvelteMap<string, CurriculumTreeNode>();
 		const roots: CurriculumTreeNode[] = [];
 
 		nodes.forEach((node) => {
@@ -35,7 +36,7 @@
 
 	const tree = $derived(buildTree(nodes));
 
-	let expanded = $state<Set<string>>(new Set());
+	let expanded = new SvelteSet<string>();
 
 	function toggleExpand(id: string) {
 		if (expanded.has(id)) {
@@ -43,7 +44,6 @@
 		} else {
 			expanded.add(id);
 		}
-		expanded = new Set(expanded);
 	}
 </script>
 
@@ -71,7 +71,7 @@
 		</button>
 
 		{#if node.node_type === 'category' && expanded.has(node.id)}
-			{#each node.children as child}
+			{#each node.children as child (child.id)}
 				{@render treeNode(child, depth + 1)}
 			{/each}
 		{/if}
@@ -84,7 +84,7 @@
 	</div>
 {:else}
 	<div class="divide-y divide-white/30">
-		{#each tree as node}
+		{#each tree as node (node.id)}
 			{@render treeNode(node, 0)}
 		{/each}
 	</div>

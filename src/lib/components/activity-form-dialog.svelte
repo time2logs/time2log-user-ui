@@ -16,6 +16,8 @@
 	import * as m from '$lib/paraglide/messages.js';
 	import { getLocale } from '$lib/paraglide/runtime.js';
 
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+
 	const localeMap: Record<string, string> = {
 		en: 'en-GB',
 		'de-ch': 'de-CH',
@@ -43,7 +45,7 @@
 
 	// Build tree from flat list
 	function buildTree(nodes: CurriculumNode[]): CurriculumTreeNode[] {
-		const map = new Map<string, CurriculumTreeNode>();
+		const map = new SvelteMap<string, CurriculumTreeNode>();
 		const roots: CurriculumTreeNode[] = [];
 
 		nodes.forEach((node) => {
@@ -75,7 +77,7 @@
 	// Get all activity nodes for pre-selection
 	const activityNodes = $derived(curriculumNodes.filter((node) => node.node_type === 'activity'));
 
-	let expanded = $state<Set<string>>(new Set());
+	let expanded = new SvelteSet<string>();
 	let selectedActivityId = $state<string>('');
 	let rating = $state<number>(0);
 	let hours = $state<number>(0);
@@ -107,7 +109,7 @@
 				notes = '';
 			}
 			// Auto-expand all categories to show activities
-			const newExpanded = new Set<string>();
+			const newExpanded = new SvelteSet<string>();
 			curriculumNodes.forEach((node) => {
 				if (node.node_type === 'category') {
 					newExpanded.add(node.id);
@@ -129,7 +131,6 @@
 		} else {
 			expanded.add(id);
 		}
-		expanded = new Set(expanded);
 	}
 
 	function selectActivity(id: string) {
@@ -305,7 +306,7 @@
 									</button>
 
 									{#if expanded.has(node.id)}
-										{#each node.children as child}
+										{#each node.children as child (child.id)}
 											{@render treeNode(child, depth + 1)}
 										{/each}
 									{/if}
@@ -330,7 +331,7 @@
 								{/if}
 							{/snippet}
 
-							{#each tree as node}
+							{#each tree as node (node.id)}
 								{@render treeNode(node, 0)}
 							{/each}
 						</div>
@@ -347,7 +348,7 @@
 			<div class="grid gap-2">
 				<Label>{m.rating_label()}</Label>
 				<div class="flex gap-1">
-					{#each [1, 2, 3, 4, 5] as star}
+					{#each [1, 2, 3, 4, 5] as star (star)}
 						<button
 							type="button"
 							onclick={() => setRating(star)}

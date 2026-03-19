@@ -85,7 +85,6 @@
 	});
 
 	const canGoToNextMonth = $derived(visibleMonth.compare(currentMonth) < 0);
-	const selectedDateLabel = $derived(value ? formatFullDate(value) : m.calendar_no_date_selected());
 
 	function formatFullDate(date: DateValue) {
 		return new DateFormatter(locale, {
@@ -146,7 +145,7 @@
 	</div>
 
 	<div class="mb-3 grid grid-cols-7 gap-2">
-		{#each weekdayLabels as weekday}
+		{#each weekdayLabels as weekday (weekday)}
 			<div
 				class="px-1 text-center text-[11px] font-semibold tracking-[0.18em] text-stone-500 uppercase"
 			>

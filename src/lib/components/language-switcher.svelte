@@ -52,7 +52,7 @@
 		{/if}
 	</Select.Trigger>
 	<Select.Content>
-		{#each locales as locale}
+		{#each locales as locale (locale.code)}
 			<Select.Item value={locale.code} label="{locale.flag} {locale.name}">
 				<span class="flex items-center gap-2">
 					<span class="text-lg">{locale.flag}</span>

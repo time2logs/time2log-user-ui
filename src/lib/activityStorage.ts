@@ -5,7 +5,7 @@ import { supabase } from './supabaseClient';
 const LAST_ACTIVITY_KEY = 'last_activity_id';
 const DEBUG = import.meta.env.DEV ?? false;
 
-function debugLog(message: string, data?: any) {
+function debugLog(message: string, data?: unknown) {
 	if (DEBUG && typeof window !== 'undefined') {
 		console.log(`[ActivityStorage] ${message}`, data || '');
 	}
@@ -41,22 +41,22 @@ function createActivityStore() {
 		debugLog(`Loaded ${data?.length || 0} activities from Supabase`);
 
 		if (data && data.length > 0) {
-			const formattedActivities: ActivityRecord[] = data.map((record: any) => ({
-				id: record.id,
-				organization_id: record.organization_id,
-				profession_id: record.profession_id,
-				user_id: record.user_id,
-				team_id: record.team_id,
-				curriculum_activity_id: record.curriculum_activity_id,
-				entry_date: record.entry_date,
-				hours: record.hours,
-				notes: record.notes,
-				rating: record.rating,
-				location: record.location || '',
-				created_at: record.created_at,
-				updated_at: record.updated_at,
-				activity_name: record.curriculum_nodes?.label || '',
-				activity_key: record.curriculum_nodes?.key || '',
+			const formattedActivities: ActivityRecord[] = data.map((record: Record<string, unknown>) => ({
+				id: record.id as string,
+				organization_id: record.organization_id as string,
+				profession_id: record.profession_id as string,
+				user_id: record.user_id as string,
+				team_id: record.team_id as string | null,
+				curriculum_activity_id: record.curriculum_activity_id as string,
+				entry_date: record.entry_date as string,
+				hours: record.hours as number,
+				notes: record.notes as string | null,
+				rating: record.rating as number | null,
+				location: (record.location as string) || '',
+				created_at: record.created_at as string,
+				updated_at: record.updated_at as string,
+				activity_name: (record.curriculum_nodes as { label: string })?.label || '',
+				activity_key: (record.curriculum_nodes as { key: string })?.key || '',
 				activity_label: ''
 			}));
 			set(formattedActivities);
@@ -159,7 +159,7 @@ function createActivityStore() {
 				return null;
 			}
 
-			const updateData: Record<string, any> = {};
+			const updateData: Record<string, unknown> = {};
 			if (activity.curriculum_activity_id !== undefined)
 				updateData.curriculum_activity_id = activity.curriculum_activity_id;
 			if (activity.entry_date !== undefined) updateData.entry_date = activity.entry_date;
@@ -218,22 +218,22 @@ export async function getActivities(): Promise<ActivityRecord[]> {
 	}
 
 	if (data && data.length > 0) {
-		return data.map((record: any) => ({
-			id: record.id,
-			organization_id: record.organization_id,
-			profession_id: record.profession_id,
-			user_id: record.user_id,
-			team_id: record.team_id,
-			curriculum_activity_id: record.curriculum_activity_id,
-			entry_date: record.entry_date,
-			hours: record.hours,
-			notes: record.notes,
-			rating: record.rating,
-			location: record.location || '',
-			created_at: record.created_at,
-			updated_at: record.updated_at,
-			activity_name: record.curriculum_nodes?.label || '',
-			activity_key: record.curriculum_nodes?.key || '',
+		return data.map((record: Record<string, unknown>) => ({
+			id: record.id as string,
+			organization_id: record.organization_id as string,
+			profession_id: record.profession_id as string,
+			user_id: record.user_id as string,
+			team_id: record.team_id as string | null,
+			curriculum_activity_id: record.curriculum_activity_id as string,
+			entry_date: record.entry_date as string,
+			hours: record.hours as number,
+			notes: record.notes as string | null,
+			rating: record.rating as number | null,
+			location: (record.location as string) || '',
+			created_at: record.created_at as string,
+			updated_at: record.updated_at as string,
+			activity_name: (record.curriculum_nodes as { label: string })?.label || '',
+			activity_key: (record.curriculum_nodes as { key: string })?.key || '',
 			activity_label: ''
 		}));
 	}
@@ -357,6 +357,7 @@ export function debugShowStorageInfo() {
 
 // Expose debug functions to window object for easy console access
 if (typeof window !== 'undefined') {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	(window as any).activityDebug = {
 		getAll: debugGetAllActivities,
 		info: debugShowStorageInfo,

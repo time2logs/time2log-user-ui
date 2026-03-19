@@ -233,15 +233,16 @@ export async function saveActivity(activity: {
 	notes: string | null;
 	rating: number | null;
 	location: string;
-}): Promise<{ success: boolean; message: string; activity?: any }> {
+}): Promise<{ success: boolean; message: string; activity?: Record<string, unknown> }> {
 	try {
-		const result = await apiRequest<{ success: boolean; message: string; activity?: any }>(
-			'/api/activities',
-			{
-				method: 'POST',
-				body: JSON.stringify(activity)
-			}
-		);
+		const result = await apiRequest<{
+			success: boolean;
+			message: string;
+			activity?: Record<string, unknown>;
+		}>('/api/activities', {
+			method: 'POST',
+			body: JSON.stringify(activity)
+		});
 
 		// Validate server response
 		if (!result.success) {
