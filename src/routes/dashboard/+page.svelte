@@ -137,6 +137,9 @@
 				</div>
 				<div class="hidden items-center gap-2 sm:flex">
 					<LanguageSwitcher />
+					<Button variant="outline" href="/settings" class="h-10 w-10 rounded-full p-0">
+						<Settings class="h-4 w-4" />
+					</Button>
 					<Button
 						variant="outline"
 						onclick={() => (logoutDialogOpen = true)}
