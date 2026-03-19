@@ -139,6 +139,7 @@
 					<LanguageSwitcher />
 					<a
 						href="/settings"
+						data-sveltekit-reload
 						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-accent hover:text-stone-800"
 					>
 						<Settings class="h-5 w-5" />
