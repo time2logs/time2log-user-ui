@@ -74,5 +74,13 @@
 	"first_name": "Prénom",
 	"last_name": "Nom",
 	"language_settings": "Paramètres de Langue",
-	"account": "Compte"
+	"account": "Compte",
+	"appearance_settings": "Apparence",
+	"dark_mode": "Mode Sombre",
+	"light_mode": "Mode Clair",
+	"default_location_settings": "Emplacement par Défaut",
+	"past_locations": "Emplacements Précédents",
+	"location_label": "Emplacement",
+	"location_placeholder": "ex. Bureau, Télétravail",
+	"save": "Enregistrer"
 }

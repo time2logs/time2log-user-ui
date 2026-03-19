@@ -74,5 +74,13 @@
 	"first_name": "Vorname",
 	"last_name": "Nachname",
 	"language_settings": "Spracheinstellungen",
-	"account": "Konto"
+	"account": "Konto",
+	"appearance_settings": "Erscheinungsbild",
+	"dark_mode": "Dunkelmodus",
+	"light_mode": "Hellmodus",
+	"default_location_settings": "Standard-Standort",
+	"past_locations": "Vergangene Standorte",
+	"location_label": "Standort",
+	"location_placeholder": "z.B. Büro, Homeoffice",
+	"save": "Speichern"
 }

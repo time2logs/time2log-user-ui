@@ -5,32 +5,16 @@
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
-	import { Input } from '$lib/components/ui/input';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import {
-		ArrowLeft,
-		User,
-		Globe,
-		LogOut,
-		Loader2,
-		Moon,
-		Sun,
-		MapPin,
-		Trash2
-	} from 'lucide-svelte';
+	import { ArrowLeft, User, Globe, LogOut, Loader2, Moon, Sun } from 'lucide-svelte';
 	import { logout } from '$lib/api';
 	import { theme } from '$lib/themeStore';
-	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
 
 	let { data } = $props();
 
 	let isLoggingOut = $state(false);
 	let logoutDialogOpen = $state(false);
 	let currentTheme = $state<'light' | 'dark'>('light');
-	let defaultLocation = $state(data.defaultLocation ?? '');
-	let isSavingLocation = $state(false);
-	let locationSaveSuccess = $state(false);
 
 	theme.subscribe((t) => {
 		currentTheme = t;
@@ -56,46 +40,6 @@
 
 	function toggleTheme() {
 		theme.toggle();
-	}
-
-	async function saveDefaultLocation() {
-		if (!defaultLocation.trim()) return;
-		isSavingLocation = true;
-		locationSaveSuccess = false;
-		try {
-			const response = await fetch('/api/user-location', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ location: defaultLocation.trim(), isDefault: true })
-			});
-			if (response.ok) {
-				locationSaveSuccess = true;
-				await invalidateAll();
-				setTimeout(() => (locationSaveSuccess = false), 2000);
-			}
-		} catch (error) {
-			console.error('Failed to save location:', error);
-		} finally {
-			isSavingLocation = false;
-		}
-	}
-
-	async function selectPastLocation(location: string) {
-		defaultLocation = location;
-		await saveDefaultLocation();
-	}
-
-	async function deleteLocation(locationId: string) {
-		try {
-			const response = await fetch(`/api/user-location/${locationId}`, {
-				method: 'DELETE'
-			});
-			if (response.ok) {
-				await invalidateAll();
-			}
-		} catch (error) {
-			console.error('Failed to delete location:', error);
-		}
 	}
 </script>
 
@@ -184,65 +128,6 @@
 									{/if}
 								</span>
 							</button>
-						</div>
-					</div>
-				</GlassCard>
-
-				<GlassCard>
-					<div class="p-4">
-						<div class="mb-4 flex items-center gap-2 text-stone-800">
-							<MapPin class="h-5 w-5" />
-							<h3 class="font-semibold">{m.default_location_settings()}</h3>
-						</div>
-						<div class="space-y-3">
-							<div class="flex gap-2">
-								<Input
-									type="text"
-									bind:value={defaultLocation}
-									placeholder={m.location_placeholder()}
-									class="flex-1"
-								/>
-								<Button
-									onclick={saveDefaultLocation}
-									disabled={isSavingLocation || !defaultLocation.trim()}
-									class="bg-gradient-to-r from-orange-400 to-rose-400 text-white hover:from-orange-500 hover:to-rose-500"
-								>
-									{#if isSavingLocation}
-										<Loader2 class="h-4 w-4 animate-spin" />
-									{:else if locationSaveSuccess}
-										<span>✓</span>
-									{:else}
-										{m.save()}
-									{/if}
-								</Button>
-							</div>
-							{#if data.pastLocations && data.pastLocations.length > 0}
-								<div class="mt-3">
-									<p class="mb-2 text-sm text-stone-500">{m.past_locations()}</p>
-									<div class="flex flex-wrap gap-2">
-										{#each data.pastLocations as loc}
-											<div
-												class="group flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-sm"
-											>
-												<button
-													type="button"
-													onclick={() => selectPastLocation(loc.location)}
-													class="text-stone-700 hover:text-orange-500"
-												>
-													{loc.location}
-												</button>
-												<button
-													type="button"
-													onclick={() => deleteLocation(loc.id)}
-													class="ml-1 text-stone-400 opacity-0 transition-opacity group-hover:opacity-100 hover:text-red-500"
-												>
-													<Trash2 class="h-3 w-3" />
-												</button>
-											</div>
-										{/each}
-									</div>
-								</div>
-							{/if}
 						</div>
 					</div>
 				</GlassCard>

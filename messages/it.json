@@ -74,5 +74,13 @@
 	"first_name": "Nome",
 	"last_name": "Cognome",
 	"language_settings": "Impostazioni Lingua",
-	"account": "Account"
+	"account": "Account",
+	"appearance_settings": "Aspetto",
+	"dark_mode": "Modalità Scura",
+	"light_mode": "Modalità Chiara",
+	"default_location_settings": "Posizione Predefinita",
+	"past_locations": "Posizioni Precedenti",
+	"location_label": "Posizione",
+	"location_placeholder": "es. Ufficio, Smart Working",
+	"save": "Salva"
 }

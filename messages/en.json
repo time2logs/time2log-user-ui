@@ -74,5 +74,13 @@
 	"first_name": "First Name",
 	"last_name": "Last Name",
 	"language_settings": "Language Settings",
-	"account": "Account"
+	"account": "Account",
+	"appearance_settings": "Appearance",
+	"dark_mode": "Dark Mode",
+	"light_mode": "Light Mode",
+	"default_location_settings": "Default Location",
+	"past_locations": "Past Locations",
+	"location_label": "Location",
+	"location_placeholder": "e.g., Office, Home",
+	"save": "Save"
 }
