@@ -65,11 +65,11 @@
 									if (blob.size > targetSize && quality > 0.1) {
 										quality -= 0.1;
 										attemptBlob();
-									} else if (blob.size > targetSize && (MAX_WIDTH > 200)) {
+									} else if (blob.size > targetSize && MAX_WIDTH > 200) {
 										// If still too big, try resizing even smaller
 										MAX_WIDTH -= 200;
 										MAX_HEIGHT -= 200;
-										
+
 										let newWidth = img.width;
 										let newHeight = img.height;
 										if (newWidth > newHeight) {
@@ -125,7 +125,7 @@
 				isCompressing = true;
 				const compressedBlob = await compressImage(file);
 				const compressedFile = new File([compressedBlob], 'avatar.jpg', { type: 'image/jpeg' });
-				
+
 				avatarFile = compressedFile;
 				if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
 				avatarPreviewUrl = URL.createObjectURL(compressedFile);
@@ -164,25 +164,25 @@
 				{#if data.inviteError || !data.token}
 					<!-- Error state: invalid or expired token -->
 					<Card.Header>
-						<Card.Title class="text-lg font-bold text-stone-800">
+						<Card.Title class="text-lg font-bold text-stone-800 dark:text-slate-100">
 							{m.onboarding_invalid_invite()}
 						</Card.Title>
-						<Card.Description class="text-sm text-stone-600">
+						<Card.Description class="text-sm text-stone-600 dark:text-slate-400">
 							{data.inviteError ?? m.onboarding_no_invite_token()}
 						</Card.Description>
 					</Card.Header>
 					<Card.Content class="pt-4">
-						<p class="text-sm text-stone-500">
+						<p class="text-sm text-stone-500 dark:text-slate-500">
 							{m.onboarding_invalid_token_message()}
 						</p>
 					</Card.Content>
 				{:else}
 					<!-- Valid invite: show onboarding form -->
 					<Card.Header>
-						<Card.Title class="text-lg font-bold text-stone-800">
+						<Card.Title class="text-lg font-bold text-stone-800 dark:text-slate-100">
 							{m.onboarding_welcome_title()}
 						</Card.Title>
-						<Card.Description class="text-sm text-stone-600">
+						<Card.Description class="text-sm text-stone-600 dark:text-slate-400">
 							{@html m.onboarding_welcome_description({
 								orgName: data.inviteDetails.organization_name
 							})}
@@ -191,7 +191,7 @@
 					<Card.Content class="pt-4">
 						{#if form?.error}
 							<div
-								class="mb-4 rounded-md border border-red-200 bg-red-50/80 p-3 text-sm text-red-700"
+								class="mb-4 rounded-md border border-red-200 bg-red-50/80 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
 							>
 								{form.error}
 							</div>
@@ -221,7 +221,7 @@
 									<button
 										type="button"
 										onclick={() => fileInput.click()}
-										class="group relative h-24 w-24 overflow-hidden rounded-full border-2 border-dashed border-stone-300 bg-stone-50 transition-all hover:border-orange-400 hover:bg-stone-100 disabled:cursor-not-allowed"
+										class="group relative h-24 w-24 overflow-hidden rounded-full border-2 border-dashed border-stone-300 bg-stone-50 transition-all hover:border-orange-400 hover:bg-stone-100 disabled:cursor-not-allowed dark:border-slate-600 dark:bg-slate-800 dark:hover:border-orange-400"
 										disabled={isSubmitting}
 									>
 										{#if avatarPreviewUrl}
@@ -231,14 +231,18 @@
 												class="h-full w-full object-cover transition-opacity group-hover:opacity-50"
 											/>
 										{:else}
-											<div class="flex h-full w-full items-center justify-center text-stone-400 group-hover:text-orange-500">
+											<div
+												class="flex h-full w-full items-center justify-center text-stone-400 group-hover:text-orange-500 dark:text-slate-500 dark:group-hover:text-orange-400"
+											>
 												<Plus class="h-8 w-8" />
 											</div>
 										{/if}
-										
-										<div class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100">
-											<div class="rounded-full bg-white/80 p-2 shadow-sm">
-												<Plus class="h-5 w-5 text-orange-600" />
+
+										<div
+											class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
+										>
+											<div class="rounded-full bg-white/80 p-2 shadow-sm dark:bg-slate-700">
+												<Plus class="h-5 w-5 text-orange-600 dark:text-orange-400" />
 											</div>
 										</div>
 									</button>
@@ -253,13 +257,15 @@
 										class="hidden"
 										disabled={isSubmitting}
 									/>
-									
-									<p class="text-xs text-stone-500">
+
+									<p class="text-xs text-stone-500 dark:text-slate-500">
 										Click to upload. JPG, PNG or WEBP (max. 0.5MB after auto-compression)
 									</p>
 								</div>
 								{#if avatarError}
-									<p class="mt-2 text-center text-sm text-red-600">{avatarError}</p>
+									<p class="mt-2 text-center text-sm text-red-600 dark:text-red-400">
+										{avatarError}
+									</p>
 								{/if}
 							</div>
 
@@ -271,7 +277,7 @@
 									type="email"
 									value={data.inviteDetails.email}
 									readonly
-									class="bg-stone-100 text-stone-500"
+									class="bg-stone-100 text-stone-500 dark:bg-slate-800 dark:text-slate-400"
 								/>
 							</div>
 

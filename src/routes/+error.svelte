@@ -30,7 +30,9 @@
 					</span>
 				</div>
 
-				<h1 class="mb-4 text-2xl font-bold tracking-tight text-stone-800 sm:text-3xl">
+				<h1
+					class="mb-4 text-2xl font-bold tracking-tight text-stone-800 sm:text-3xl dark:text-slate-100"
+				>
 					{#if status === 404}
 						Page Not Found
 					{:else if status === 403}
@@ -42,7 +44,7 @@
 					{/if}
 				</h1>
 
-				<p class="mx-auto mb-8 max-w-md text-stone-600">
+				<p class="mx-auto mb-8 max-w-md text-stone-600 dark:text-slate-400">
 					{#if status === 404}
 						The page you're looking for doesn't exist or has been moved.
 					{:else if status === 403}
@@ -59,7 +61,7 @@
 						onclick={goBack}
 						variant="outline"
 						size="lg"
-						class="min-w-[160px] border-stone-300 text-stone-700 hover:bg-stone-100"
+						class="min-w-[160px] border-stone-300 text-stone-700 hover:bg-stone-100 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
 					>
 						<ArrowLeft class="mr-2 h-4 w-4" />
 						Go Back
@@ -67,7 +69,7 @@
 					<Button
 						href="/"
 						size="lg"
-						class="min-w-[160px] bg-stone-800 text-white hover:bg-stone-700"
+						class="min-w-[160px] bg-stone-800 text-white hover:bg-stone-700 dark:bg-slate-700 dark:text-white dark:hover:bg-slate-600"
 					>
 						<Home class="mr-2 h-4 w-4" />
 						Home

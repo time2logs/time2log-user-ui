@@ -124,7 +124,7 @@
 								type="button"
 								onclick={toggleTheme}
 								class="relative h-6 w-12 rounded-full transition-colors {currentTheme === 'dark'
-									? 'bg-blue-600'
+									? 'bg-black'
 									: 'bg-stone-300'}"
 							>
 								<span
@@ -134,7 +134,7 @@
 										: 'left-0.5'}"
 								>
 									{#if currentTheme === 'dark'}
-										<Moon class="mt-0.5 ml-0.5 h-4 w-4 text-blue-400" />
+										<Moon class="mt-0.5 ml-0.5 h-4 w-4 text-black" />
 									{:else}
 										<Sun class="mt-0.5 ml-0.5 h-4 w-4 text-orange-400" />
 									{/if}
