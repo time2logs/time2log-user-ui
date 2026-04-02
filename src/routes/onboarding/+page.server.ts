@@ -231,17 +231,15 @@ export const actions: Actions = {
 		}
 
 		// Profil anlegen / aktualisieren
-		const { error: statusError } = await locals.supabase
-			.from('profiles')
-			.upsert(
-				{
-					id: existingUser.id,
-					first_name: firstName,
-					last_name: lastName,
-					onboarding_status: 'completed'
-				},
-				{ onConflict: 'id' }
-			);
+		const { error: statusError } = await locals.supabase.from('profiles').upsert(
+			{
+				id: existingUser.id,
+				first_name: firstName,
+				last_name: lastName,
+				onboarding_status: 'completed'
+			},
+			{ onConflict: 'id' }
+		);
 
 		if (statusError) {
 			console.error('Failed to upsert profile:', statusError);
