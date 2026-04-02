@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
 	import { activityStore, getLastActivityId } from '$lib/activityStorage';
-	import type { CurriculumNode, CurriculumTreeNode, TeamMember } from '$lib/types';
+	import type { ActivityRecord, CurriculumNode, CurriculumTreeNode, TeamMember } from '$lib/types';
 	import {
 		Star,
 		ChevronRight,
@@ -17,6 +17,10 @@
 	import { getLocale } from '$lib/paraglide/runtime.js';
 
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+
+	const MAX_HOURS_PER_ENTRY = 10;
+	const MAX_HOURS_PER_DAY = 10;
+	const MIN_HOURS = 1;
 
 	const localeMap: Record<string, string> = {
 		en: 'en-GB',
@@ -33,14 +37,16 @@
 		teamMember,
 		onActivityAdded,
 		selectedDate,
-		activityToEdit = null
+		activityToEdit = null,
+		existingActivities = []
 	}: {
 		open: boolean;
 		curriculumNodes: CurriculumNode[];
 		teamMember: TeamMember | null;
 		onActivityAdded: () => void;
 		selectedDate?: string;
-		activityToEdit?: import('$lib/types').ActivityRecord | null;
+		activityToEdit?: ActivityRecord | null;
+		existingActivities?: ActivityRecord[];
 	} = $props();
 
 	// Build tree from flat list
@@ -141,7 +147,25 @@
 		if (!selectedActivity || hours === 0 || isSubmitting) return;
 		if (!teamMember) {
 			submitError = 'Team information not found. Please contact support.';
-			console.error('[ActivityForm] teamMember is null or undefined');
+			return;
+		}
+
+		if (hours < MIN_HOURS) {
+			submitError = m.error_hours_min({ min: MIN_HOURS.toString() });
+			return;
+		}
+
+		if (hours > MAX_HOURS_PER_ENTRY) {
+			submitError = m.error_hours_max_entry({ max: MAX_HOURS_PER_ENTRY.toString() });
+			return;
+		}
+
+		if (wouldExceedDailyMax) {
+			const remaining = MAX_HOURS_PER_DAY - currentDayHours;
+			submitError = m.error_hours_max_day({
+				max: MAX_HOURS_PER_DAY.toString(),
+				remaining: remaining > 0 ? remaining.toString() : '0'
+			});
 			return;
 		}
 
@@ -193,11 +217,6 @@
 				};
 
 				if (!activityData.organization_id || !activityData.profession_id || !activityData.user_id) {
-					console.error('[ActivityForm] Validation failed:', {
-						organization_id: activityData.organization_id,
-						profession_id: activityData.profession_id,
-						user_id: activityData.user_id
-					});
 					throw new Error('Missing required user information');
 				}
 
@@ -219,7 +238,6 @@
 			open = false;
 			onActivityAdded();
 		} catch (error) {
-			console.error('[ActivityForm] Failed to save activity:', error);
 			submitError =
 				error instanceof Error ? error.message : 'Failed to save activity. Please try again.';
 		} finally {
@@ -231,7 +249,24 @@
 		rating = value;
 	}
 
-	const isValid = $derived(selectedActivityId && hours > 0 && location.trim() && !isSubmitting);
+	const hoursExceedsMax = $derived(hours > MAX_HOURS_PER_ENTRY);
+	const currentDayHours = $derived(
+		existingActivities
+			.filter((a) => a.entry_date === (selectedDate || new Date().toISOString().split('T')[0]))
+			.reduce((sum, a) => {
+				if (activityToEdit && a.id === activityToEdit.id) return sum;
+				return sum + a.hours;
+			}, 0)
+	);
+	const wouldExceedDailyMax = $derived(currentDayHours + hours > MAX_HOURS_PER_DAY);
+	const isValid = $derived(
+		selectedActivityId &&
+			hours >= MIN_HOURS &&
+			!hoursExceedsMax &&
+			!wouldExceedDailyMax &&
+			location.trim() &&
+			!isSubmitting
+	);
 	const selectedDateLabel = $derived(
 		selectedDate
 			? new Intl.DateTimeFormat(dateLocale, {
@@ -371,12 +406,32 @@
 				<input
 					id="hours"
 					type="number"
-					min="0.5"
-					step="0.5"
+					min={MIN_HOURS}
+					max={MAX_HOURS_PER_ENTRY}
+					step="1"
 					bind:value={hours}
 					placeholder={m.hours_placeholder()}
-					class="flex h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-stone-500 focus-visible:ring-1 focus-visible:ring-stone-950 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+					class="flex h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-stone-500 focus-visible:ring-1 focus-visible:ring-stone-950 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 {hoursExceedsMax ||
+					wouldExceedDailyMax
+						? 'border-red-400 focus-visible:ring-red-400'
+						: ''}"
 				/>
+				{#if hoursExceedsMax}
+					<p class="text-sm text-red-600">
+						{m.error_hours_max_entry({ max: MAX_HOURS_PER_ENTRY.toString() })}
+					</p>
+				{:else if wouldExceedDailyMax && hours > 0}
+					<p class="text-sm text-red-600">
+						{m.error_hours_max_day({
+							max: MAX_HOURS_PER_DAY.toString(),
+							remaining: Math.max(0, MAX_HOURS_PER_DAY - currentDayHours).toString()
+						})}
+					</p>
+				{:else if hours > 0 && hours < MIN_HOURS}
+					<p class="text-sm text-amber-600">
+						{m.error_hours_min({ min: MIN_HOURS.toString() })}
+					</p>
+				{/if}
 			</div>
 
 			<!-- Location -->

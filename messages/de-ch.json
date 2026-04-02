@@ -70,5 +70,8 @@
 	"edit_activity_description": "Aktualisieren Sie Ihre Aktivitätsdetails.",
 	"save_changes_button": "Änderungen speichern",
 	"location_label": "Standort",
-	"location_placeholder": "Standort eingeben"
+	"location_placeholder": "Standort eingeben",
+	"error_hours_min": "Mindestens {min} Stunde(n) erforderlich",
+	"error_hours_max_entry": "Maximal {max} Stunden pro Eintrag erlaubt",
+	"error_hours_max_day": "Tageslimit von {max} Stunden würde überschritten. Verbleibend: {remaining}h"
 }

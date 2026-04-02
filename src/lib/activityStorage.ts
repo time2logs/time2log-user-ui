@@ -5,6 +5,9 @@ import { supabase } from './supabaseClient';
 const LAST_ACTIVITY_KEY = 'last_activity_id';
 const DEBUG = import.meta.env.DEV ?? false;
 
+export const MAX_HOURS_PER_ENTRY = 10;
+export const MIN_HOURS = 0.5;
+
 function debugLog(message: string, data?: unknown) {
 	if (DEBUG && typeof window !== 'undefined') {
 		console.log(`[ActivityStorage] ${message}`, data || '');
@@ -12,8 +15,21 @@ function debugLog(message: string, data?: unknown) {
 }
 
 function validateActivity(activity: { hours: number }): boolean {
-	if (typeof activity.hours !== 'number' || isNaN(activity.hours) || activity.hours <= 0) {
+	if (typeof activity.hours !== 'number' || isNaN(activity.hours)) {
 		console.error('[ActivityStorage] Invalid hours value:', activity.hours);
+		return false;
+	}
+	if (activity.hours < MIN_HOURS) {
+		console.error('[ActivityStorage] Hours below minimum:', activity.hours, '<', MIN_HOURS);
+		return false;
+	}
+	if (activity.hours > MAX_HOURS_PER_ENTRY) {
+		console.error(
+			'[ActivityStorage] Hours exceed maximum:',
+			activity.hours,
+			'>',
+			MAX_HOURS_PER_ENTRY
+		);
 		return false;
 	}
 	return true;
