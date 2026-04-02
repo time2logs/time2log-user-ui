@@ -89,5 +89,20 @@
 	"save": "Speichern",
 	"error_hours_min": "Mindestens {min} Stunde(n) erforderlich",
 	"error_hours_max_entry": "Maximal {max} Stunden pro Eintrag erlaubt",
-	"error_hours_max_day": "Tageslimit von {max} Stunden würde überschritten. Verbleibend: {remaining}h"
+	"error_hours_max_day": "Tageslimit von {max} Stunden würde überschritten. Verbleibend: {remaining}h",
+	"settings_profile_saved": "Profil erfolgreich gespeichert.",
+	"settings_error_name_required": "Vor- und Nachname sind erforderlich.",
+	"settings_error_file_too_large": "Dateigrösse überschreitet 0.5MB. Bitte wähle ein kleineres Bild.",
+	"settings_error_file_type": "Nicht unterstützter Dateityp. Bitte JPEG, PNG oder WEBP verwenden.",
+	"change_avatar": "Foto ändern",
+	"saving": "Speichern...",
+	"settings_email_confirmation_sent": "Eine Bestätigungs-E-Mail wurde an deine neue Adresse gesendet.",
+	"settings_error_email_unchanged": "Dies ist bereits deine aktuelle E-Mail-Adresse.",
+	"settings_password_saved": "Passwort erfolgreich geändert.",
+	"settings_error_password_mismatch": "Die Passwörter stimmen nicht überein.",
+	"danger_zone": "Gefahrenzone",
+	"change_email": "E-Mail ändern",
+	"change_password_title": "Passwort ändern",
+	"new_password_label": "Neues Passwort",
+	"confirm_password_label": "Neues Passwort bestätigen"
 }
