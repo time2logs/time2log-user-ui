@@ -7,7 +7,6 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { ArrowLeft, User, Globe, LogOut, Loader2, Moon, Sun } from 'lucide-svelte';
-	import { logout } from '$lib/api';
 	import { theme } from '$lib/themeStore';
 
 	let { data } = $props();
@@ -21,21 +20,19 @@
 	});
 
 	const initials = $derived(
-		data.profile ? `${data.profile.first_name[0]}${data.profile.last_name[0]}`.toUpperCase() : '?'
+		data.profile
+			? `${data.profile.first_name?.[0] ?? ''}${data.profile.last_name?.[0] ?? ''}`.toUpperCase() ||
+					'?'
+			: '?'
 	);
 
 	const fullName = $derived(
 		data.profile ? `${data.profile.first_name} ${data.profile.last_name}` : 'Guest'
 	);
 
-	async function handleLogout() {
+	function handleLogout() {
 		isLoggingOut = true;
-		try {
-			await logout();
-		} catch (error) {
-			console.error('Logout failed:', error);
-			isLoggingOut = false;
-		}
+		window.location.href = '/logout';
 	}
 
 	function toggleTheme() {

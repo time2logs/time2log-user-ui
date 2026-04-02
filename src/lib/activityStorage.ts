@@ -6,7 +6,8 @@ const LAST_ACTIVITY_KEY = 'last_activity_id';
 const DEBUG = import.meta.env.DEV ?? false;
 
 export const MAX_HOURS_PER_ENTRY = 10;
-export const MIN_HOURS = 0.5;
+export const MAX_HOURS_PER_DAY = 10;
+export const MIN_HOURS = 1;
 
 function debugLog(message: string, data?: unknown) {
 	if (DEBUG && typeof window !== 'undefined') {
@@ -347,47 +348,4 @@ export async function getActivityById(id: string): Promise<ActivityRecord | unde
 		activity_key: data.curriculum_nodes?.key || '',
 		activity_label: ''
 	};
-}
-
-// Debug functions to expose to console for debugging
-export async function debugGetAllActivities() {
-	const activities = await getActivities();
-	console.table(activities);
-	return activities;
-}
-
-export function debugShowStorageInfo() {
-	if (typeof window === 'undefined') {
-		console.log('[ActivityStorage] Storage Info not available during SSR');
-		return null;
-	}
-
-	const lastId = localStorage.getItem(LAST_ACTIVITY_KEY);
-	const info = {
-		lastActivityId: lastId,
-		note: 'Activities are now stored in Supabase, not localStorage'
-	};
-	console.log('[ActivityStorage] Storage Info:', info);
-	return info;
-}
-
-// Expose debug functions to window object for easy console access
-if (typeof window !== 'undefined') {
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	(window as any).activityDebug = {
-		getAll: debugGetAllActivities,
-		info: debugShowStorageInfo,
-		help: () => {
-			console.log(`
-Activity Storage Debug Commands:
-  activityDebug.getAll()     - Display all activities in a table
-  activityDebug.info()       - Show storage info
-  activityDebug.help()       - Show this help message
-
-Note: Activities are stored in Supabase, not localStorage.
-			`);
-		}
-	};
-
-	debugLog('Debug functions exposed to window.activityDebug');
 }

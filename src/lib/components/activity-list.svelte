@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Trash2, Calendar, Clock, Star, Pencil, MapPin } from 'lucide-svelte';
 	import { activityStore } from '$lib/activityStorage';
 	import type { ActivityRecord } from '$lib/types';
@@ -15,16 +16,7 @@
 		onEdit?: (activity: ActivityRecord) => void;
 	} = $props();
 
-	// Subscribe to the store for automatic updates
-	let activities = $state<ActivityRecord[]>([]);
-	activityStore.subscribe((data) => {
-		activities = data;
-	});
-
-	// Load activities from Supabase when component mounts
-	$effect(() => {
-		activityStore.load();
-	});
+	const activities = $derived($activityStore);
 
 	const filteredActivities = $derived(
 		selectedDate
@@ -32,15 +24,26 @@
 			: activities
 	);
 
-	async function handleDelete(id: string) {
-		if (confirm(m.delete_activity_confirm())) {
-			try {
-				await activityStore.delete(id);
-				onRefresh();
-			} catch (error) {
-				console.error('[ActivityList] Exception deleting:', error);
-				alert(error instanceof Error ? error.message : 'Failed to delete activity');
-			}
+	let deleteDialogOpen = $state(false);
+	let activityToDeleteId = $state<string | null>(null);
+	let deleteError = $state('');
+
+	function requestDelete(id: string) {
+		activityToDeleteId = id;
+		deleteError = '';
+		deleteDialogOpen = true;
+	}
+
+	async function confirmDelete() {
+		if (!activityToDeleteId) return;
+		try {
+			await activityStore.delete(activityToDeleteId);
+			deleteDialogOpen = false;
+			activityToDeleteId = null;
+			onRefresh();
+		} catch (error) {
+			console.error('[ActivityList] Exception deleting:', error);
+			deleteError = error instanceof Error ? error.message : 'Failed to delete activity';
 		}
 	}
 
@@ -81,8 +84,10 @@
 		>
 			<div class="flex flex-col items-center gap-3 text-stone-400 dark:text-slate-500">
 				<Calendar class="h-12 w-12" />
-				<p class="text-lg font-medium">No activities logged for {selectedDateLabel}.</p>
-				<p class="text-sm">Choose another workday or add an activity for this date.</p>
+				<p class="text-lg font-medium">
+					{m.no_activities_for_date({ date: selectedDateLabel ?? '' })}
+				</p>
+				<p class="text-sm">{m.no_activities_for_date_hint()}</p>
 			</div>
 		</div>
 	{:else}
@@ -141,6 +146,7 @@
 						<Button
 							variant="ghost"
 							size="icon"
+							aria-label={m.edit_activity_title()}
 							onclick={() => onEdit?.(activity)}
 							class="text-stone-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-blue-50 hover:text-blue-500 dark:text-slate-500 dark:hover:bg-slate-600 dark:hover:text-blue-400"
 						>
@@ -149,7 +155,8 @@
 						<Button
 							variant="ghost"
 							size="icon"
-							onclick={() => handleDelete(activity.id)}
+							aria-label={m.delete_activity_confirm_button()}
+							onclick={() => requestDelete(activity.id)}
 							class="text-stone-400 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 dark:text-slate-500 dark:hover:bg-slate-600 dark:hover:text-red-400"
 						>
 							<Trash2 class="h-4 w-4" />
@@ -160,6 +167,27 @@
 		</div>
 	{/if}
 </div>
+
+<AlertDialog.Root bind:open={deleteDialogOpen}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>{m.delete_activity_confirm()}</AlertDialog.Title>
+			{#if deleteError}
+				<AlertDialog.Description class="text-red-500">{deleteError}</AlertDialog.Description>
+			{/if}
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>{m.cancel()}</AlertDialog.Cancel>
+			<AlertDialog.Action
+				onclick={confirmDelete}
+				class="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"
+			>
+				<Trash2 class="mr-2 h-4 w-4" />
+				{m.delete_activity_confirm_button()}
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
 
 <style>
 	@keyframes slideIn {

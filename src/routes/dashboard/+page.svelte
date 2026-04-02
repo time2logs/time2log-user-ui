@@ -8,25 +8,17 @@
 	import ActivityFormDialog from '$lib/components/activity-form-dialog.svelte';
 	import WorkdayCalendar from '$lib/components/workday-calendar.svelte';
 	import * as m from '$lib/paraglide/messages.js';
-	import { getLocale } from '$lib/paraglide/runtime.js';
 	import GradientBackground from '$lib/components/gradient-background.svelte';
 	import GlassCard from '$lib/components/glass-card.svelte';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
-	import { logout } from '$lib/api';
 	import { activityStore } from '$lib/activityStorage';
 	import type { ActivityRecord } from '$lib/types';
 	import { resolve } from '$app/paths';
 	import { LogOut, Loader2, Plus, Menu, Settings } from 'lucide-svelte';
 	import { DateFormatter, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
+	import { getDateLocale } from '$lib/dateLocale';
 
-	const localeMap: Record<string, string> = {
-		en: 'en-GB',
-		'de-ch': 'de-CH',
-		it: 'it-IT',
-		fr: 'fr-FR'
-	};
-
-	const dateLocale = $derived(localeMap[getLocale()] ?? 'en-GB');
+	const dateLocale = $derived(getDateLocale());
 
 	let { data } = $props();
 
@@ -50,10 +42,7 @@
 
 	let selectedDate = $state<DateValue>(getDefaultSelectedDate());
 
-	let activities = $state<ActivityRecord[]>([]);
-	activityStore.subscribe((data) => {
-		activities = data;
-	});
+	const activities = $derived($activityStore);
 
 	$effect(() => {
 		activityStore.load();
@@ -78,14 +67,9 @@
 		}).format(selectedDate.toDate(timeZone))
 	);
 
-	async function handleLogout() {
+	function handleLogout() {
 		isLoggingOut = true;
-		try {
-			await logout();
-		} catch (error) {
-			console.error('Logout failed:', error);
-			isLoggingOut = false;
-		}
+		window.location.href = '/logout';
 	}
 
 	function handleActivityAdded() {
@@ -99,7 +83,10 @@
 	}
 
 	const initials = $derived(
-		data.profile ? `${data.profile.first_name[0]}${data.profile.last_name[0]}`.toUpperCase() : '?'
+		data.profile
+			? `${data.profile.first_name?.[0] ?? ''}${data.profile.last_name?.[0] ?? ''}`.toUpperCase() ||
+					'?'
+			: '?'
 	);
 
 	const firstName = $derived(data.profile?.first_name ?? 'Guest');
@@ -145,6 +132,7 @@
 					<a
 						href={resolve('/settings')}
 						data-sveltekit-reload
+						aria-label={m.settings_title()}
 						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-accent hover:text-stone-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
 					>
 						<Settings class="h-5 w-5" />
@@ -153,6 +141,7 @@
 						variant="ghost"
 						onclick={() => (logoutDialogOpen = true)}
 						size="icon"
+						aria-label={m.logout()}
 						class="text-stone-600 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400"
 					>
 						<LogOut class="h-5 w-5" />
@@ -161,6 +150,7 @@
 				<Button
 					variant="outline"
 					onclick={() => (mobileMenuOpen = true)}
+					aria-label={m.open_menu()}
 					class="h-10 w-10 shrink-0 rounded-full p-0 sm:hidden"
 				>
 					<Menu class="h-5 w-5" />
