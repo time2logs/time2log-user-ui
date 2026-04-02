@@ -8,7 +8,7 @@ export type CurriculumNode = {
 	label: string;
 	description: string | null;
 	sort_order: number;
-	meta: any;
+	meta: Record<string, unknown>;
 	is_active: boolean;
 	created_at: string;
 	updated_at: string;
