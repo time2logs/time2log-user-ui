@@ -19,8 +19,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const profile = profileResult.error ? null : profileResult.data;
 
-	let locations = [];
-	let defaultLocation = null;
+	type UserLocation = {
+		user_id: string;
+		location: string;
+		is_default: boolean;
+		created_at: string;
+	};
+
+	let locations: UserLocation[] = [];
+	let defaultLocation: string | null = null;
 
 	try {
 		const locationsResult = await locals.supabase
@@ -30,8 +37,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.order('created_at', { ascending: false });
 
 		if (!locationsResult.error && locationsResult.data) {
-			locations = locationsResult.data;
-			defaultLocation = locations.find((l: any) => l.is_default)?.location ?? null;
+			locations = locationsResult.data as UserLocation[];
+			defaultLocation = locations.find((l) => l.is_default)?.location ?? null;
 		}
 	} catch (e) {
 		console.warn('user_locations table not available:', e);

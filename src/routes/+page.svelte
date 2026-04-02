@@ -29,6 +29,7 @@
 <GradientBackground>
 	<section class="flex flex-grow items-center justify-center px-4 py-20">
 		<GlassCard class="relative mx-auto max-w-2xl p-8 sm:p-12">
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
 			<div
 				bind:this={cardElement}
 				onmousemove={handleMouseMove}

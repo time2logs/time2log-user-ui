@@ -143,7 +143,7 @@
 				<div class="hidden items-center gap-2 sm:flex">
 					<LanguageSwitcher />
 					<a
-						href="/settings"
+						href={resolve('/settings')}
 						data-sveltekit-reload
 						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-accent hover:text-stone-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
 					>

@@ -78,6 +78,7 @@
 	<!-- Main Content -->
 	<main class="relative z-10 flex flex-1 items-center justify-center px-4 py-12">
 		<!-- Frosted glass card with cursor bloom inside -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			bind:this={cardElement}
 			onmousemove={handleMouseMove}

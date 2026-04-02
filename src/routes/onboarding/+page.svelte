@@ -21,7 +21,7 @@
 	let avatarFile: File | null = $state(null);
 	let avatarPreviewUrl = $state('');
 	let avatarError = $state('');
-	let fileInput: HTMLInputElement;
+	let fileInput: HTMLInputElement | undefined = $state();
 
 	async function compressImage(file: File): Promise<Blob> {
 		return new Promise((resolve, reject) => {
@@ -221,7 +221,7 @@
 								<div class="mt-2 flex flex-col items-center gap-4">
 									<button
 										type="button"
-										onclick={() => fileInput.click()}
+										onclick={() => fileInput?.click()}
 										class="group relative h-24 w-24 overflow-hidden rounded-full border-2 border-dashed border-stone-300 bg-stone-50 transition-all hover:border-orange-400 hover:bg-stone-100 disabled:cursor-not-allowed dark:border-slate-600 dark:bg-slate-800 dark:hover:border-orange-400"
 										disabled={isSubmitting}
 									>

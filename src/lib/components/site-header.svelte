@@ -8,7 +8,9 @@
 >
 	<div class="mx-auto flex max-w-6xl items-center justify-between">
 		<div class="flex items-center gap-2">
-			<a class="text-xl font-bold text-stone-800 dark:text-slate-100" href={resolve('/')}>time2log</a>
+			<a class="text-xl font-bold text-stone-800 dark:text-slate-100" href={resolve('/')}
+				>time2log</a
+			>
 		</div>
 		<LanguageSwitcher />
 	</div>
