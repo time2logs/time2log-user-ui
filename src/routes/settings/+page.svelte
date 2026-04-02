@@ -1,7 +1,5 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages.js';
-	import GradientBackground from '$lib/components/gradient-background.svelte';
-	import GlassCard from '$lib/components/glass-card.svelte';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
@@ -21,6 +19,7 @@
 		ShieldAlert
 	} from 'lucide-svelte';
 	import { theme } from '$lib/themeStore';
+	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 
 	let { data, form } = $props();
 
@@ -191,24 +190,21 @@
 	});
 </script>
 
-<GradientBackground>
-	<main class="flex flex-1 flex-col items-center justify-center p-4 sm:p-8">
+<div class="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
+	<AmbientGlow />
+	<main class="relative z-10 flex flex-1 flex-col items-center justify-center p-4 sm:p-8">
 		<div class="w-full max-w-md">
-			<Button
-				variant="ghost"
-				href="/dashboard"
-				class="mb-6 gap-2 self-start text-stone-600 dark:text-slate-400"
-			>
+			<Button variant="ghost" href="/dashboard" class="mb-6 gap-2 self-start text-muted-foreground">
 				<ArrowLeft class="h-4 w-4" />
 				{m.back_to_dashboard()}
 			</Button>
 
-			<h1 class="mb-8 text-3xl font-bold text-stone-800 dark:text-slate-100">
+			<h1 class="mb-8 text-3xl font-bold text-foreground">
 				{m.settings_title()}
 			</h1>
 
 			<div class="space-y-6">
-				<GlassCard>
+				<div class="rounded-xl border border-border bg-card shadow-sm">
 					<form
 						method="POST"
 						action="?/updateProfile"
@@ -230,7 +226,7 @@
 						}}
 					>
 						<div class="p-4">
-							<div class="mb-4 flex items-center gap-2 text-stone-800 dark:text-slate-100">
+							<div class="mb-4 flex items-center gap-2 text-foreground">
 								<User class="h-5 w-5" />
 								<h3 class="font-semibold">{m.profile_settings()}</h3>
 							</div>
@@ -240,7 +236,7 @@
 								<button
 									type="button"
 									onclick={() => fileInput?.click()}
-									class="group relative h-20 w-20 overflow-hidden rounded-full border-2 border-white shadow-lg transition-all hover:border-orange-400 dark:border-slate-600 dark:hover:border-orange-400"
+									class="group relative h-20 w-20 overflow-hidden rounded-full border-2 border-border shadow-sm transition-all hover:border-border hover:border-primary"
 									disabled={isSaving || isCompressing}
 								>
 									{#if displayAvatarUrl}
@@ -251,7 +247,7 @@
 										/>
 									{:else}
 										<div
-											class="flex h-full w-full items-center justify-center bg-gradient-to-br from-orange-400 to-rose-400 text-xl font-semibold text-white transition-opacity group-hover:opacity-60"
+											class="flex h-full w-full items-center justify-center bg-primary/10 text-xl font-semibold text-primary ring-1 ring-primary/20 transition-opacity group-hover:opacity-60"
 										>
 											{initials}
 										</div>
@@ -275,9 +271,9 @@
 									disabled={isSaving || isCompressing}
 								/>
 								{#if avatarError}
-									<p class="text-xs text-red-600 dark:text-red-400">{avatarError}</p>
+									<p class="text-xs text-destructive">{avatarError}</p>
 								{:else}
-									<p class="text-xs text-stone-500 dark:text-slate-500">{m.change_avatar()}</p>
+									<p class="text-xs text-muted-foreground">{m.change_avatar()}</p>
 								{/if}
 							</div>
 
@@ -309,14 +305,14 @@
 
 							{#if form?.profileError}
 								<div
-									class="mt-4 rounded-md border border-red-200 bg-red-50/80 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+									class="mt-4 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
 								>
 									{form.profileError}
 								</div>
 							{/if}
 							{#if form?.profileSuccess}
 								<div
-									class="mt-4 rounded-md border border-green-200 bg-green-50/80 p-3 text-sm text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-300"
+									class="mt-4 rounded-md border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-600"
 								>
 									{m.settings_profile_saved()}
 								</div>
@@ -332,16 +328,16 @@
 							</Button>
 						</div>
 					</form>
-				</GlassCard>
+				</div>
 
-				<GlassCard>
+				<div class="rounded-xl border border-border bg-card shadow-sm">
 					<div class="p-4">
-						<div class="mb-4 flex items-center gap-2 text-stone-800 dark:text-slate-100">
+						<div class="mb-4 flex items-center gap-2 text-foreground">
 							<Moon class="h-5 w-5" />
 							<h3 class="font-semibold">{m.appearance_settings()}</h3>
 						</div>
 						<div class="flex items-center justify-between">
-							<span class="text-stone-600 dark:text-slate-400">
+							<span class="text-muted-foreground">
 								{currentTheme === 'dark' ? m.dark_mode() : m.light_mode()}
 							</span>
 							<button
@@ -349,7 +345,7 @@
 								onclick={toggleTheme}
 								class="relative h-6 w-12 rounded-full transition-colors {currentTheme === 'dark'
 									? 'bg-black'
-									: 'bg-stone-300'}"
+									: 'bg-muted'}"
 							>
 								<span
 									class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-transform {currentTheme ===
@@ -360,30 +356,28 @@
 									{#if currentTheme === 'dark'}
 										<Moon class="mt-0.5 ml-0.5 h-4 w-4 text-black" />
 									{:else}
-										<Sun class="mt-0.5 ml-0.5 h-4 w-4 text-orange-400" />
+										<Sun class="mt-0.5 ml-0.5 h-4 w-4 text-primary" />
 									{/if}
 								</span>
 							</button>
 						</div>
 					</div>
-				</GlassCard>
+				</div>
 
-				<GlassCard>
+				<div class="rounded-xl border border-border bg-card shadow-sm">
 					<div class="p-4">
-						<div class="mb-4 flex items-center gap-2 text-stone-800 dark:text-slate-100">
+						<div class="mb-4 flex items-center gap-2 text-foreground">
 							<Globe class="h-5 w-5" />
 							<h3 class="font-semibold">{m.language_settings()}</h3>
 						</div>
 						<LanguageSwitcher />
 					</div>
-				</GlassCard>
+				</div>
 
 				<!-- Danger Zone -->
-				<div
-					class="rounded-xl border border-red-200 bg-red-50/40 dark:border-red-900 dark:bg-red-950/20"
-				>
+				<div class="rounded-xl border border-destructive/20 bg-destructive/5">
 					<div class="p-4">
-						<div class="mb-4 flex items-center gap-2 text-red-700 dark:text-red-400">
+						<div class="mb-4 flex items-center gap-2 text-destructive">
 							<ShieldAlert class="h-5 w-5" />
 							<h3 class="font-semibold">{m.danger_zone()}</h3>
 						</div>
@@ -402,7 +396,7 @@
 								}}
 								class="space-y-3"
 							>
-								<p class="text-sm font-medium text-stone-700 dark:text-slate-300">
+								<p class="text-sm font-medium text-foreground">
 									{m.change_email()}
 								</p>
 								<div class="space-y-1">
@@ -417,14 +411,14 @@
 								</div>
 								{#if form?.emailError}
 									<div
-										class="rounded-md border border-red-200 bg-red-50/80 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+										class="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
 									>
 										{form.emailError}
 									</div>
 								{/if}
 								{#if form?.emailSuccess}
 									<div
-										class="rounded-md border border-green-200 bg-green-50/80 p-3 text-sm text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-300"
+										class="rounded-md border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-600"
 									>
 										{m.settings_email_confirmation_sent()}
 									</div>
@@ -432,7 +426,7 @@
 								<Button
 									type="submit"
 									variant="outline"
-									class="w-full border-red-200 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+									class="w-full border-destructive/20 text-destructive hover:bg-destructive/10 dark:hover:bg-red-950"
 									disabled={isSavingEmail}
 								>
 									{#if isSavingEmail}
@@ -444,7 +438,7 @@
 								</Button>
 							</form>
 
-							<Separator class="border-red-200 dark:border-red-900" />
+							<Separator class="border-destructive/20 " />
 
 							<!-- Change password -->
 							<form
@@ -459,7 +453,7 @@
 								}}
 								class="space-y-3"
 							>
-								<p class="text-sm font-medium text-stone-700 dark:text-slate-300">
+								<p class="text-sm font-medium text-foreground">
 									{m.change_password_title()}
 								</p>
 								<div class="space-y-1">
@@ -484,14 +478,14 @@
 								</div>
 								{#if form?.passwordError}
 									<div
-										class="rounded-md border border-red-200 bg-red-50/80 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+										class="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
 									>
 										{form.passwordError}
 									</div>
 								{/if}
 								{#if form?.passwordSuccess}
 									<div
-										class="rounded-md border border-green-200 bg-green-50/80 p-3 text-sm text-green-700 dark:border-green-900 dark:bg-green-950 dark:text-green-300"
+										class="rounded-md border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-600"
 									>
 										{m.settings_password_saved()}
 									</div>
@@ -499,7 +493,7 @@
 								<Button
 									type="submit"
 									variant="outline"
-									class="w-full border-red-200 text-red-700 hover:bg-red-100 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
+									class="w-full border-destructive/20 text-destructive hover:bg-destructive/10 dark:hover:bg-red-950"
 									disabled={isSavingPassword}
 								>
 									{#if isSavingPassword}
@@ -511,17 +505,17 @@
 								</Button>
 							</form>
 
-							<Separator class="border-red-200 dark:border-red-900" />
+							<Separator class="border-destructive/20 " />
 
 							<!-- Logout -->
 							<div>
-								<p class="mb-3 text-sm font-medium text-stone-700 dark:text-slate-300">
+								<p class="mb-3 text-sm font-medium text-foreground">
 									{m.account()}
 								</p>
 								<Button
 									variant="outline"
 									onclick={() => (logoutDialogOpen = true)}
-									class="w-full justify-start gap-2 border-red-200 bg-red-50 text-red-700 hover:bg-red-100 dark:border-red-900 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900"
+									class="w-full justify-start gap-2 border-destructive/20 bg-destructive/5 text-destructive hover:bg-destructive/10 dark:hover:bg-red-900"
 								>
 									<LogOut class="h-4 w-4" />
 									{m.logout()}
@@ -533,7 +527,7 @@
 			</div>
 		</div>
 	</main>
-</GradientBackground>
+</div>
 
 <AlertDialog.Root bind:open={logoutDialogOpen}>
 	<AlertDialog.Content>
@@ -546,7 +540,7 @@
 			<AlertDialog.Action
 				onclick={handleLogout}
 				disabled={isLoggingOut}
-				class="bg-red-500 hover:bg-red-600"
+				class="bg-destructive/50 hover:bg-red-600"
 			>
 				{#if isLoggingOut}
 					<Loader2 class="mr-2 h-4 w-4 animate-spin" /> {m.logging_out()}
