@@ -142,8 +142,10 @@ export const actions: Actions = {
 		}
 
 		// 1. User per Email in auth.users suchen
-		const { data: { users }, error: listError } =
-			await locals.supabaseServiceRole.auth.admin.listUsers();
+		const {
+			data: { users },
+			error: listError
+		} = await locals.supabaseServiceRole.auth.admin.listUsers();
 
 		if (listError) {
 			return fail(500, {
@@ -152,7 +154,7 @@ export const actions: Actions = {
 			});
 		}
 
-		const existingUser = users.find(u => u.email === email);
+		const existingUser = users.find((u) => u.email === email);
 
 		if (!existingUser) {
 			return fail(400, {
@@ -177,23 +179,23 @@ export const actions: Actions = {
 
 		if (profile?.onboarding_status === 'completed') {
 			return fail(400, {
-				error: 'Dieser Benutzer hat das Onboarding bereits abgeschlossen. Bitte melde dich direkt an.',
+				error:
+					'Dieser Benutzer hat das Onboarding bereits abgeschlossen. Bitte melde dich direkt an.',
 				values: { firstName, lastName }
 			});
 		}
 
 		// 3. Passwort + Metadaten setzen
-		const { error: updateError } =
-			await locals.supabaseServiceRole.auth.admin.updateUserById(
-				existingUser.id,
-				{
-					password,
-					user_metadata: {
-						first_name: firstName,
-						last_name: lastName
-					}
+		const { error: updateError } = await locals.supabaseServiceRole.auth.admin.updateUserById(
+			existingUser.id,
+			{
+				password,
+				user_metadata: {
+					first_name: firstName,
+					last_name: lastName
 				}
-			);
+			}
+		);
 
 		if (updateError) {
 			return fail(500, {
@@ -216,27 +218,27 @@ export const actions: Actions = {
 		}
 
 		// 5. Invite akzeptieren
-        const { error: acceptError } = await locals.supabase.rpc('accept_invite', {
-            invite_token: token
-        });
+		const { error: acceptError } = await locals.supabase.rpc('accept_invite', {
+			invite_token: token
+		});
 
-        if (acceptError) {
-            return fail(400, {
-                error: acceptError.message,
-                values: { firstName, lastName }
-            });
-        }
+		if (acceptError) {
+			return fail(400, {
+				error: acceptError.message,
+				values: { firstName, lastName }
+			});
+		}
 
-        // Onboarding-Status auf completed setzen
-        const { error: statusError } = await locals.supabase
-            .from('profiles')
-            .update({ onboarding_status: 'completed' })
-            .eq('id', existingUser.id);
+		// Onboarding-Status auf completed setzen
+		const { error: statusError } = await locals.supabase
+			.from('profiles')
+			.update({ onboarding_status: 'completed' })
+			.eq('id', existingUser.id);
 
-        if (statusError) {
-            console.error('Failed to update onboarding status:', statusError);
-            // Kein hard fail — User ist bereits eingeloggt und Invite akzeptiert
-        }
+		if (statusError) {
+			console.error('Failed to update onboarding status:', statusError);
+			// Kein hard fail — User ist bereits eingeloggt und Invite akzeptiert
+		}
 
 		// 6. Avatar upload
 		if (avatarFile && avatarFile.size > 0) {
