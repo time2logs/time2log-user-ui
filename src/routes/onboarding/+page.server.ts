@@ -165,6 +165,7 @@ export const actions: Actions = {
 
 		// 2. Onboarding-Status prüfen — falls bereits abgeschlossen, abbrechen
 		const { data: profile, error: profileError } = await locals.supabaseServiceRole
+			.schema('app')
 			.from('profiles')
 			.select('onboarding_status')
 			.eq('id', existingUser.id)
