@@ -18,7 +18,7 @@ export function generateRecurrenceDates(
 	const maxDate = until || new Date(start);
 	maxDate.setMonth(maxDate.getMonth() + 12);
 
-	let current = new Date(start);
+	const current = new Date(start);
 	let count = 0;
 
 	while (current <= maxDate && count < maxFutureDates) {

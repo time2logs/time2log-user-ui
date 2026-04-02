@@ -58,6 +58,7 @@
 		"@supabase/supabase-js": "^2.99.3",
 		"csstype": "^3.2.3",
 		"flowbite-svelte": "^1.31.0",
-		"lucide-svelte": "^0.577.0"
+		"lucide-svelte": "^0.577.0",
+		"rrule": "^2.8.1"
 	}
 }
