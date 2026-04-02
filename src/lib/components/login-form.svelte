@@ -48,24 +48,28 @@
 
 <div class="relative flex min-h-screen flex-col overflow-hidden">
 	<!-- Background gradient that covers entire page -->
-	<div class="fixed inset-0 bg-gradient-to-br from-orange-50 via-rose-50 to-white"></div>
+	<div
+		class="fixed inset-0 bg-gradient-to-br from-orange-50 via-rose-50 to-white dark:from-slate-950 dark:via-slate-900 dark:to-slate-950"
+	></div>
 
 	<!-- Soft gradient orbs -->
 	<div
-		class="fixed top-0 left-1/4 h-[600px] w-[600px] rounded-full bg-orange-200/40 blur-[120px]"
+		class="fixed top-0 left-1/4 h-[600px] w-[600px] rounded-full bg-orange-200/40 blur-[120px] dark:bg-black/20 dark:blur-[150px]"
 	></div>
 	<div
-		class="fixed top-1/4 right-0 h-[500px] w-[500px] rounded-full bg-orange-300/35 blur-[120px]"
+		class="fixed top-1/4 right-0 h-[500px] w-[500px] rounded-full bg-orange-300/35 blur-[120px] dark:bg-black/15 dark:blur-[150px]"
 	></div>
 	<div
-		class="fixed bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-rose-200/30 blur-[100px]"
+		class="fixed bottom-0 left-1/3 h-[400px] w-[400px] rounded-full bg-rose-200/30 blur-[100px] dark:bg-black/25 dark:blur-[150px]"
 	></div>
 
 	<!-- Header -->
-	<header class="relative z-10 border-b border-white/30 bg-white/20 px-8 py-4 backdrop-blur-xl">
+	<header
+		class="relative z-10 border-b border-white/30 bg-white/20 px-8 py-4 backdrop-blur-xl dark:border-slate-700/30 dark:bg-slate-900/40"
+	>
 		<div class="mx-auto flex max-w-6xl items-center justify-between">
 			<div class="flex items-center gap-2">
-				<span class="text-xl font-bold text-stone-800">time2log</span>
+				<span class="text-xl font-bold text-stone-800 dark:text-slate-100">time2log</span>
 			</div>
 			<LanguageSwitcher />
 		</div>
@@ -78,22 +82,22 @@
 			bind:this={cardElement}
 			onmousemove={handleMouseMove}
 			onmouseleave={handleMouseLeave}
-			class="relative mx-auto w-full max-w-sm overflow-hidden rounded-3xl border border-white/50 bg-white/25 p-8 shadow-xl backdrop-blur-2xl"
+			class="relative mx-auto w-full max-w-sm overflow-hidden rounded-3xl border border-white/50 bg-white/25 p-8 shadow-xl backdrop-blur-2xl dark:border-slate-700/50 dark:bg-slate-800/40 dark:shadow-2xl dark:shadow-black/50"
 			style="box-shadow: 0 8px 32px 0 rgba(255, 200, 150, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.5);"
 		>
 			<!-- Cursor bloom effect - only inside card -->
 			<div
-				class="pointer-events-none absolute z-0 h-[300px] w-[300px] rounded-full bg-gradient-to-r from-orange-200/40 via-rose-200/40 to-orange-300/40 blur-[60px] transition-opacity duration-300"
+				class="pointer-events-none absolute z-0 h-[300px] w-[300px] rounded-full bg-gradient-to-r from-orange-200/40 via-rose-200/40 to-orange-300/40 blur-[60px] transition-opacity duration-300 dark:opacity-0"
 				style="left: {cursorX - 150}px; top: {cursorY - 150}px; opacity: {cursorVisible ? 1 : 0};"
 			></div>
 
 			<div class="relative z-10">
 				<Card.Root class="border-0 bg-transparent shadow-none">
 					<Card.Header class="px-0 pb-4">
-						<Card.Title class="text-2xl font-bold text-stone-800">
+						<Card.Title class="text-2xl font-bold text-stone-800 dark:text-slate-100">
 							{m.login_title()}
 						</Card.Title>
-						<Card.Description class="text-stone-600">
+						<Card.Description class="text-stone-600 dark:text-slate-400">
 							{m.login_description()}
 						</Card.Description>
 					</Card.Header>
@@ -106,13 +110,17 @@
 							class="grid gap-4"
 						>
 							{#if errorMessage}
-								<div class="rounded-md border border-red-200 bg-red-50/80 p-3 text-sm text-red-700">
+								<div
+									class="rounded-md border border-red-200 bg-red-50/80 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
+								>
 									{errorMessage}
 								</div>
 							{/if}
 
 							<div class="grid gap-2">
-								<Label for="email" class="text-stone-700">{m.email_label()}</Label>
+								<Label for="email" class="text-stone-700 dark:text-slate-200"
+									>{m.email_label()}</Label
+								>
 								<Input
 									id="email"
 									type="email"
@@ -120,12 +128,14 @@
 									bind:value={email}
 									required
 									disabled={isLoading}
-									class="border-white/50 bg-white/50 backdrop-blur-sm placeholder:text-stone-400 focus:bg-white/70"
+									class="border-white/50 bg-white/50 backdrop-blur-sm placeholder:text-stone-400 focus:bg-white/70 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-700/50"
 								/>
 							</div>
 							<div class="grid gap-2">
 								<div class="flex items-center">
-									<Label for="password" class="text-stone-700">{m.password_label()}</Label>
+									<Label for="password" class="text-stone-700 dark:text-slate-200"
+										>{m.password_label()}</Label
+									>
 								</div>
 								<Input
 									id="password"
@@ -133,12 +143,15 @@
 									bind:value={password}
 									required
 									disabled={isLoading}
-									class="border-white/50 bg-white/50 backdrop-blur-sm placeholder:text-stone-400 focus:bg-white/70"
+									class="border-white/50 bg-white/50 backdrop-blur-sm placeholder:text-stone-400 focus:bg-white/70 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-700/50"
 								/>
 							</div>
 							<button
 								type="submit"
-								class={cn(buttonVariants(), 'w-full bg-stone-800 text-white hover:bg-stone-700')}
+								class={cn(
+									buttonVariants(),
+									'w-full bg-stone-800 text-white hover:bg-stone-700 dark:bg-slate-700 dark:text-white dark:hover:bg-slate-600'
+								)}
 								disabled={isLoading}
 							>
 								{#if isLoading}
@@ -159,9 +172,9 @@
 	<footer class="relative z-10 px-4 py-8">
 		<div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
 			<div class="flex items-center gap-2">
-				<span class="font-semibold text-stone-700">time2log</span>
+				<span class="font-semibold text-stone-700 dark:text-slate-300">time2log</span>
 			</div>
-			<p class="text-sm text-stone-500">
+			<p class="text-sm text-stone-500 dark:text-slate-500">
 				© {new Date().getFullYear()} time2log. All rights reserved.
 			</p>
 		</div>

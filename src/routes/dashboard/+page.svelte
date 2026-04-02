@@ -115,7 +115,9 @@
 			<div class="mb-8 flex items-center justify-between gap-4">
 				<div class="flex items-center gap-3 sm:gap-4">
 					{#if data.profile?.avatar_url}
-						<div class="h-16 w-16 overflow-hidden rounded-full border-2 border-white shadow-lg">
+						<div
+							class="h-16 w-16 overflow-hidden rounded-full border-2 border-white shadow-lg dark:border-slate-600"
+						>
 							<img
 								src={data.profile.avatar_url}
 								alt={fullName}
@@ -124,26 +126,36 @@
 						</div>
 					{:else}
 						<div
-							class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-rose-400 text-xl font-semibold text-white shadow-lg"
+							class="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-rose-400 text-xl font-semibold text-white shadow-lg dark:shadow-orange-900/30"
 						>
 							{initials}
 						</div>
 					{/if}
 					<div class="min-w-0">
-						<h1 class="truncate text-xl font-bold text-stone-800 sm:text-2xl">
+						<h1 class="truncate text-xl font-bold text-stone-800 sm:text-2xl dark:text-slate-100">
 							{m.welcome({ name: firstName })}
 						</h1>
-						<p class="text-sm text-stone-600 sm:text-base">{m.dashboard_subtitle()}</p>
+						<p class="text-sm text-stone-600 sm:text-base dark:text-slate-400">
+							{m.dashboard_subtitle()}
+						</p>
 					</div>
 				</div>
 				<div class="hidden items-center gap-2 sm:flex">
 					<LanguageSwitcher />
-					<Button
-						variant="outline"
-						onclick={() => (logoutDialogOpen = true)}
-						class="h-10 w-10 rounded-full p-0"
+					<a
+						href="/settings"
+						data-sveltekit-reload
+						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-stone-600 transition-colors hover:bg-accent hover:text-stone-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
 					>
-						<LogOut class="h-4 w-4" />
+						<Settings class="h-5 w-5" />
+					</a>
+					<Button
+						variant="ghost"
+						onclick={() => (logoutDialogOpen = true)}
+						size="icon"
+						class="text-stone-600 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400"
+					>
+						<LogOut class="h-5 w-5" />
 					</Button>
 				</div>
 				<Button
@@ -165,10 +177,10 @@
 				<GlassCard>
 					<Card.Header class="flex flex-row items-center justify-between gap-4">
 						<div>
-							<Card.Title class="mt-4 text-lg font-bold text-stone-800"
+							<Card.Title class="mt-4 text-lg font-bold text-stone-800 dark:text-slate-100"
 								>{m.activity_log_title()}</Card.Title
 							>
-							<Card.Description class="mb-2 text-sm text-stone-600">
+							<Card.Description class="mb-2 text-sm text-stone-600 dark:text-slate-400">
 								{m.activity_log_showing_for({ date: selectedDateLabel })}
 							</Card.Description>
 						</div>
@@ -240,18 +252,20 @@
 <Sheet.Root bind:open={mobileMenuOpen}>
 	<Sheet.Content
 		side="right"
-		class="flex h-full w-full flex-col bg-gradient-to-br from-orange-50 via-rose-50 to-white sm:w-3/4 sm:max-w-sm"
+		class="flex h-full w-full flex-col bg-gradient-to-br from-orange-50 via-rose-50 to-white sm:w-3/4 sm:max-w-sm dark:from-slate-900 dark:via-slate-800 dark:to-slate-900"
 	>
 		<Sheet.Header>
 			<Sheet.Title>{m.welcome_back()}</Sheet.Title>
-			<Sheet.Description class="text-lg font-semibold text-stone-800">{fullName}</Sheet.Description>
+			<Sheet.Description class="text-lg font-semibold text-stone-800 dark:text-slate-100"
+				>{fullName}</Sheet.Description
+			>
 		</Sheet.Header>
 		<Separator />
 		<div class="flex flex-col gap-3 p-4">
 			<LanguageSwitcher />
 			<a
 				href={resolve('/settings')}
-				class="flex items-center gap-2 rounded-md px-3 py-2 text-stone-700 transition-colors hover:bg-stone-100"
+				class="flex items-center gap-2 rounded-md px-3 py-2 text-stone-700 transition-colors hover:bg-stone-100 dark:text-slate-200 dark:hover:bg-slate-700"
 			>
 				<Settings class="h-4 w-4" />
 				{m.settings_title()}
@@ -265,7 +279,7 @@
 					mobileMenuOpen = false;
 					logoutDialogOpen = true;
 				}}
-				class="w-full justify-start gap-2 border-red-200 bg-red-100 text-red-700 hover:bg-red-200"
+				class="w-full justify-start gap-2 border-red-200 bg-red-100 text-red-700 hover:bg-red-200 dark:border-red-900 dark:bg-red-950 dark:text-red-400 dark:hover:bg-red-900"
 			>
 				<LogOut class="h-4 w-4" />
 				{m.logout()}
