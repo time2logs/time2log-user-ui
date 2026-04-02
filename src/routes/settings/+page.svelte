@@ -9,7 +9,17 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { enhance } from '$app/forms';
-	import { ArrowLeft, User, Globe, LogOut, Loader2, Moon, Sun, Camera, ShieldAlert } from 'lucide-svelte';
+	import {
+		ArrowLeft,
+		User,
+		Globe,
+		LogOut,
+		Loader2,
+		Moon,
+		Sun,
+		Camera,
+		ShieldAlert
+	} from 'lucide-svelte';
 	import { theme } from '$lib/themeStore';
 
 	let { data, form } = $props();
@@ -369,7 +379,9 @@
 				</GlassCard>
 
 				<!-- Danger Zone -->
-				<div class="rounded-xl border border-red-200 bg-red-50/40 dark:border-red-900 dark:bg-red-950/20">
+				<div
+					class="rounded-xl border border-red-200 bg-red-50/40 dark:border-red-900 dark:bg-red-950/20"
+				>
 					<div class="p-4">
 						<div class="mb-4 flex items-center gap-2 text-red-700 dark:text-red-400">
 							<ShieldAlert class="h-5 w-5" />
