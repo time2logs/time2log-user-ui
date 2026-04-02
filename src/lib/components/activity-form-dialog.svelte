@@ -1,7 +1,10 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
+	import { Input } from '$lib/components/ui/input';
+	import { Textarea } from '$lib/components/ui/textarea';
 	import {
 		activityStore,
 		getLastActivityId,
@@ -18,7 +21,8 @@
 		Folder,
 		FileText,
 		Check,
-		AlertCircle
+		AlertCircle,
+		Trash2
 	} from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
@@ -88,6 +92,9 @@
 	let isSubmitting = $state(false);
 	let hasInitialized = $state(false);
 	let submitError = $state<string | null>(null);
+	let deleteDialogOpen = $state(false);
+	let isDeleting = $state(false);
+	let deleteError = $state<string | null>(null);
 
 	// Pre-fill with last activity or edit activity when dialog opens
 	$effect(() => {
@@ -244,6 +251,24 @@
 		rating = value;
 	}
 
+	async function handleDelete() {
+		if (!activityToEdit) return;
+
+		isDeleting = true;
+		deleteError = null;
+
+		try {
+			await activityStore.delete(activityToEdit.id);
+			deleteDialogOpen = false;
+			open = false;
+			onActivityAdded();
+		} catch (error) {
+			deleteError = error instanceof Error ? error.message : 'Failed to delete activity';
+		} finally {
+			isDeleting = false;
+		}
+	}
+
 	const hoursExceedsMax = $derived(hours > MAX_HOURS_PER_ENTRY);
 	const currentDayHours = $derived(
 		existingActivities
@@ -303,7 +328,7 @@
 		<div class="grid gap-4 py-4">
 			{#if selectedDateLabel}
 				<div
-					class="rounded-lg border border-orange-200 bg-orange-50/80 px-4 py-3 text-sm text-stone-700 dark:border-orange-800 dark:bg-orange-950/50 dark:text-slate-300"
+					class="rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
 				>
 					{m.activity_saved_for_date({ date: selectedDateLabel })}
 				</div>
@@ -312,39 +337,29 @@
 			<!-- Activity Tree Selector -->
 			<div class="grid gap-2">
 				<Label>{m.activity_label()}</Label>
-				<div
-					class="rounded-lg border border-stone-200 bg-white/60 shadow-sm backdrop-blur-sm dark:border-slate-700 dark:bg-slate-800/50"
-				>
+				<div class="rounded-lg border border-border bg-card shadow-sm">
 					{#if tree.length === 0}
 						<div class="flex h-32 items-center justify-center">
-							<p class="text-stone-400 dark:text-slate-500">{m.no_activities_available()}</p>
+							<p class="text-muted-foreground">{m.no_activities_available()}</p>
 						</div>
 					{:else}
-						<div class="max-h-64 divide-y divide-white/30 overflow-y-auto dark:divide-slate-700/50">
+						<div class="max-h-64 divide-y divide-border overflow-y-auto">
 							{#snippet treeNode(node: CurriculumTreeNode, depth: number)}
 								{#if node.node_type === 'category'}
 									<button
 										type="button"
-										class="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-white/40 dark:hover:bg-slate-700/50"
+										class="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-accent"
 										style="padding-left: {depth * 20 + 12}px"
 										onclick={() => toggleExpand(node.id)}
 									>
 										{#if expanded.has(node.id)}
-											<ChevronDown
-												class="pointer-events-none h-4 w-4 text-stone-400 dark:text-slate-500"
-											/>
+											<ChevronDown class="pointer-events-none h-4 w-4 text-muted-foreground" />
 										{:else}
-											<ChevronRight
-												class="pointer-events-none h-4 w-4 text-stone-400 dark:text-slate-500"
-											/>
+											<ChevronRight class="pointer-events-none h-4 w-4 text-muted-foreground" />
 										{/if}
-										<Folder class="pointer-events-none h-4 w-4 text-orange-400" />
-										<span class="font-mono text-sm text-stone-500 dark:text-slate-500"
-											>{node.key}</span
-										>
-										<span class="text-sm font-medium text-stone-800 dark:text-slate-200"
-											>{node.label}</span
-										>
+										<Folder class="pointer-events-none h-4 w-4 text-primary" />
+										<span class="font-mono text-sm text-muted-foreground">{node.key}</span>
+										<span class="text-sm font-medium text-foreground">{node.label}</span>
 									</button>
 
 									{#if expanded.has(node.id)}
@@ -355,23 +370,19 @@
 								{:else}
 									<button
 										type="button"
-										class="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-white/40 dark:hover:bg-slate-700/50 {selectedActivityId ===
+										class="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-accent {selectedActivityId ===
 										node.id
-											? 'bg-orange-50 dark:bg-orange-950/50'
+											? 'bg-accent'
 											: ''}"
 										style="padding-left: {depth * 20 + 32}px"
 										onclick={() => selectActivity(node.id)}
 									>
 										<span class="w-4"></span>
-										<FileText class="pointer-events-none h-4 w-4 text-rose-400" />
-										<span class="font-mono text-sm text-stone-500 dark:text-slate-500"
-											>{node.key}</span
-										>
-										<span class="text-sm font-medium text-stone-800 dark:text-slate-200"
-											>{node.label}</span
-										>
+										<FileText class="pointer-events-none h-4 w-4 text-muted-foreground" />
+										<span class="font-mono text-sm text-muted-foreground">{node.key}</span>
+										<span class="text-sm font-medium text-foreground">{node.label}</span>
 										{#if selectedActivityId === node.id}
-											<Check class="pointer-events-none ml-auto h-4 w-4 text-orange-500" />
+											<Check class="pointer-events-none ml-auto h-4 w-4 text-primary" />
 										{/if}
 									</button>
 								{/if}
@@ -384,7 +395,7 @@
 					{/if}
 				</div>
 				{#if selectedActivity}
-					<p class="text-sm text-stone-600 dark:text-slate-400">
+					<p class="text-sm text-muted-foreground">
 						{m.selected_activity({ name: `${selectedActivity.key} - ${selectedActivity.label}` })}
 					</p>
 				{/if}
@@ -403,8 +414,8 @@
 						>
 							<Star
 								class="h-6 w-6 {star <= rating
-									? 'fill-orange-400 text-orange-400'
-									: 'fill-stone-200 text-stone-200 dark:fill-slate-700 dark:text-slate-600'}"
+									? 'fill-primary text-primary'
+									: 'fill-muted-foreground/25 text-muted-foreground/25'}"
 							/>
 						</button>
 					{/each}
@@ -414,7 +425,7 @@
 			<!-- Time Input -->
 			<div class="grid gap-2">
 				<Label for="hours">{m.hours_label()}</Label>
-				<input
+				<Input
 					id="hours"
 					type="number"
 					min={MIN_HOURS}
@@ -422,10 +433,7 @@
 					step="1"
 					bind:value={hours}
 					placeholder={m.hours_placeholder()}
-					class="flex h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-stone-500 focus-visible:ring-1 focus-visible:ring-stone-950 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800/30 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus-visible:ring-orange-400 {hoursExceedsMax ||
-					wouldExceedDailyMax
-						? 'border-red-400 focus-visible:ring-red-400'
-						: ''}"
+					aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
 				/>
 				{#if hoursExceedsMax}
 					<p class="text-sm text-red-600">
@@ -448,54 +456,84 @@
 			<!-- Location -->
 			<div class="grid gap-2">
 				<Label for="location">{m.location_label()}</Label>
-				<input
+				<Input
 					id="location"
 					type="text"
 					bind:value={location}
 					placeholder={m.location_placeholder()}
-					class="flex h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-stone-500 focus-visible:ring-1 focus-visible:ring-stone-950 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800/30 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus-visible:ring-orange-400"
 				/>
 			</div>
 
 			<!-- Notes (Optional) -->
 			<div class="grid gap-2">
 				<Label for="notes">{m.notes_optional()}</Label>
-				<textarea
-					id="notes"
-					bind:value={notes}
-					placeholder={m.notes_placeholder()}
-					rows="3"
-					class="flex min-h-[60px] w-full rounded-md border border-stone-200 bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-stone-400 focus-visible:ring-1 focus-visible:ring-stone-950 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800/30 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus-visible:ring-orange-400"
-				></textarea>
+				<Textarea id="notes" bind:value={notes} placeholder={m.notes_placeholder()} />
 			</div>
 		</div>
 
-		<Dialog.Footer>
-			<Button
-				variant="outline"
-				onclick={() => {
-					open = false;
-					submitError = null;
-				}}
-				disabled={isSubmitting}
-			>
-				{m.cancel()}
-			</Button>
-			<Button
-				variant="default"
-				onclick={handleSubmit}
-				disabled={!isValid || isSubmitting}
-				class="bg-gradient-to-r from-orange-400 to-rose-400 text-white hover:from-orange-500 hover:to-rose-500"
-			>
-				{#if isSubmitting}
-					<span class="flex items-center gap-2">
-						<span class="h-4 w-4 animate-spin">⟳</span>
-						Saving...
-					</span>
-				{:else}
-					{activityToEdit ? m.save_changes_button() : m.log_activity_button()}
-				{/if}
-			</Button>
+		<Dialog.Footer class={activityToEdit ? 'flex gap-2' : ''}>
+			{#if activityToEdit}
+				<Button
+					variant="destructive"
+					onclick={() => (deleteDialogOpen = true)}
+					disabled={isSubmitting || isDeleting}
+					class="flex-1"
+				>
+					<Trash2 class="mr-2 h-4 w-4" />
+					{m.delete_activity_confirm_button()}
+				</Button>
+			{/if}
+			<div class="flex gap-2">
+				<Button
+					variant="outline"
+					onclick={() => {
+						open = false;
+						submitError = null;
+					}}
+					disabled={isSubmitting || isDeleting}
+				>
+					{m.cancel()}
+				</Button>
+				<Button variant="default" onclick={handleSubmit} disabled={!isValid || isSubmitting}>
+					{#if isSubmitting}
+						<span class="flex items-center gap-2">
+							<span class="h-4 w-4 animate-spin">⟳</span>
+							Saving...
+						</span>
+					{:else}
+						{activityToEdit ? m.save_changes_button() : m.log_activity_button()}
+					{/if}
+				</Button>
+			</div>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<AlertDialog.Root bind:open={deleteDialogOpen}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>{m.delete_activity_confirm()}</AlertDialog.Title>
+			{#if deleteError}
+				<AlertDialog.Description class="text-red-500">{deleteError}</AlertDialog.Description>
+			{/if}
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel disabled={isDeleting}>{m.cancel()}</AlertDialog.Cancel>
+			<AlertDialog.Action
+				onclick={handleDelete}
+				disabled={isDeleting}
+				class="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+			>
+				{#if isDeleting}
+					<span class="flex items-center gap-2">
+						<span class="h-4 w-4 animate-spin">⟳</span>
+						Deleting...
+					</span>
+				{:else}
+					<Trash2 class="mr-2 h-4 w-4" />
+					{m.delete_activity_confirm_button()}
+				{/if}
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>

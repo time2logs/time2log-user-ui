@@ -67,6 +67,8 @@
 		return Array.from({ length: totalCells }, (_, index) => {
 			const date = gridStart.add({ days: index });
 			const outsideMonth = !isEqualMonth(date, visibleMonth);
+			const dayOfWeek = date.toDate(timeZone).getDay();
+			const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 			const disabled = outsideMonth || isDateDisabled(date);
 			const selected = value ? isEqualDay(date, value) : false;
 			const isToday = isEqualDay(date, todayDate);
@@ -76,6 +78,7 @@
 				date,
 				dayNumber: date.toDate(timeZone).getDate(),
 				outsideMonth,
+				isWeekend,
 				disabled,
 				selected,
 				isToday,
@@ -114,50 +117,50 @@
 	}
 </script>
 
-<div class="w-full max-w-md rounded-3xl border border-border bg-card p-4 shadow-sm">
-	<div class="mb-4 flex items-center justify-between gap-3">
+<div class="w-full max-w-md rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-4">
+	<div class="mb-3 flex items-center justify-between gap-2 sm:mb-4 sm:gap-3">
 		<div>
-			<h3 class="text-lg font-semibold text-card-foreground">{monthLabel}</h3>
+			<h3 class="text-base font-semibold text-card-foreground sm:text-lg">{monthLabel}</h3>
 		</div>
-		<div class="flex items-center gap-2">
+		<div class="flex items-center gap-1 sm:gap-2">
 			<Button
 				variant="outline"
 				size="icon-sm"
-				class="rounded-full"
+				class="h-8 w-8 rounded-full sm:h-9 sm:w-9"
 				onclick={goToPreviousMonth}
 				aria-label={m.calendar_previous_month()}
 			>
-				<ChevronLeft class="h-4 w-4" />
+				<ChevronLeft class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
 			</Button>
 			<Button
 				variant="outline"
 				size="icon-sm"
-				class="rounded-full disabled:opacity-40"
+				class="h-8 w-8 rounded-full disabled:opacity-40 sm:h-9 sm:w-9"
 				onclick={goToNextMonth}
 				disabled={!canGoToNextMonth}
 				aria-label={m.calendar_next_month()}
 			>
-				<ChevronRight class="h-4 w-4" />
+				<ChevronRight class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
 			</Button>
 		</div>
 	</div>
 
-	<div class="mb-3 grid grid-cols-7 gap-2">
+	<div class="mb-2 grid grid-cols-7 gap-1 sm:mb-3 sm:gap-2">
 		{#each weekdayLabels as weekday (weekday)}
 			<div
-				class="px-1 text-center text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase"
+				class="px-0.5 text-center text-[10px] font-semibold tracking-[0.18em] text-muted-foreground uppercase sm:px-1 sm:text-[11px]"
 			>
 				{weekday}
 			</div>
 		{/each}
 	</div>
 
-	<div class="grid grid-cols-7 gap-2">
+	<div class="grid grid-cols-7 gap-1 sm:gap-2">
 		{#each dayCells as cell (cell.date.toString())}
 			<button
 				type="button"
 				class={cn(
-					'flex aspect-square flex-col items-center justify-center gap-0.5 rounded-2xl border text-sm font-medium transition-all',
+					'flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg border text-xs font-medium transition-all sm:rounded-xl sm:text-sm',
 					cell.outsideMonth && 'border-transparent bg-transparent text-muted-foreground/40',
 					!cell.outsideMonth && 'border-border bg-card text-foreground shadow-sm',
 					!cell.disabled &&
@@ -173,15 +176,15 @@
 				aria-label={formatFullDate(cell.date)}
 			>
 				<span>{cell.dayNumber}</span>
-				{#if cell.hasActivity}
+				{#if !cell.outsideMonth && !cell.isWeekend && !cell.disabled && !cell.hasActivity}
 					<span
 						class={cn(
-							'h-1.5 w-1.5 rounded-full',
-							cell.selected ? 'bg-primary-foreground' : 'bg-emerald-500 dark:bg-emerald-400'
+							'h-1 w-1 rounded-full sm:h-1.5 sm:w-1.5',
+							cell.selected ? 'bg-primary-foreground' : 'bg-amber-500 dark:bg-amber-400'
 						)}
 					></span>
 				{:else}
-					<span class="h-1.5 w-1.5"></span>
+					<span class="h-1 w-1 rounded-full opacity-0 sm:h-1.5 sm:w-1.5"></span>
 				{/if}
 			</button>
 		{/each}
