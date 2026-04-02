@@ -8,7 +8,7 @@ export type CurriculumNode = {
 	label: string;
 	description: string | null;
 	sort_order: number;
-	meta: any;
+	meta: Record<string, unknown>;
 	is_active: boolean;
 	created_at: string;
 	updated_at: string;
@@ -41,10 +41,11 @@ export type ActivityRecord = {
 	user_id: string;
 	team_id: string | null;
 	curriculum_activity_id: string;
-	entry_date: string; // ISO date string
+	entry_date: string;
 	hours: number;
 	notes: string | null;
-	rating: number | null; // 1-5
+	rating: number | null;
+	location: string;
 	created_at: string;
 	updated_at: string;
 	activity_name: string;

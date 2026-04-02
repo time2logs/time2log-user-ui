@@ -85,7 +85,6 @@
 	});
 
 	const canGoToNextMonth = $derived(visibleMonth.compare(currentMonth) < 0);
-	const selectedDateLabel = $derived(value ? formatFullDate(value) : m.calendar_no_date_selected());
 
 	function formatFullDate(date: DateValue) {
 		return new DateFormatter(locale, {
@@ -115,18 +114,16 @@
 	}
 </script>
 
-<div
-	class="w-full max-w-md rounded-3xl border border-orange-100/80 bg-white/70 p-4 shadow-sm backdrop-blur-sm"
->
+<div class="w-full max-w-md rounded-3xl border border-border bg-card p-4 shadow-sm">
 	<div class="mb-4 flex items-center justify-between gap-3">
 		<div>
-			<h3 class="text-lg font-semibold text-stone-800">{monthLabel}</h3>
+			<h3 class="text-lg font-semibold text-card-foreground">{monthLabel}</h3>
 		</div>
 		<div class="flex items-center gap-2">
 			<Button
 				variant="outline"
 				size="icon-sm"
-				class="rounded-full border-orange-200 bg-white/80 text-stone-700 hover:border-orange-300 hover:bg-orange-50"
+				class="rounded-full"
 				onclick={goToPreviousMonth}
 				aria-label={m.calendar_previous_month()}
 			>
@@ -135,7 +132,7 @@
 			<Button
 				variant="outline"
 				size="icon-sm"
-				class="rounded-full border-orange-200 bg-white/80 text-stone-700 hover:border-orange-300 hover:bg-orange-50 disabled:opacity-40"
+				class="rounded-full disabled:opacity-40"
 				onclick={goToNextMonth}
 				disabled={!canGoToNextMonth}
 				aria-label={m.calendar_next_month()}
@@ -146,9 +143,9 @@
 	</div>
 
 	<div class="mb-3 grid grid-cols-7 gap-2">
-		{#each weekdayLabels as weekday}
+		{#each weekdayLabels as weekday (weekday)}
 			<div
-				class="px-1 text-center text-[11px] font-semibold tracking-[0.18em] text-stone-500 uppercase"
+				class="px-1 text-center text-[11px] font-semibold tracking-[0.18em] text-muted-foreground uppercase"
 			>
 				{weekday}
 			</div>
@@ -161,19 +158,14 @@
 				type="button"
 				class={cn(
 					'flex aspect-square flex-col items-center justify-center gap-0.5 rounded-2xl border text-sm font-medium transition-all',
-					cell.outsideMonth && 'border-transparent bg-transparent text-stone-300',
-					!cell.outsideMonth &&
-						'border-orange-100/80 bg-white/85 text-stone-700 shadow-[0_4px_14px_rgba(120,53,15,0.05)]',
+					cell.outsideMonth && 'border-transparent bg-transparent text-muted-foreground/40',
+					!cell.outsideMonth && 'border-border bg-card text-foreground shadow-sm',
 					!cell.disabled &&
 						!cell.selected &&
-						'cursor-pointer hover:-translate-y-0.5 hover:border-orange-300 hover:bg-orange-50 hover:text-stone-900',
-					cell.isToday &&
-						!cell.selected &&
-						'border-amber-300 bg-amber-50 text-amber-900 ring-1 ring-amber-200',
-					cell.selected &&
-						'border-rose-400 bg-gradient-to-br from-orange-400 to-rose-400 text-white shadow-[0_10px_30px_rgba(244,114,182,0.28)]',
-					cell.disabled &&
-						'cursor-not-allowed opacity-45 hover:translate-y-0 hover:border-orange-100/80 hover:bg-white/85 hover:text-stone-700'
+						'cursor-pointer hover:-translate-y-0.5 hover:border-primary/50 hover:bg-accent hover:text-accent-foreground',
+					cell.isToday && !cell.selected && 'border-primary/30 bg-primary/10 text-primary',
+					cell.selected && 'border-primary bg-primary text-primary-foreground shadow-md',
+					cell.disabled && 'cursor-not-allowed opacity-50 hover:translate-y-0'
 				)}
 				onclick={() => selectDate(cell.date, cell.disabled)}
 				disabled={cell.disabled}
@@ -183,7 +175,10 @@
 				<span>{cell.dayNumber}</span>
 				{#if cell.hasActivity}
 					<span
-						class={cn('h-1.5 w-1.5 rounded-full', cell.selected ? 'bg-white' : 'bg-emerald-500')}
+						class={cn(
+							'h-1.5 w-1.5 rounded-full',
+							cell.selected ? 'bg-primary-foreground' : 'bg-emerald-500 dark:bg-emerald-400'
+						)}
 					></span>
 				{:else}
 					<span class="h-1.5 w-1.5"></span>

@@ -5,15 +5,32 @@ import { supabase } from './supabaseClient';
 const LAST_ACTIVITY_KEY = 'last_activity_id';
 const DEBUG = import.meta.env.DEV ?? false;
 
-function debugLog(message: string, data?: any) {
+export const MAX_HOURS_PER_ENTRY = 10;
+export const MAX_HOURS_PER_DAY = 10;
+export const MIN_HOURS = 1;
+
+function debugLog(message: string, data?: unknown) {
 	if (DEBUG && typeof window !== 'undefined') {
 		console.log(`[ActivityStorage] ${message}`, data || '');
 	}
 }
 
 function validateActivity(activity: { hours: number }): boolean {
-	if (typeof activity.hours !== 'number' || isNaN(activity.hours) || activity.hours <= 0) {
+	if (typeof activity.hours !== 'number' || isNaN(activity.hours)) {
 		console.error('[ActivityStorage] Invalid hours value:', activity.hours);
+		return false;
+	}
+	if (activity.hours < MIN_HOURS) {
+		console.error('[ActivityStorage] Hours below minimum:', activity.hours, '<', MIN_HOURS);
+		return false;
+	}
+	if (activity.hours > MAX_HOURS_PER_ENTRY) {
+		console.error(
+			'[ActivityStorage] Hours exceed maximum:',
+			activity.hours,
+			'>',
+			MAX_HOURS_PER_ENTRY
+		);
 		return false;
 	}
 	return true;
@@ -41,21 +58,22 @@ function createActivityStore() {
 		debugLog(`Loaded ${data?.length || 0} activities from Supabase`);
 
 		if (data && data.length > 0) {
-			const formattedActivities: ActivityRecord[] = data.map((record: any) => ({
-				id: record.id,
-				organization_id: record.organization_id,
-				profession_id: record.profession_id,
-				user_id: record.user_id,
-				team_id: record.team_id,
-				curriculum_activity_id: record.curriculum_activity_id,
-				entry_date: record.entry_date,
-				hours: record.hours,
-				notes: record.notes,
-				rating: record.rating,
-				created_at: record.created_at,
-				updated_at: record.updated_at,
-				activity_name: record.curriculum_nodes?.label || '',
-				activity_key: record.curriculum_nodes?.key || '',
+			const formattedActivities: ActivityRecord[] = data.map((record: Record<string, unknown>) => ({
+				id: record.id as string,
+				organization_id: record.organization_id as string,
+				profession_id: record.profession_id as string,
+				user_id: record.user_id as string,
+				team_id: record.team_id as string | null,
+				curriculum_activity_id: record.curriculum_activity_id as string,
+				entry_date: record.entry_date as string,
+				hours: record.hours as number,
+				notes: record.notes as string | null,
+				rating: record.rating as number | null,
+				location: (record.location as string) || '',
+				created_at: record.created_at as string,
+				updated_at: record.updated_at as string,
+				activity_name: (record.curriculum_nodes as { label: string })?.label || '',
+				activity_key: (record.curriculum_nodes as { key: string })?.key || '',
 				activity_label: ''
 			}));
 			set(formattedActivities);
@@ -89,7 +107,8 @@ function createActivityStore() {
 					entry_date: activity.entry_date,
 					hours: activity.hours,
 					notes: activity.notes,
-					rating: activity.rating
+					rating: activity.rating,
+					location: activity.location
 				})
 				.select()
 				.single();
@@ -143,6 +162,7 @@ function createActivityStore() {
 					| 'hours'
 					| 'notes'
 					| 'rating'
+					| 'location'
 					| 'activity_name'
 					| 'activity_key'
 					| 'activity_label'
@@ -156,13 +176,14 @@ function createActivityStore() {
 				return null;
 			}
 
-			const updateData: Record<string, any> = {};
+			const updateData: Record<string, unknown> = {};
 			if (activity.curriculum_activity_id !== undefined)
 				updateData.curriculum_activity_id = activity.curriculum_activity_id;
 			if (activity.entry_date !== undefined) updateData.entry_date = activity.entry_date;
 			if (activity.hours !== undefined) updateData.hours = activity.hours;
 			if (activity.notes !== undefined) updateData.notes = activity.notes;
 			if (activity.rating !== undefined) updateData.rating = activity.rating;
+			if (activity.location !== undefined) updateData.location = activity.location;
 
 			const { data, error } = await supabase
 				.from('activity_records')
@@ -214,21 +235,22 @@ export async function getActivities(): Promise<ActivityRecord[]> {
 	}
 
 	if (data && data.length > 0) {
-		return data.map((record: any) => ({
-			id: record.id,
-			organization_id: record.organization_id,
-			profession_id: record.profession_id,
-			user_id: record.user_id,
-			team_id: record.team_id,
-			curriculum_activity_id: record.curriculum_activity_id,
-			entry_date: record.entry_date,
-			hours: record.hours,
-			notes: record.notes,
-			rating: record.rating,
-			created_at: record.created_at,
-			updated_at: record.updated_at,
-			activity_name: record.curriculum_nodes?.label || '',
-			activity_key: record.curriculum_nodes?.key || '',
+		return data.map((record: Record<string, unknown>) => ({
+			id: record.id as string,
+			organization_id: record.organization_id as string,
+			profession_id: record.profession_id as string,
+			user_id: record.user_id as string,
+			team_id: record.team_id as string | null,
+			curriculum_activity_id: record.curriculum_activity_id as string,
+			entry_date: record.entry_date as string,
+			hours: record.hours as number,
+			notes: record.notes as string | null,
+			rating: record.rating as number | null,
+			location: (record.location as string) || '',
+			created_at: record.created_at as string,
+			updated_at: record.updated_at as string,
+			activity_name: (record.curriculum_nodes as { label: string })?.label || '',
+			activity_key: (record.curriculum_nodes as { key: string })?.key || '',
 			activity_label: ''
 		}));
 	}
@@ -256,7 +278,8 @@ export async function addActivity(
 			entry_date: activity.entry_date,
 			hours: activity.hours,
 			notes: activity.notes,
-			rating: activity.rating
+			rating: activity.rating,
+			location: activity.location
 		})
 		.select()
 		.single();
@@ -276,6 +299,7 @@ export async function addActivity(
 
 	return {
 		...data,
+		location: data.location || activity.location || '',
 		activity_name: activity.activity_name || '',
 		activity_key: activity.activity_key || '',
 		activity_label: activity.activity_label || ''
@@ -319,50 +343,9 @@ export async function getActivityById(id: string): Promise<ActivityRecord | unde
 
 	return {
 		...data,
+		location: data.location || '',
 		activity_name: data.curriculum_nodes?.label || '',
 		activity_key: data.curriculum_nodes?.key || '',
 		activity_label: ''
 	};
-}
-
-// Debug functions to expose to console for debugging
-export async function debugGetAllActivities() {
-	const activities = await getActivities();
-	console.table(activities);
-	return activities;
-}
-
-export function debugShowStorageInfo() {
-	if (typeof window === 'undefined') {
-		console.log('[ActivityStorage] Storage Info not available during SSR');
-		return null;
-	}
-
-	const lastId = localStorage.getItem(LAST_ACTIVITY_KEY);
-	const info = {
-		lastActivityId: lastId,
-		note: 'Activities are now stored in Supabase, not localStorage'
-	};
-	console.log('[ActivityStorage] Storage Info:', info);
-	return info;
-}
-
-// Expose debug functions to window object for easy console access
-if (typeof window !== 'undefined') {
-	(window as any).activityDebug = {
-		getAll: debugGetAllActivities,
-		info: debugShowStorageInfo,
-		help: () => {
-			console.log(`
-Activity Storage Debug Commands:
-  activityDebug.getAll()     - Display all activities in a table
-  activityDebug.info()       - Show storage info
-  activityDebug.help()       - Show this help message
-
-Note: Activities are stored in Supabase, not localStorage.
-			`);
-		}
-	};
-
-	debugLog('Debug functions exposed to window.activityDebug');
 }

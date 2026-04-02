@@ -90,7 +90,6 @@ export const actions: Actions = {
 			}
 		}
 
-		// Validate required fields
 		if (!firstName || !lastName) {
 			return fail(400, {
 				error: m.onboarding_error_name_required(),
@@ -107,7 +106,7 @@ export const actions: Actions = {
 
 		const hasUppercase = /[A-Z]/.test(password);
 		const hasNumber = /[0-9]/.test(password);
-		const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password);
+		const hasSpecialChar = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password);
 
 		if (!hasUppercase) {
 			return fail(400, {
@@ -115,14 +114,12 @@ export const actions: Actions = {
 				values: { firstName, lastName }
 			});
 		}
-
 		if (!hasNumber) {
 			return fail(400, {
 				error: m.onboarding_error_password_number(),
 				values: { firstName, lastName }
 			});
 		}
-
 		if (!hasSpecialChar) {
 			return fail(400, {
 				error: m.onboarding_error_password_special(),
@@ -144,78 +141,113 @@ export const actions: Actions = {
 			});
 		}
 
-		// 1. Create the auth user via service role (bypasses email confirmation)
-		const { data: newUser, error: createError } =
-			await locals.supabaseServiceRole.auth.admin.createUser({
-				email,
-				password,
-				email_confirm: true,
-				user_metadata: {
-					first_name: firstName,
-					last_name: lastName
-				}
-			});
+		// 1. User per Email in auth.users suchen
+		const { data: { users }, error: listError } =
+			await locals.supabaseServiceRole.auth.admin.listUsers();
 
-		if (createError) {
-			return fail(400, {
-				error: createError.message,
+		if (listError) {
+			return fail(500, {
+				error: listError.message,
 				values: { firstName, lastName }
 			});
 		}
 
-		// 2. Accept invite via RPC
-		//    The accept_invite RPC uses auth.uid(), so we need to call it as the authenticated user.
-		//    Sign in as the user first to establish a session, then use supabase client to call accept_invite.
+		const existingUser = users.find(u => u.email === email);
+
+		if (!existingUser) {
+			return fail(400, {
+				error: 'Kein Benutzer mit dieser E-Mail-Adresse gefunden.',
+				values: { firstName, lastName }
+			});
+		}
+
+		// 2. Onboarding-Status prüfen — falls bereits abgeschlossen, abbrechen
+		const { data: profile, error: profileError } = await locals.supabaseServiceRole
+			.from('profiles')
+			.select('onboarding_status')
+			.eq('id', existingUser.id)
+			.single();
+
+		if (profileError) {
+			return fail(500, {
+				error: profileError.message,
+				values: { firstName, lastName }
+			});
+		}
+
+		if (profile?.onboarding_status === 'completed') {
+			return fail(400, {
+				error: 'Dieser Benutzer hat das Onboarding bereits abgeschlossen. Bitte melde dich direkt an.',
+				values: { firstName, lastName }
+			});
+		}
+
+		// 3. Passwort + Metadaten setzen
+		const { error: updateError } =
+			await locals.supabaseServiceRole.auth.admin.updateUserById(
+				existingUser.id,
+				{
+					password,
+					user_metadata: {
+						first_name: firstName,
+						last_name: lastName
+					}
+				}
+			);
+
+		if (updateError) {
+			return fail(500, {
+				error: updateError.message,
+				values: { firstName, lastName }
+			});
+		}
+
+		// 4. Einloggen
 		const { error: signInError } = await locals.supabase.auth.signInWithPassword({
 			email,
 			password
 		});
 
 		if (signInError) {
-			const { error: deleteError } = await locals.supabaseServiceRole.auth.admin.deleteUser(
-				newUser.user.id
-			);
-			if (deleteError) {
-				console.error('Failed to cleanup user after sign-in error:', deleteError);
-			}
 			return fail(500, {
 				error: m.onboarding_error_signin_failed() + signInError.message,
 				values: { firstName, lastName }
 			});
 		}
 
-		// 3. Now the supabase client has the user's session — call accept_invite
-		//    If this fails, clean up the created user to avoid orphaned accounts
-		const { error: acceptError } = await locals.supabase.rpc('accept_invite', {
-			invite_token: token
-		});
+		// 5. Invite akzeptieren
+        const { error: acceptError } = await locals.supabase.rpc('accept_invite', {
+            invite_token: token
+        });
 
-		if (acceptError) {
-			const { error: deleteError } = await locals.supabaseServiceRole.auth.admin.deleteUser(
-				newUser.user.id
-			);
-			if (deleteError) {
-				console.error('Failed to cleanup user after accept_invite error:', deleteError);
-			}
-			return fail(400, {
-				error: acceptError.message,
-				values: { firstName, lastName }
-			});
-		}
+        if (acceptError) {
+            return fail(400, {
+                error: acceptError.message,
+                values: { firstName, lastName }
+            });
+        }
 
-		// 4. Upload avatar if provided
+        // Onboarding-Status auf completed setzen
+        const { error: statusError } = await locals.supabase
+            .from('profiles')
+            .update({ onboarding_status: 'completed' })
+            .eq('id', existingUser.id);
+
+        if (statusError) {
+            console.error('Failed to update onboarding status:', statusError);
+            // Kein hard fail — User ist bereits eingeloggt und Invite akzeptiert
+        }
+
+		// 6. Avatar upload
 		if (avatarFile && avatarFile.size > 0) {
 			const fileExt = avatarFile.name.split('.').pop() || 'jpg';
-			const filePath = `${newUser.user.id}/avatar-${Date.now()}.${fileExt}`;
+			const filePath = `${existingUser.id}/avatar-${Date.now()}.${fileExt}`;
 
 			const { error: uploadError } = await locals.supabase.storage
 				.from('avatars')
 				.upload(filePath, avatarFile);
 
-			if (uploadError) {
-				console.error('Avatar upload failed:', uploadError);
-				// We don't fail the whole onboarding process if just the avatar fails
-			} else {
+			if (!uploadError) {
 				const { data: publicUrlData } = locals.supabase.storage
 					.from('avatars')
 					.getPublicUrl(filePath);
@@ -224,8 +256,10 @@ export const actions: Actions = {
 					await locals.supabase
 						.from('profiles')
 						.update({ avatar_url: publicUrlData.publicUrl })
-						.eq('id', newUser.user.id);
+						.eq('id', existingUser.id);
 				}
+			} else {
+				console.error('Avatar upload failed:', uploadError);
 			}
 		}
 
