@@ -110,13 +110,12 @@
 				notes = '';
 			}
 			// Auto-expand all categories to show activities
-			const newExpanded = new SvelteSet<string>();
+			expanded.clear();
 			curriculumNodes.forEach((node) => {
 				if (node.node_type === 'category') {
-					newExpanded.add(node.id);
+					expanded.add(node.id);
 				}
 			});
-			expanded = newExpanded;
 			submitError = null;
 			hasInitialized = true;
 		} else if (!open) {
