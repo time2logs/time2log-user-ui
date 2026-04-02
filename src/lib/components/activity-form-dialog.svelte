@@ -8,6 +8,7 @@
 	import {
 		activityStore,
 		getLastActivityId,
+		getLastLocation,
 		MAX_HOURS_PER_ENTRY,
 		MAX_HOURS_PER_DAY,
 		MIN_HOURS
@@ -113,7 +114,7 @@
 				}
 				rating = 0;
 				hours = 0;
-				location = '';
+				location = getLastLocation() || '';
 				notes = '';
 			}
 			// Auto-expand all categories to show activities

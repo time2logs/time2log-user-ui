@@ -165,10 +165,11 @@ export const actions: Actions = {
 
 		// 2. Onboarding-Status prüfen — falls bereits abgeschlossen, abbrechen
 		const { data: profile, error: profileError } = await locals.supabaseServiceRole
+			.schema('app')
 			.from('profiles')
 			.select('onboarding_status')
 			.eq('id', existingUser.id)
-			.single();
+			.maybeSingle();
 
 		if (profileError) {
 			return fail(500, {
@@ -229,14 +230,19 @@ export const actions: Actions = {
 			});
 		}
 
-		// Onboarding-Status auf completed setzen
-		const { error: statusError } = await locals.supabase
-			.from('profiles')
-			.update({ onboarding_status: 'completed' })
-			.eq('id', existingUser.id);
+		// Profil anlegen / aktualisieren
+		const { error: statusError } = await locals.supabase.from('profiles').upsert(
+			{
+				id: existingUser.id,
+				first_name: firstName,
+				last_name: lastName,
+				onboarding_status: 'completed'
+			},
+			{ onConflict: 'id' }
+		);
 
 		if (statusError) {
-			console.error('Failed to update onboarding status:', statusError);
+			console.error('Failed to upsert profile:', statusError);
 			// Kein hard fail — User ist bereits eingeloggt und Invite akzeptiert
 		}
 
