@@ -89,5 +89,20 @@
 	"save": "Save",
 	"error_hours_min": "Minimum {min} hour(s) required",
 	"error_hours_max_entry": "Maximum {max} hours per entry allowed",
-	"error_hours_max_day": "Daily limit of {max} hours would be exceeded. Remaining: {remaining}h"
+	"error_hours_max_day": "Daily limit of {max} hours would be exceeded. Remaining: {remaining}h",
+	"settings_profile_saved": "Profile saved successfully.",
+	"settings_error_name_required": "First and last name are required.",
+	"settings_error_file_too_large": "File size exceeds 0.5MB. Please choose a smaller image.",
+	"settings_error_file_type": "Unsupported file type. Please use JPEG, PNG, or WEBP.",
+	"change_avatar": "Change photo",
+	"saving": "Saving...",
+	"settings_email_confirmation_sent": "A confirmation email has been sent to verify your new address.",
+	"settings_error_email_unchanged": "This is already your current email address.",
+	"settings_password_saved": "Password changed successfully.",
+	"settings_error_password_mismatch": "Passwords do not match.",
+	"danger_zone": "Danger Zone",
+	"change_email": "Change Email",
+	"change_password_title": "Change Password",
+	"new_password_label": "New Password",
+	"confirm_password_label": "Confirm New Password"
 }
