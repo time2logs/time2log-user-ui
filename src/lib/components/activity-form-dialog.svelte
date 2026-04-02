@@ -2,7 +2,7 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
-	import { activityStore, getLastActivityId } from '$lib/activityStorage';
+	import { activityStore, getLastActivityId, getLastLocation } from '$lib/activityStorage';
 	import type { ActivityRecord, CurriculumNode, CurriculumTreeNode, TeamMember } from '$lib/types';
 	import {
 		Star,
@@ -109,7 +109,7 @@
 				}
 				rating = 0;
 				hours = 0;
-				location = '';
+				location = getLastLocation() || '';
 				notes = '';
 			}
 			// Auto-expand all categories to show activities

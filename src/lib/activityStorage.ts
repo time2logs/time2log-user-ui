@@ -3,6 +3,7 @@ import { writable } from 'svelte/store';
 import { supabase } from './supabaseClient';
 
 const LAST_ACTIVITY_KEY = 'last_activity_id';
+const LAST_LOCATION_KEY = 'last_location';
 const DEBUG = import.meta.env.DEV ?? false;
 
 export const MAX_HOURS_PER_ENTRY = 10;
@@ -119,9 +120,12 @@ function createActivityStore() {
 
 			debugLog('Activity saved to Supabase:', data);
 
-			// Store last activity ID for pre-filling (localStorage is fine for this)
+			// Store last activity ID and location for pre-filling (localStorage is fine for this)
 			if (typeof window !== 'undefined') {
 				localStorage.setItem(LAST_ACTIVITY_KEY, activity.curriculum_activity_id);
+				if (activity.location) {
+					localStorage.setItem(LAST_LOCATION_KEY, activity.location);
+				}
 			}
 
 			// Add to local store with the activity name info
@@ -197,6 +201,11 @@ function createActivityStore() {
 			}
 
 			debugLog('Activity updated in Supabase:', data);
+
+			// Store last location if it was updated
+			if (typeof window !== 'undefined' && activity.location) {
+				localStorage.setItem(LAST_LOCATION_KEY, activity.location);
+			}
 
 			const updatedActivity: ActivityRecord = {
 				...data,
@@ -288,9 +297,12 @@ export async function addActivity(
 		throw new Error(error.message || 'Failed to save activity');
 	}
 
-	// Store last activity ID for pre-filling
+	// Store last activity ID and location for pre-filling
 	if (typeof window !== 'undefined') {
 		localStorage.setItem(LAST_ACTIVITY_KEY, activity.curriculum_activity_id);
+		if (activity.location) {
+			localStorage.setItem(LAST_LOCATION_KEY, activity.location);
+		}
 		debugLog('Stored last activity ID', activity.curriculum_activity_id);
 	}
 
@@ -324,6 +336,14 @@ export function getLastActivityId(): string | null {
 	const lastId = localStorage.getItem(LAST_ACTIVITY_KEY);
 	debugLog('Retrieved last activity ID', lastId);
 	return lastId;
+}
+
+export function getLastLocation(): string | null {
+	if (typeof window === 'undefined') return null;
+
+	const lastLocation = localStorage.getItem(LAST_LOCATION_KEY);
+	debugLog('Retrieved last location', lastLocation);
+	return lastLocation;
 }
 
 export async function getActivityById(id: string): Promise<ActivityRecord | undefined> {
@@ -363,12 +383,31 @@ export function debugShowStorageInfo() {
 	}
 
 	const lastId = localStorage.getItem(LAST_ACTIVITY_KEY);
+	const lastLocation = localStorage.getItem(LAST_LOCATION_KEY);
 	const info = {
 		lastActivityId: lastId,
+		lastLocation: lastLocation,
 		note: 'Activities are now stored in Supabase, not localStorage'
 	};
 	console.log('[ActivityStorage] Storage Info:', info);
 	return info;
+}
+
+export async function suggestActivity(userId: string): Promise<string | null> {
+	const { data, error } = await supabase
+		.from('activity_records')
+		.select('curriculum_activity_id')
+		.eq('user_id', userId)
+		.order('created_at', { ascending: false })
+		.limit(1)
+		.maybeSingle();
+
+	if (error) {
+		console.error('[ActivityStorage] Error suggesting activity:', error);
+		return null;
+	}
+
+	return data?.curriculum_activity_id || null;
 }
 
 // Expose debug functions to window object for easy console access
