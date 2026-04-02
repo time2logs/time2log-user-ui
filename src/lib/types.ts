@@ -52,6 +52,29 @@ export type ActivityRecord = {
 	activity_label: string;
 };
 
+export type AbsenceType = 'sick' | 'vacation' | 'military' | 'uk' | 'berufsschule' | 'custom';
+
+export type RecurrencePattern = {
+	frequency: 'weekly' | 'biweekly' | 'monthly';
+	days?: number[];
+	until?: string;
+};
+
+export type AbsenceRecord = {
+	id: string;
+	user_id: string;
+	team_id: string | null;
+	organization_id: string;
+	absence_type_id: AbsenceType;
+	entry_date: string;
+	is_recurring: boolean;
+	recurrence_pattern: RecurrencePattern | null;
+	notes: string | null;
+	created_at: string;
+	updated_at: string;
+	absence_type_label: string;
+};
+
 export type InviteDetails = {
 	organization_name: string;
 	email: string;

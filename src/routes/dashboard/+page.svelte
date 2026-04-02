@@ -6,6 +6,7 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import ActivityList from '$lib/components/activity-list.svelte';
 	import ActivityFormDialog from '$lib/components/activity-form-dialog.svelte';
+	import AbsenceFormDialog from '$lib/components/absence-form-dialog.svelte';
 	import WorkdayCalendar from '$lib/components/workday-calendar.svelte';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getLocale } from '$lib/paraglide/runtime.js';
@@ -14,8 +15,9 @@
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import { logout } from '$lib/api';
 	import { activityStore } from '$lib/activityStorage';
-	import type { ActivityRecord } from '$lib/types';
-	import { LogOut, Loader2, Plus, Menu, Settings } from 'lucide-svelte';
+	import { absenceStore } from '$lib/absenceStorage';
+	import type { ActivityRecord, AbsenceRecord } from '$lib/types';
+	import { LogOut, Loader2, Plus, Menu, Settings, AlertCircle } from 'lucide-svelte';
 	import { DateFormatter, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
 
 	const localeMap: Record<string, string> = {
@@ -32,9 +34,11 @@
 	let isLoggingOut = $state(false);
 	let logoutDialogOpen = $state(false);
 	let activityDialogOpen = $state(false);
+	let absenceDialogOpen = $state(false);
 	let mobileMenuOpen = $state(false);
 	let refreshKey = $state(0);
 	let editingActivity = $state<ActivityRecord | null>(null);
+	let editingAbsence = $state<AbsenceRecord | null>(null);
 	const timeZone = getLocalTimeZone();
 
 	function getDefaultSelectedDate(): DateValue {
@@ -54,8 +58,17 @@
 		activities = data;
 	});
 
+	let absences = $state<AbsenceRecord[]>([]);
+	absenceStore.subscribe((data) => {
+		absences = data;
+	});
+
 	$effect(() => {
 		activityStore.load();
+	});
+
+	$effect(() => {
+		absenceStore.load();
 	});
 
 	function isDateDisabled(date: DateValue) {
@@ -68,6 +81,7 @@
 
 	const selectedDateIso = $derived(selectedDate.toString());
 	const activityDates = $derived(new Set(activities.map((a) => a.entry_date)));
+	const selectedDateHasAbsence = $derived(absences.some((a) => a.entry_date === selectedDateIso));
 	const selectedDateLabel = $derived(
 		new DateFormatter(dateLocale, {
 			weekday: 'long',
@@ -92,9 +106,19 @@
 		editingActivity = null;
 	}
 
+	function handleAbsenceAdded() {
+		refreshKey++;
+		editingAbsence = null;
+	}
+
 	function handleEditActivity(activity: ActivityRecord) {
 		editingActivity = activity;
 		activityDialogOpen = true;
+	}
+
+	function handleEditAbsence(absence: AbsenceRecord) {
+		editingAbsence = absence;
+		absenceDialogOpen = true;
 	}
 
 	const initials = $derived(
@@ -171,20 +195,35 @@
 								{m.activity_log_showing_for({ date: selectedDateLabel })}
 							</Card.Description>
 						</div>
-						<Button
-							onclick={() => (activityDialogOpen = true)}
-							class="hidden bg-gradient-to-r from-orange-400 to-rose-400 text-white hover:from-orange-500 hover:to-rose-500 sm:inline-flex"
-							size="lg"
-						>
-							<Plus class="mr-2 h-5 w-5" />
-							{m.log_activity_button()}
-						</Button>
+						<div class="flex gap-2">
+							<Button
+								onclick={() => (absenceDialogOpen = true)}
+								disabled={selectedDateHasAbsence}
+								variant="outline"
+								class="hidden border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50 sm:inline-flex"
+								size="lg"
+							>
+								<AlertCircle class="mr-2 h-5 w-5" />
+								{m.log_absence_button()}
+							</Button>
+							<Button
+								onclick={() => (activityDialogOpen = true)}
+								disabled={selectedDateHasAbsence}
+								class="hidden bg-gradient-to-r from-orange-400 to-rose-400 text-white hover:from-orange-500 hover:to-rose-500 disabled:cursor-not-allowed disabled:opacity-50 sm:inline-flex"
+								size="lg"
+							>
+								<Plus class="mr-2 h-5 w-5" />
+								{m.log_activity_button()}
+							</Button>
+						</div>
 					</Card.Header>
 					<Card.Content class="p-0">
 						<ActivityList
 							onRefresh={handleActivityAdded}
+							onAbsenceRefresh={handleAbsenceAdded}
 							selectedDate={selectedDateIso}
 							onEdit={handleEditActivity}
+							onEditAbsence={handleEditAbsence}
 						/>
 					</Card.Content>
 				</GlassCard>
@@ -199,17 +238,35 @@
 					selectedDate={selectedDateIso}
 					activityToEdit={editingActivity}
 				/>
+				<AbsenceFormDialog
+					bind:open={absenceDialogOpen}
+					teamMember={data.teamMember}
+					onAbsenceAdded={handleAbsenceAdded}
+					selectedDate={selectedDateIso}
+					absenceToEdit={editingAbsence}
+				/>
 			{/if}
 		</div>
 	</main>
 
 	<!-- Mobile FAB -->
-	<Button
-		onclick={() => (activityDialogOpen = true)}
-		class="fixed right-6 bottom-6 z-50 h-14 w-14 rounded-full bg-gradient-to-r from-orange-400 to-rose-400 p-0 text-white shadow-lg hover:from-orange-500 hover:to-rose-500 sm:hidden"
-	>
-		<Plus class="h-6 w-6" />
-	</Button>
+	<div class="fixed right-6 bottom-6 z-50 flex gap-3 sm:hidden">
+		<Button
+			onclick={() => (absenceDialogOpen = true)}
+			disabled={selectedDateHasAbsence}
+			variant="outline"
+			class="h-14 w-14 rounded-full border-orange-300 bg-orange-50 p-0 text-orange-700 shadow-lg hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
+		>
+			<AlertCircle class="h-6 w-6" />
+		</Button>
+		<Button
+			onclick={() => (activityDialogOpen = true)}
+			disabled={selectedDateHasAbsence}
+			class="h-14 w-14 rounded-full bg-gradient-to-r from-orange-400 to-rose-400 p-0 text-white shadow-lg hover:from-orange-500 hover:to-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+		>
+			<Plus class="h-6 w-6" />
+		</Button>
+	</div>
 </GradientBackground>
 
 <AlertDialog.Root bind:open={logoutDialogOpen}>
