@@ -18,6 +18,8 @@ export type CurriculumTreeNode = CurriculumNode & {
 	children: CurriculumTreeNode[];
 };
 
+export type CurriculumNodeSummary = Pick<CurriculumNode, 'id' | 'key' | 'label' | 'is_active'>;
+
 export type TeamMember = {
 	team_id: string;
 	user_id: string;

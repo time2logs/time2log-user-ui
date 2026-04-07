@@ -1,6 +1,6 @@
 import { redirect, isRedirect, isHttpError } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import type { CurriculumNode, Team } from '$lib/types';
+import type { CurriculumNode, CurriculumNodeSummary, Team } from '$lib/types';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	try {
@@ -16,6 +16,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				profile: null,
 				teamMember: null,
 				curriculumNodes: [],
+				curriculumNodeSummaries: [],
 				organizationName: null,
 				professionLabel: null
 			};
@@ -30,7 +31,6 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 
 		const profile = profileResult.error ? null : profileResult.data;
 
-		// Global onboarding enforcement: incomplete users can only access allowed paths
 		const isAllowedPath =
 			url.pathname === '/onboarding' ||
 			url.pathname.startsWith('/onboarding/') ||
@@ -48,6 +48,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				profile,
 				teamMember: null,
 				curriculumNodes: [],
+				curriculumNodeSummaries: [],
 				organizationName: null,
 				professionLabel: null
 			};
@@ -65,23 +66,33 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				profile,
 				teamMember: null,
 				curriculumNodes: [],
+				curriculumNodeSummaries: [],
 				organizationName: null,
 				professionLabel: null
 			};
 		}
 
-		// Enrich teamMember with organization and profession info
 		const enrichedTeamMember = {
 			...teamMember,
 			organization_id: team.organization_id,
 			profession_id: team.profession_id
 		};
 
-		const [nodesResult, orgResult, professionResult] = await Promise.all([
-			locals.supabase
+		const [nodesResult, summaryResult, orgResult, professionResult] = await Promise.all([
+			locals.supabaseAdmin
 				.from('curriculum_nodes')
 				.select('*')
+				.eq('organization_id', team.organization_id)
 				.eq('profession_id', team.profession_id)
+				.eq('is_active', true)
+				.order('sort_order')
+				.order('key'),
+			locals.supabaseAdmin
+				.from('curriculum_nodes')
+				.select('id, key, label, is_active')
+				.eq('organization_id', team.organization_id)
+				.eq('profession_id', team.profession_id)
+				.order('sort_order')
 				.order('key'),
 			locals.supabaseAdmin
 				.from('organizations')
@@ -97,26 +108,32 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				profile,
 				teamMember: enrichedTeamMember,
 				curriculumNodes: [],
+				curriculumNodeSummaries: [],
 				organizationName: null,
 				professionLabel: null
 			};
+		}
+
+		if (summaryResult.error) {
+			console.error('Curriculum node summary query error:', summaryResult.error);
 		}
 
 		return {
 			profile,
 			teamMember: enrichedTeamMember,
 			curriculumNodes: (nodesResult.data as CurriculumNode[]) ?? [],
+			curriculumNodeSummaries: (summaryResult.data as CurriculumNodeSummary[] | null) ?? [],
 			organizationName: orgResult.data?.name ?? null,
 			professionLabel: professionResult.data?.label ?? null
 		};
 	} catch (error) {
-		// Re-throw SvelteKit redirects and HTTP errors — catching these would silently bypass auth enforcement
 		if (isRedirect(error) || isHttpError(error)) throw error;
 		console.error('Layout load error:', error);
 		return {
 			profile: null,
 			teamMember: null,
 			curriculumNodes: [],
+			curriculumNodeSummaries: [],
 			organizationName: null,
 			professionLabel: null
 		};
