@@ -1,5 +1,4 @@
 <script lang="ts" module>
-	/* eslint-disable svelte/no-navigation-without-resolve */
 	import { cn } from '$lib/utils.js';
 	import type { WithElementRef } from 'bits-ui';
 	import type { HTMLAnchorAttributes, HTMLButtonAttributes } from 'svelte/elements';

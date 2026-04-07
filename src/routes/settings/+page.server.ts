@@ -1,6 +1,7 @@
 import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import * as m from '$lib/paraglide/messages.js';
+import { validateImageMagicBytes } from '$lib/server/avatarValidation';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const session = await locals.safeGetSession();
@@ -62,11 +63,13 @@ export const actions: Actions = {
 			return fail(400, { profileError: m.settings_error_name_required() });
 		}
 
+		let avatarExt: string | null = null;
 		if (avatarFile && avatarFile.size > 0) {
 			if (avatarFile.size > 512 * 1024) {
 				return fail(400, { profileError: m.settings_error_file_too_large() });
 			}
-			if (!avatarFile.type.startsWith('image/')) {
+			avatarExt = await validateImageMagicBytes(avatarFile);
+			if (!avatarExt) {
 				return fail(400, { profileError: m.settings_error_file_type() });
 			}
 		}
@@ -77,12 +80,14 @@ export const actions: Actions = {
 			.eq('id', session.user.id);
 
 		if (profileError) {
-			return fail(500, { profileError: profileError.message });
+			console.error('[Settings] Failed to update profile:', profileError.message);
+			return fail(500, {
+				profileError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
+			});
 		}
 
-		if (avatarFile && avatarFile.size > 0) {
-			const fileExt = avatarFile.name.split('.').pop() || 'jpg';
-			const filePath = `${session.user.id}/avatar-${Date.now()}.${fileExt}`;
+		if (avatarFile && avatarFile.size > 0 && avatarExt) {
+			const filePath = `${session.user.id}/avatar-${Date.now()}.${avatarExt}`;
 
 			const { error: uploadError } = await locals.supabase.storage
 				.from('avatars')
@@ -122,7 +127,10 @@ export const actions: Actions = {
 
 		const { error } = await locals.supabase.auth.updateUser({ email });
 		if (error) {
-			return fail(500, { emailError: error.message });
+			console.error('[Settings] Failed to update email:', error.message);
+			return fail(500, {
+				emailError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
+			});
 		}
 
 		return { emailSuccess: true };
@@ -158,7 +166,10 @@ export const actions: Actions = {
 
 		const { error } = await locals.supabase.auth.updateUser({ password });
 		if (error) {
-			return fail(500, { passwordError: error.message });
+			console.error('[Settings] Failed to update password:', error.message);
+			return fail(500, {
+				passwordError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
+			});
 		}
 
 		return { passwordSuccess: true };

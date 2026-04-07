@@ -348,10 +348,16 @@ export function getLastLocation(): string | null {
 }
 
 export async function getActivityById(id: string): Promise<ActivityRecord | undefined> {
+	const {
+		data: { user }
+	} = await supabase.auth.getUser();
+	if (!user) return undefined;
+
 	const { data, error } = await supabase
 		.from('activity_records')
 		.select('*, curriculum_nodes!inner(id, key, label)')
 		.eq('id', id)
+		.eq('user_id', user.id)
 		.single();
 
 	if (error) {

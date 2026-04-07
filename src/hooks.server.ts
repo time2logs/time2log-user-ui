@@ -66,5 +66,33 @@ export const handle: Handle = async ({ event, resolve }) => {
 		throw redirect(302, '/login');
 	}
 
+	// Security headers
+	const supabaseOrigin = new URL(PUBLIC_SUPABASE_URL).origin;
+	response.headers.set(
+		'Content-Security-Policy',
+		[
+			`default-src 'self'`,
+			// SvelteKit requires unsafe-inline for hydration scripts; unsafe-eval is not needed
+			`script-src 'self' 'unsafe-inline'`,
+			// Tailwind and Svelte emit inline styles
+			`style-src 'self' 'unsafe-inline'`,
+			// Supabase API + realtime websocket
+			`connect-src 'self' ${supabaseOrigin} wss://${new URL(PUBLIC_SUPABASE_URL).host}`,
+			// Avatars are served from Supabase storage (same origin) + data URIs for previews
+			`img-src 'self' data: blob: ${supabaseOrigin}`,
+			`font-src 'self'`,
+			`frame-src 'none'`,
+			`frame-ancestors 'none'`,
+			`object-src 'none'`,
+			`base-uri 'self'`,
+			`form-action 'self'`
+		].join('; ')
+	);
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+	// HSTS: only meaningful over HTTPS (ignored on HTTP in dev)
+	response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+
 	return response;
 };

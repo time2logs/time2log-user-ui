@@ -1,4 +1,4 @@
-import { redirect } from '@sveltejs/kit';
+import { redirect, isRedirect, isHttpError } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import type { CurriculumNode, Team } from '$lib/types';
 
@@ -110,6 +110,8 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			professionLabel: professionResult.data?.label ?? null
 		};
 	} catch (error) {
+		// Re-throw SvelteKit redirects and HTTP errors — catching these would silently bypass auth enforcement
+		if (isRedirect(error) || isHttpError(error)) throw error;
 		console.error('Layout load error:', error);
 		return {
 			profile: null,

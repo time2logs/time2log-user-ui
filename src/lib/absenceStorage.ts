@@ -252,10 +252,16 @@ export async function deleteAbsence(id: string): Promise<void> {
 }
 
 export async function getAbsenceById(id: string): Promise<AbsenceRecord | undefined> {
+	const {
+		data: { user }
+	} = await supabase.auth.getUser();
+	if (!user) return undefined;
+
 	const { data, error } = await supabase
 		.from('absences')
 		.select('*, absence_types(id, label_key, is_recurring_allowed)')
 		.eq('id', id)
+		.eq('user_id', user.id)
 		.single();
 
 	if (error) {

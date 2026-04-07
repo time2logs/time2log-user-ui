@@ -11,6 +11,15 @@
 
 	let { data, form } = $props();
 
+	function escapeHtml(str: string): string {
+		return str
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
+
 	let firstName = $state('');
 	let lastName = $state('');
 	let password = $state('');
@@ -187,7 +196,7 @@
 						<Card.Description class="text-sm text-muted-foreground">
 							<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 							{@html m.onboarding_welcome_description({
-								orgName: data.inviteDetails.organization_name
+								orgName: escapeHtml(data.inviteDetails.organization_name)
 							})}
 						</Card.Description>
 					</Card.Header>

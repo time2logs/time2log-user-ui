@@ -4,7 +4,6 @@
 	import { page } from '$app/stores';
 
 	const status = $derived($page.status);
-	const message = $derived($page.error?.message || 'Page not found');
 
 	function goBack() {
 		history.back();
@@ -43,10 +42,8 @@
 					The page you're looking for doesn't exist or has been moved.
 				{:else if status === 403}
 					You don't have permission to access this page.
-				{:else if status === 500}
-					An unexpected error occurred. Please try again later.
 				{:else}
-					{message}
+					An unexpected error occurred. Please try again later.
 				{/if}
 			</p>
 
