@@ -111,7 +111,7 @@ describe('cn', () => {
 		// Act
 		const result = cn(...inputs);
 
-		// Assert
+		// Assertt
 		expect(result).toBe('');
 	});
 });
