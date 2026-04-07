@@ -103,29 +103,29 @@
 
 <!-- stat cards row -->
 <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-	<Card.Root>
-		<Card.Header class="pb-2">
+	<Card.Root class="gap-1">
+		<Card.Header class="pt-5 pb-0">
 			<Card.Description>{m.stats_hours_this_week()}</Card.Description>
 		</Card.Header>
-		<Card.Content>
+		<Card.Content class="pb-5">
 			<p class="text-3xl font-bold tabular-nums">{hoursThisWeek}</p>
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root>
-		<Card.Header class="pb-2">
+	<Card.Root class="gap-1">
+		<Card.Header class="pt-5 pb-0">
 			<Card.Description>{m.stats_total_hours()}</Card.Description>
 		</Card.Header>
-		<Card.Content>
+		<Card.Content class="pb-5">
 			<p class="text-3xl font-bold tabular-nums">{totalHours}</p>
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root>
-		<Card.Header class="pb-2">
+	<Card.Root class="gap-1">
+		<Card.Header class="pt-5 pb-0">
 			<Card.Description>{m.stats_active_days_month()}</Card.Description>
 		</Card.Header>
-		<Card.Content>
+		<Card.Content class="pb-5">
 			<p class="text-3xl font-bold tabular-nums">{activeDaysThisMonth}</p>
 		</Card.Content>
 	</Card.Root>
@@ -135,13 +135,13 @@
 {#if browser}
 	<div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
 		<!-- weekly bar chart -->
-		<Card.Root>
-			<Card.Header>
+		<Card.Root class="gap-1">
+			<Card.Header class="pt-5 pb-0">
 				<Card.Title>{m.stats_weekly_hours_title()}</Card.Title>
 				<Card.Description>{m.stats_weekly_hours_desc()}</Card.Description>
 			</Card.Header>
-			<Card.Content class="pb-6">
-				<div class="h-56">
+			<Card.Content class="pb-0">
+				<div class="h-64 w-full">
 					<Chart
 						data={weeklyData}
 						x="label"
@@ -165,8 +165,8 @@
 		</Card.Root>
 
 		<!-- activity donut -->
-		<Card.Root>
-			<Card.Header>
+		<Card.Root class="gap-1">
+			<Card.Header class="pt-5 pb-0">
 				<Card.Title>{m.stats_activity_breakdown_title()}</Card.Title>
 				<Card.Description>{m.stats_activity_breakdown_desc()}</Card.Description>
 			</Card.Header>
@@ -175,7 +175,7 @@
 					<p class="text-sm text-muted-foreground">{m.no_activities_found()}</p>
 				{:else}
 					<div class="flex h-56 w-full items-center justify-center">
-						<svg viewBox="0 0 200 200" class="h-full w-full max-w-xs">
+						<svg viewBox="-100 -100 200 200" class="h-full w-full max-w-xs">
 							{#each pie().value((d) => d.hours)(activityBreakdown) as slice (slice.data.name)}
 								<path
 									d={d3Arc().innerRadius(40).outerRadius(80).padAngle(0.02)(slice) ?? ''}
