@@ -186,6 +186,7 @@
 						</div>
 						<Button
 							onclick={() => (activityDialogOpen = true)}
+							data-testid="add-activity-btn"
 							class="hidden bg-gradient-to-r from-orange-400 to-rose-400 text-white hover:from-orange-500 hover:to-rose-500 sm:inline-flex"
 							size="lg"
 						>
@@ -220,6 +221,8 @@
 	<!-- Mobile FAB -->
 	<Button
 		onclick={() => (activityDialogOpen = true)}
+		data-testid="add-activity-btn"
+		aria-label={m.log_activity_button()}
 		class="fixed right-6 bottom-6 z-50 h-14 w-14 rounded-full bg-gradient-to-r from-orange-400 to-rose-400 p-0 text-white shadow-lg hover:from-orange-500 hover:to-rose-500 sm:hidden"
 	>
 		<Plus class="h-6 w-6" />

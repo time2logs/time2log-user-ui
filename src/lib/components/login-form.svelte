@@ -112,6 +112,7 @@
 						>
 							{#if errorMessage}
 								<div
+									data-testid="error-message"
 									class="rounded-md border border-red-200 bg-red-50/80 p-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300"
 								>
 									{errorMessage}

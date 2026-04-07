@@ -1,17 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActivityRecord } from './types';
 
-// ---- Supabase mock ----------------------------------------------------------
 
-const supabaseMock = {
-	from: vi.fn()
-};
+const supabaseMock = { from: vi.fn() };
 
-vi.mock('./supabaseClient', () => ({
-	supabase: supabaseMock
-}));
+vi.mock('./supabaseClient', () => ({ supabase: supabaseMock }));
 
-// ---- Helpers ----------------------------------------------------------------
 
 function makeRecord(overrides: Partial<ActivityRecord> = {}): ActivityRecord {
 	return {
@@ -35,25 +29,12 @@ function makeRecord(overrides: Partial<ActivityRecord> = {}): ActivityRecord {
 	};
 }
 
-/** Builds a chainable Supabase query mock that resolves to { data, error }. */
-function makeQueryMock(result: { data: unknown; error: unknown }) {
-	const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-	const methods = ['select', 'insert', 'update', 'delete', 'eq', 'order', 'single'];
-	methods.forEach((m) => {
-		chain[m] = vi.fn().mockReturnValue(chain);
-	});
-	// The last call in a chain resolves the promise
-	chain['single'] = vi.fn().mockResolvedValue(result);
-	// Also make the chain itself a promise (for cases without .single())
-	(chain as any).then = undefined;
-	// Override select/order/delete to support awaiting
-	chain['order'] = vi.fn().mockResolvedValue(result);
-	chain['delete'] = vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue(result) });
-
-	return chain;
+function makeInsertMock(result: { data: unknown; error: unknown }) {
+	const singleMock = vi.fn().mockResolvedValue(result);
+	const selectMock = vi.fn().mockReturnValue({ single: singleMock });
+	const insertMock = vi.fn().mockReturnValue({ select: selectMock });
+	return { insertMock, selectMock, singleMock };
 }
-
-// ---- Tests ------------------------------------------------------------------
 
 beforeEach(() => {
 	localStorage.clear();
@@ -64,121 +45,167 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-// ---- Constants --------------------------------------------------------------
 
 describe('exported constants', () => {
-	it('MIN_HOURS is 0.5', async () => {
+	it('MIN_HOURS equals 0.5', async () => {
+		// Arrange
 		const { MIN_HOURS } = await import('./activityStorage');
+
+		// Act
+
+		// Assert
 		expect(MIN_HOURS).toBe(0.5);
 	});
 
-	it('MAX_HOURS_PER_ENTRY is 10', async () => {
+	it('MAX_HOURS_PER_ENTRY equals 10', async () => {
+		// Arrange
 		const { MAX_HOURS_PER_ENTRY } = await import('./activityStorage');
+
+		// Act
+
+		// Assert
 		expect(MAX_HOURS_PER_ENTRY).toBe(10);
 	});
 });
 
-// ---- validateActivity (tested indirectly via addActivity) -------------------
 
 describe('addActivity — validation', () => {
 	it('throws when hours is 0', async () => {
+		// Arrange
 		const { addActivity } = await import('./activityStorage');
 		const activity = { ...makeRecord(), hours: 0 };
+
+		// Act und Assert
 		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
 	});
 
 	it('throws when hours is negative', async () => {
+		// Arrange
 		const { addActivity } = await import('./activityStorage');
 		const activity = { ...makeRecord(), hours: -2 };
+
+		// Act und  Assert
 		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
 	});
 
 	it('throws when hours is NaN', async () => {
+		// Arrange
 		const { addActivity } = await import('./activityStorage');
 		const activity = { ...makeRecord(), hours: NaN };
+
+		// Act und Assert
 		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
 	});
 
-	it('throws when hours is below MIN_HOURS (0.4 < 0.5)', async () => {
+	it('throws when hours are below MIN_HOURS (0.4 < 0.5)', async () => {
+		// Arrange
 		const { addActivity } = await import('./activityStorage');
 		const activity = { ...makeRecord(), hours: 0.4 };
+
+		// Act und  Assert
 		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
 	});
 
 	it('throws when hours exceed MAX_HOURS_PER_ENTRY (11 > 10)', async () => {
+		// Arrange
 		const { addActivity } = await import('./activityStorage');
 		const activity = { ...makeRecord(), hours: 11 };
+
+		// Act und  Assert
 		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
 	});
 
-	it('accepts hours exactly at MIN_HOURS boundary (0.5)', async () => {
+	it('accepts hours exactly at the MIN_HOURS lower boundary (0.5)', async () => {
+		// Arrange
 		const insertedRow = { ...makeRecord(), id: 'new-id', hours: 0.5 };
-		const singleMock = vi.fn().mockResolvedValue({ data: insertedRow, error: null });
-		const selectMock = vi.fn().mockReturnValue({ single: singleMock });
-		const insertMock = vi.fn().mockReturnValue({ select: selectMock });
+		const { insertMock } = makeInsertMock({ data: insertedRow, error: null });
 		supabaseMock.from.mockReturnValue({ insert: insertMock });
-
 		const { addActivity } = await import('./activityStorage');
+
+		// Act
 		const result = await addActivity({ ...makeRecord(), hours: 0.5 });
+
+		// Assert
 		expect(result.hours).toBe(0.5);
 	});
 
-	it('accepts hours exactly at MAX_HOURS_PER_ENTRY boundary (10)', async () => {
+	it('accepts hours exactly at the MAX_HOURS_PER_ENTRY upper boundary (10)', async () => {
+		// Arrange
 		const insertedRow = { ...makeRecord(), id: 'new-id', hours: 10 };
-		const singleMock = vi.fn().mockResolvedValue({ data: insertedRow, error: null });
-		const selectMock = vi.fn().mockReturnValue({ single: singleMock });
-		const insertMock = vi.fn().mockReturnValue({ select: selectMock });
+		const { insertMock } = makeInsertMock({ data: insertedRow, error: null });
 		supabaseMock.from.mockReturnValue({ insert: insertMock });
-
 		const { addActivity } = await import('./activityStorage');
+
+		// Act
 		const result = await addActivity({ ...makeRecord(), hours: 10 });
+
+		// Assert
 		expect(result.hours).toBe(10);
 	});
 });
 
-// ---- getLastActivityId ------------------------------------------------------
 
 describe('getLastActivityId', () => {
 	it('returns null when nothing is stored', async () => {
+		// Arrange
 		const { getLastActivityId } = await import('./activityStorage');
-		expect(getLastActivityId()).toBeNull();
+
+		// Act
+		const result = getLastActivityId();
+
+		// Assert
+		expect(result).toBeNull();
 	});
 
-	it('returns stored activity id from localStorage', async () => {
+	it('returns the stored activity id from localStorage', async () => {
+		// Arrange
 		localStorage.setItem('last_activity_id', 'act-99');
 		const { getLastActivityId } = await import('./activityStorage');
-		expect(getLastActivityId()).toBe('act-99');
+
+		// Act
+		const result = getLastActivityId();
+
+		// Assert
+		expect(result).toBe('act-99');
 	});
 });
 
-// ---- getActivities ----------------------------------------------------------
 
 describe('getActivities', () => {
-	it('returns empty array on Supabase error', async () => {
+	it('returns an empty array when Supabase reports an error', async () => {
+		// Arrange
 		const queryChain = {
 			select: vi.fn().mockReturnThis(),
 			order: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } })
 		};
 		supabaseMock.from.mockReturnValue(queryChain);
-
 		const { getActivities } = await import('./activityStorage');
+
+		// Act
 		const result = await getActivities();
+
+		// Assert
 		expect(result).toEqual([]);
 	});
 
-	it('returns empty array when data is empty', async () => {
+	it('returns an empty array when Supabase returns no rows', async () => {
+		// Arrange
 		const queryChain = {
 			select: vi.fn().mockReturnThis(),
 			order: vi.fn().mockResolvedValue({ data: [], error: null })
 		};
 		supabaseMock.from.mockReturnValue(queryChain);
-
 		const { getActivities } = await import('./activityStorage');
+
+		// Act
 		const result = await getActivities();
+
+		// Assert
 		expect(result).toEqual([]);
 	});
 
-	it('maps Supabase rows to ActivityRecord shape', async () => {
+	it('maps Supabase rows to the ActivityRecord shape', async () => {
+		// Arrange
 		const row = {
 			id: 'r1',
 			organization_id: 'org-1',
@@ -200,10 +227,12 @@ describe('getActivities', () => {
 			order: vi.fn().mockResolvedValue({ data: [row], error: null })
 		};
 		supabaseMock.from.mockReturnValue(queryChain);
-
 		const { getActivities } = await import('./activityStorage');
+
+		// Act
 		const [activity] = await getActivities();
 
+		// Assert
 		expect(activity.id).toBe('r1');
 		expect(activity.hours).toBe(3);
 		expect(activity.activity_name).toBe('Diagnose');
@@ -211,7 +240,8 @@ describe('getActivities', () => {
 		expect(activity.location).toBe('München');
 	});
 
-	it('falls back to empty string when location is null', async () => {
+	it('falls back to an empty string when location is null', async () => {
+		// Arrange
 		const row = {
 			id: 'r2',
 			organization_id: 'org-1',
@@ -233,63 +263,79 @@ describe('getActivities', () => {
 			order: vi.fn().mockResolvedValue({ data: [row], error: null })
 		};
 		supabaseMock.from.mockReturnValue(queryChain);
-
 		const { getActivities } = await import('./activityStorage');
+
+		// Act
 		const [activity] = await getActivities();
+
+		// Assert
 		expect(activity.location).toBe('');
 	});
 });
 
-// ---- deleteActivity ---------------------------------------------------------
 
 describe('deleteActivity', () => {
-	it('calls supabase delete with the correct id', async () => {
+	it('calls supabase.delete with the correct record id', async () => {
+		// Arrange
 		const eqMock = vi.fn().mockResolvedValue({ error: null });
 		const deleteMock = vi.fn().mockReturnValue({ eq: eqMock });
 		supabaseMock.from.mockReturnValue({ delete: deleteMock });
-
 		const { deleteActivity } = await import('./activityStorage');
+
+		// Act
 		await deleteActivity('rec-1');
 
+		// Assert
 		expect(deleteMock).toHaveBeenCalled();
 		expect(eqMock).toHaveBeenCalledWith('id', 'rec-1');
 	});
 
-	it('throws on Supabase error', async () => {
+	it('throws when Supabase returns an error', async () => {
+		// Arrange
 		const eqMock = vi.fn().mockResolvedValue({ error: { message: 'Delete failed' } });
 		const deleteMock = vi.fn().mockReturnValue({ eq: eqMock });
 		supabaseMock.from.mockReturnValue({ delete: deleteMock });
-
 		const { deleteActivity } = await import('./activityStorage');
+
+		// Actu nnd Assert
 		await expect(deleteActivity('rec-1')).rejects.toThrow('Delete failed');
 	});
 });
 
-// ---- addActivity (success path) ---------------------------------------------
 
-describe('addActivity', () => {
-	it('stores last activity id in localStorage on success', async () => {
+describe('addActivity — success path', () => {
+	it('persists the last activity id in localStorage after a successful insert', async () => {
+		// Arrange
 		const insertedRow = { ...makeRecord(), id: 'new-id' };
-		const singleMock = vi.fn().mockResolvedValue({ data: insertedRow, error: null });
-		const selectMock = vi.fn().mockReturnValue({ single: singleMock });
-		const insertMock = vi.fn().mockReturnValue({ select: selectMock });
+		const { insertMock } = makeInsertMock({ data: insertedRow, error: null });
 		supabaseMock.from.mockReturnValue({ insert: insertMock });
-
 		const { addActivity } = await import('./activityStorage');
-		const activity = makeRecord({ id: undefined as any, created_at: undefined as any, updated_at: undefined as any });
+		const activity = makeRecord({
+			id: undefined as never,
+			created_at: undefined as never,
+			updated_at: undefined as never
+		});
+
+		// Act
 		await addActivity(activity);
 
+		// Assert
 		expect(localStorage.getItem('last_activity_id')).toBe(activity.curriculum_activity_id);
 	});
 
-	it('throws when Supabase returns an error', async () => {
-		const singleMock = vi.fn().mockResolvedValue({ data: null, error: { message: 'Insert failed' } });
-		const selectMock = vi.fn().mockReturnValue({ single: singleMock });
-		const insertMock = vi.fn().mockReturnValue({ select: selectMock });
+	it('throws when Supabase returns an insert error', async () => {
+		// Arrange
+		const { insertMock } = makeInsertMock({ data: null, error: { message: 'Insert failed' } });
 		supabaseMock.from.mockReturnValue({ insert: insertMock });
-
 		const { addActivity } = await import('./activityStorage');
-		const activity = makeRecord({ id: undefined as any, created_at: undefined as any, updated_at: undefined as any });
+		const activity = makeRecord({
+			id: undefined as never,
+			created_at: undefined as never,
+			updated_at: undefined as never
+		});
+
+		// Act und  Assert
 		await expect(addActivity(activity)).rejects.toThrow('Insert failed');
 	});
 });
+t

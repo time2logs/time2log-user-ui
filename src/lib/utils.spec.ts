@@ -3,45 +3,115 @@ import { cn } from './utils';
 
 describe('cn', () => {
 	it('joins single class name', () => {
-		expect(cn('foo')).toBe('foo');
+		// Arrange
+		const input = 'foo';
+
+		// Act
+		const result = cn(input);
+
+		// Assert
+		expect(result).toBe('foo');
 	});
 
 	it('joins multiple class names', () => {
-		expect(cn('foo', 'bar', 'baz')).toBe('foo bar baz');
+		// Arrange
+		const a = 'foo', b = 'bar', c = 'baz';
+
+		// Act
+		const result = cn(a, b, c);
+
+		// Assert
+		expect(result).toBe('foo bar baz');
 	});
 
 	it('ignores falsy values', () => {
-		expect(cn('foo', false, undefined, null, 0 as any)).toBe('foo');
+		// Arrange
+		const inputs = ['foo', false, undefined, null, 0 as never] as const;
+
+		// Act
+		const result = cn(...inputs);
+
+		// Assert
+		expect(result).toBe('foo');
 	});
 
 	it('handles conditional (false && ...) expressions', () => {
+		// Arrange
 		const active = false;
-		expect(cn('base', active && 'active')).toBe('base');
+
+		// Act
+		const result = cn('base', active && 'active');
+
+		// Assert
+		expect(result).toBe('base');
 	});
 
 	it('handles conditional (true && ...) expressions', () => {
+		// Arrange
 		const active = true;
-		expect(cn('base', active && 'active')).toBe('base active');
+
+		// Act
+		const result = cn('base', active && 'active');
+
+		// Assert
+		expect(result).toBe('base active');
 	});
 
 	it('handles object syntax (clsx feature)', () => {
-		expect(cn({ foo: true, bar: false, baz: true })).toBe('foo baz');
+		// Arrange
+		const flags = { foo: true, bar: false, baz: true };
+
+		// Act
+		const result = cn(flags);
+
+		// Assert
+		expect(result).toBe('foo baz');
 	});
 
 	it('merges conflicting tailwind classes — last one wins', () => {
-		expect(cn('px-2', 'px-4')).toBe('px-4');
-		expect(cn('text-sm text-red-500', 'text-lg')).toBe('text-red-500 text-lg');
+		// Arrange
+		const paddingInputs = ['px-2', 'px-4'] as const;
+		const textInputs = ['text-sm text-red-500', 'text-lg'] as const;
+
+		// Act
+		const paddingResult = cn(...paddingInputs);
+		const textResult = cn(...textInputs);
+
+		// Assert
+		expect(paddingResult).toBe('px-4');
+		expect(textResult).toBe('text-red-500 text-lg');
 	});
 
 	it('handles array input', () => {
-		expect(cn(['foo', 'bar'])).toBe('foo bar');
+		// Arrange
+		const input = ['foo', 'bar'];
+
+		// Act
+		const result = cn(input);
+
+		// Assert
+		expect(result).toBe('foo bar');
 	});
 
 	it('handles nested arrays with conditions', () => {
-		expect(cn(['foo', false && 'bar', 'baz'])).toBe('foo baz');
+		// Arrange
+		const input = ['foo', false && 'bar', 'baz'];
+
+		// Act
+		const result = cn(input);
+
+		// Assert
+		expect(result).toBe('foo baz');
 	});
 
 	it('returns empty string for all falsy inputs', () => {
-		expect(cn(false, undefined, null)).toBe('');
+		// Arrange
+		const inputs = [false, undefined, null] as never[];
+
+		// Act
+		const result = cn(...inputs);
+
+		// Assert
+		expect(result).toBe('');
 	});
 });

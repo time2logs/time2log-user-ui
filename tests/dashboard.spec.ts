@@ -8,69 +8,112 @@ import { expect, test } from '@playwright/test';
 
 test.describe('Dashboard – guest mode (unauthenticated)', () => {
 	test.beforeEach(async ({ page }) => {
+		// Arrange – navigate to dashboard without a session cookie
 		await page.goto('/dashboard', { waitUntil: 'networkidle' });
 	});
 
 	test('renders the page without crashing', async ({ page }) => {
-		// Page must not show an error page / 500
+		// Arrange – page is loaded in beforeEach
+
+		// Act – (no interaction; verify rendered content)
+
+		// Assert
 		await expect(page.locator('main, [class*="gradient"]').first()).toBeVisible({ timeout: 8000 });
 	});
 
 	test('renders the calendar widget', async ({ page }) => {
+		// Arrange – page is loaded in beforeEach
+
+		// Act – (no interaction; verify rendered content)
+
+		// Assert
 		await expect(
 			page.locator('[data-bits-calendar-root], [class*="calendar"]').first()
 		).toBeVisible({ timeout: 8000 });
 	});
 
 	test('renders the activity log section', async ({ page }) => {
+		// Arrange – page is loaded in beforeEach
 		// "Activity Log" (en) | "Aktivitätsprotokoll" (de-ch)
+
+		// Act – (no interaction; verify rendered content)
+
+		// Assert
 		await expect(
 			page.getByText(/activity log|aktivitätsprotokoll/i).first()
 		).toBeVisible({ timeout: 8000 });
 	});
 
 	test('shows the add-activity button', async ({ page }) => {
-		// "Log Activity" (en) | "Aktivität protokollieren" (de-ch) – desktop button
-		const addBtn = page
-			.getByRole('button', { name: /log activity|aktivität protokollieren/i })
-			.first();
-		await expect(addBtn).toBeVisible({ timeout: 8000 });
+		// Arrange – page is loaded in beforeEach
+		// Desktop: labelled button; Mobile: FAB with aria-label.
+		// Both carry data-testid="add-activity-btn".
+
+		// Act – (no interaction; verify rendered content)
+
+		// Assert – at least one add-activity button is present in the DOM
+		await expect(
+			page.locator('[data-testid="add-activity-btn"]').first()
+		).toBeAttached({ timeout: 8000 });
 	});
 
-	test('opens the activity form dialog on button click', async ({ page }) => {
-		const addBtn = page
-			.getByRole('button', { name: /log activity|aktivität protokollieren/i })
-			.first();
+	test('opens the activity form dialog when the add-button is clicked', async ({ page }) => {
+		// Arrange
+		// bits-ui Dialog.Content renders with data-slot="dialog-content".
+		// On mobile the visible button is the FAB; on desktop it is the header button.
+		// :visible filters out the hidden counterpart so the click always targets
+		// the button that is actually rendered for the current viewport.
+		const addBtn = page.locator('[data-testid="add-activity-btn"]:visible').first();
+
+		// Act
 		await addBtn.click();
 
-		// bits-ui Dialog.Content renders with data-slot="dialog-content"
+		// Assert
 		await expect(page.locator('[data-slot="dialog-content"]')).toBeVisible({ timeout: 6000 });
 	});
 
-	test('activity form dialog closes with Escape', async ({ page }) => {
-		const addBtn = page
-			.getByRole('button', { name: /log activity|aktivität protokollieren/i })
-			.first();
+	test('closes the activity form dialog when Escape is pressed', async ({ page }) => {
+		// Arrange – open the dialog first using the viewport-appropriate button
+		const addBtn = page.locator('[data-testid="add-activity-btn"]:visible').first();
 		await addBtn.click();
 		await expect(page.locator('[data-slot="dialog-content"]')).toBeVisible({ timeout: 6000 });
 
+		// Act
 		await page.keyboard.press('Escape');
+
+		// Assert
 		await expect(page.locator('[data-slot="dialog-content"]')).not.toBeVisible({ timeout: 3000 });
 	});
 
 	test('h1 greeting is visible', async ({ page }) => {
+		// Arrange – page is loaded in beforeEach
+
+		// Act – (no interaction; verify rendered content)
+
+		// Assert
 		await expect(page.locator('h1').first()).toBeVisible({ timeout: 8000 });
 	});
 
 	test('settings icon link is present', async ({ page }) => {
-		// The settings link is an <a href="/settings">
-		await expect(page.locator('a[href="/settings"]').first()).toBeVisible({ timeout: 8000 });
+		// Arrange – page is loaded in beforeEach
+		// On desktop the settings link is visible in the header.
+		// On mobile it lives inside the closed Sheet drawer (in the DOM but hidden).
+
+		// Act – (no interaction; verify DOM presence)
+
+		// Assert – link exists in the DOM on every viewport
+		await expect(page.locator('a[href="/settings"]').first()).toBeAttached({ timeout: 8000 });
 	});
 
-	test('no critical JS errors on load', async ({ page }) => {
+	test('page loads without critical JavaScript errors', async ({ page }) => {
+		// Arrange – attach error listener before reload
 		const errors: string[] = [];
 		page.on('pageerror', (e) => errors.push(e.message));
+
+		// Act
 		await page.reload({ waitUntil: 'networkidle' });
+
+		// Assert – ignore expected Supabase network errors (no real credentials in test env)
 		const critical = errors.filter(
 			(e) =>
 				!e.toLowerCase().includes('supabase') &&
@@ -83,40 +126,59 @@ test.describe('Dashboard – guest mode (unauthenticated)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Authenticated tests – only run when real test credentials are supplied:
+// Authenticated tests – only run when real credentials are supplied:
 //   TEST_USER_EMAIL=... TEST_USER_PASSWORD=... npx playwright test
 // ---------------------------------------------------------------------------
 
 test.describe('Dashboard – authenticated UI', () => {
 	test.beforeEach(async ({ page }) => {
+		// Arrange – skip unless credentials are available
 		test.skip(
 			!process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD,
 			'Set TEST_USER_EMAIL + TEST_USER_PASSWORD to run authenticated tests'
 		);
 
+		// Arrange – log in via the real login form so the server gets a valid session cookie
 		await page.goto('/login', { waitUntil: 'networkidle' });
 		await page.locator('input[type="email"]').fill(process.env.TEST_USER_EMAIL!);
 		await page.locator('input[type="password"]').fill(process.env.TEST_USER_PASSWORD!);
+
+		// Act
 		await page.locator('form button[type="submit"]').click();
 		await page.waitForURL('**/dashboard', { timeout: 10_000 });
 	});
 
-	test('shows personalised greeting in h1', async ({ page }) => {
+	test('shows a personalised greeting in h1 (not "Guest")', async ({ page }) => {
+		// Arrange – user is logged in via beforeEach
+
+		// Act – (no interaction; verify rendered content)
+
+		// Assert
 		await expect(page.locator('h1').first()).toBeVisible({ timeout: 8000 });
 		const text = await page.locator('h1').first().textContent();
 		expect(text?.trim()).not.toBe('');
-		// Must NOT say "Guest" for a real user
 		expect(text).not.toMatch(/guest/i);
 	});
 
-	test('logout confirmation dialog opens', async ({ page }) => {
+	test('logout confirmation dialog opens when the logout button is clicked', async ({ page }) => {
+		// Arrange – user is logged in via beforeEach
 		// "Logout" (en) | "Abmelden" (de-ch)
-		await page.getByRole('button', { name: /^(Logout|Abmelden)$/i }).first().click();
+		const logoutBtn = page.getByRole('button', { name: /^(Logout|Abmelden)$/i }).first();
+
+		// Act
+		await logoutBtn.click();
+
+		// Assert
 		await expect(page.getByRole('alertdialog')).toBeVisible({ timeout: 5000 });
 	});
 
 	test('settings link navigates to /settings', async ({ page }) => {
+		// Arrange – user is logged in via beforeEach
+
+		// Act
 		await page.locator('a[href="/settings"]').first().click();
+
+		// Assert
 		await page.waitForURL('**/settings', { timeout: 5000 });
 		expect(page.url()).toContain('/settings');
 	});
