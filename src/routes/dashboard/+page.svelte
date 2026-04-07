@@ -14,7 +14,7 @@
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import { logout } from '$lib/api';
 	import { activityStore } from '$lib/activityStorage';
-	import type { ActivityRecord } from '$lib/types';
+	import type { ActivityRecord, CurriculumNode, CurriculumNodeSummary, TeamMember } from '$lib/types';
 	import { LogOut, Loader2, Plus, Menu, Settings } from 'lucide-svelte';
 	import { DateFormatter, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
 
@@ -27,7 +27,18 @@
 
 	const dateLocale = $derived(localeMap[getLocale()] ?? 'en-GB');
 
-	let { data } = $props();
+	type DashboardPageData = {
+		profile: {
+			first_name: string;
+			last_name: string;
+			avatar_url: string | null;
+		} | null;
+		teamMember: TeamMember | null;
+		curriculumNodes: CurriculumNode[];
+		curriculumNodeSummaries: CurriculumNodeSummary[];
+	};
+
+	let { data }: { data: DashboardPageData } = $props();
 
 	let isLoggingOut = $state(false);
 	let logoutDialogOpen = $state(false);
@@ -55,7 +66,8 @@
 	});
 
 	$effect(() => {
-		activityStore.load();
+		activityStore.setCurriculumNodeSummaries(data.curriculumNodeSummaries);
+		void activityStore.load();
 	});
 
 	function isDateDisabled(date: DateValue) {

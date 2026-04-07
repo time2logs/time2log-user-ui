@@ -24,6 +24,8 @@
 	"log_activity_description": "Record your completed activity with time and rating.",
 	"activity_label": "Activity",
 	"no_activities_available": "No activities available",
+	"unavailable_activity_name": "Unavailable activity",
+	"unavailable_activity_key": "N/A",
 	"selected_activity": "Selected: {name}",
 	"rating_label": "Rating",
 	"hours_label": "Hours",

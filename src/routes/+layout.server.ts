@@ -1,6 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import type { CurriculumNode, TeamMember, Team } from '$lib/types';
+import type { CurriculumNode, CurriculumNodeSummary, TeamMember, Team } from '$lib/types';
 
 type Profile = {
 	id: string;
@@ -17,7 +17,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 
 
 		if (!session) {
-			return { profile: null, teamMember: null, curriculumNodes: [] };
+			return { profile: null, teamMember: null, curriculumNodes: [], curriculumNodeSummaries: [] };
 		}
 
 		const userId = session.user.id;
@@ -43,7 +43,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		teamMemberResult.data && teamMemberResult.data.length > 0 ? teamMemberResult.data[0] : null;
 
 		if (!teamMember) {
-			return { profile, teamMember: null, curriculumNodes: [] };
+			return { profile, teamMember: null, curriculumNodes: [], curriculumNodeSummaries: [] };
 		}
 
 		const { data: team, error: teamError } = await locals.supabaseAdmin
@@ -54,7 +54,12 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 
 		if (teamError || !team) {
 			console.error('Team query error:', teamError);
-			return { profile, teamMember: null, curriculumNodes: [] };
+			return {
+				profile,
+				teamMember: null,
+				curriculumNodes: [],
+				curriculumNodeSummaries: []
+			};
 		}
 
 		// Enrich teamMember with organization and profession info
@@ -64,27 +69,41 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			profession_id: team.profession_id
 		};
 
-		const { data: nodes, error: nodesError } = await locals.supabaseAdmin
+		const { data: allNodes, error: nodesError } = await locals.supabaseAdmin
 			.from('curriculum_nodes')
 			.select('*')
 			.eq('organization_id', team.organization_id)
 			.eq('profession_id', team.profession_id)
-			.eq('is_active', true)
 			.order('sort_order')
 			.order('key');
 
 		if (nodesError) {
 			console.error('Curriculum nodes query error:', nodesError);
-			return { profile, teamMember: enrichedTeamMember, curriculumNodes: [] };
+			return {
+				profile,
+				teamMember: enrichedTeamMember,
+				curriculumNodes: [],
+				curriculumNodeSummaries: []
+			};
 		}
+
+		const nodes = (allNodes as CurriculumNode[] | null) ?? [];
 
 		return {
 			profile,
 			teamMember: enrichedTeamMember,
-			curriculumNodes: (nodes as CurriculumNode[]) ?? []
+			curriculumNodes: nodes.filter((node) => node.is_active),
+			curriculumNodeSummaries: nodes.map(
+				(node): CurriculumNodeSummary => ({
+					id: node.id,
+					key: node.key,
+					label: node.label,
+					is_active: node.is_active
+				})
+			)
 		};
 	} catch (error) {
 		console.error('Layout load error:', error);
-		return { profile: null, teamMember: null, curriculumNodes: [] };
+		return { profile: null, teamMember: null, curriculumNodes: [], curriculumNodeSummaries: [] };
 	}
 };

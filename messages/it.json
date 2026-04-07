@@ -1,6 +1,8 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
 	"hello_world": "Hello, {name} from it!",
+	"unavailable_activity_name": "Attivita non disponibile",
+	"unavailable_activity_key": "N/D",
 	"welcome": "Benvenuto, {name}",
 	"dashboard_subtitle": "Ecco la tua dashboard",
 	"curriculum_title": "Curriculum",

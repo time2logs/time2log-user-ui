@@ -21,11 +21,6 @@
 		activities = data;
 	});
 
-	// Load activities from Supabase when component mounts
-	$effect(() => {
-		activityStore.load();
-	});
-
 	const filteredActivities = $derived(
 		selectedDate
 			? activities.filter((activity) => activity.entry_date === selectedDate)

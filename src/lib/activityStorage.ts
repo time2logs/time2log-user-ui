@@ -1,6 +1,7 @@
-import type { ActivityRecord } from './types';
+import type { ActivityRecord, CurriculumNodeSummary } from './types';
 import { writable } from 'svelte/store';
-import { supabase, supabaseAdmin } from './supabaseClient';
+import { supabase } from './supabaseClient';
+import * as m from '$lib/paraglide/messages.js';
 
 const LAST_ACTIVITY_KEY = 'last_activity_id';
 const DEBUG = import.meta.env.DEV ?? false;
@@ -8,18 +9,15 @@ const DEBUG = import.meta.env.DEV ?? false;
 export const MAX_HOURS_PER_ENTRY = 10;
 export const MIN_HOURS = 0.5;
 
-type ActivityRecordRow = Omit<
+type ActivityRecordSource = Omit<
 	ActivityRecord,
 	'location' | 'activity_name' | 'activity_key' | 'activity_label'
 > & {
 	location: string | null;
 };
 
-type CurriculumNodeSummary = {
-	id: string;
-	key: string;
-	label: string;
-};
+let curriculumNodeSummariesConfigured = false;
+let curriculumNodeSummaryMap = new Map<string, CurriculumNodeSummary>();
 
 function debugLog(message: string, data?: any) {
 	if (DEBUG && typeof window !== 'undefined') {
@@ -48,57 +46,53 @@ function validateActivity(activity: { hours: number }): boolean {
 	return true;
 }
 
-async function fetchCurriculumNodeMap(
-	curriculumNodeIds: string[]
-): Promise<Map<string, CurriculumNodeSummary>> {
-	const uniqueIds = Array.from(
-		new Set(curriculumNodeIds.filter((id): id is string => typeof id === 'string' && id.length > 0))
-	);
+function reportMissingCurriculumSummaries(context: string) {
+	const message = `[ActivityStorage] Curriculum node summaries were not configured before ${context}.`;
+	console.error(message, { context });
 
-	if (uniqueIds.length === 0) {
-		return new Map();
+	if (DEBUG) {
+		throw new Error(message);
+	}
+}
+
+function resolveCurriculumNodeSummary(
+	curriculumActivityId: string,
+	context: string
+): CurriculumNodeSummary | undefined {
+	if (!curriculumNodeSummariesConfigured) {
+		reportMissingCurriculumSummaries(context);
+		return undefined;
 	}
 
-	const { data, error } = await supabaseAdmin
-		.from('curriculum_nodes')
-		.select('id, key, label')
-		.in('id', uniqueIds);
+	const node = curriculumNodeSummaryMap.get(curriculumActivityId);
 
-	if (error) {
-		console.error('[ActivityStorage] Error loading curriculum nodes from admin schema:', error);
-		return new Map();
+	if (!node) {
+		console.error('[ActivityStorage] Missing curriculum node summary for activity record.', {
+			context,
+			curriculumActivityId
+		});
 	}
 
-	return new Map(
-		((data as CurriculumNodeSummary[] | null) ?? []).map((node) => [
-			node.id,
-			{ id: node.id, key: node.key, label: node.label }
-		])
-	);
+	return node;
 }
 
 function toActivityRecord(
-	record: ActivityRecordRow,
-	node?: CurriculumNodeSummary,
+	record: ActivityRecordSource,
 	fallback: Partial<Pick<ActivityRecord, 'activity_name' | 'activity_key' | 'activity_label'>> = {}
 ): ActivityRecord {
+	const node = resolveCurriculumNodeSummary(record.curriculum_activity_id, 'activity enrichment');
+
 	return {
 		...record,
 		location: record.location || '',
-		activity_name: node?.label || fallback.activity_name || '',
-		activity_key: node?.key || fallback.activity_key || '',
+		activity_name: node?.label || fallback.activity_name || m.unavailable_activity_name(),
+		activity_key: node?.key || fallback.activity_key || m.unavailable_activity_key(),
 		activity_label: fallback.activity_label || ''
 	};
 }
 
-async function enrichActivityRecords(records: ActivityRecordRow[]): Promise<ActivityRecord[]> {
-	if (records.length === 0) {
-		return [];
-	}
-
-	const nodeMap = await fetchCurriculumNodeMap(records.map((record) => record.curriculum_activity_id));
-
-	return records.map((record) => toActivityRecord(record, nodeMap.get(record.curriculum_activity_id)));
+function enrichActivityRecords(records: ActivityRecordSource[]): ActivityRecord[] {
+	return records.map((record) => toActivityRecord(record));
 }
 
 // Create a writable store for activities
@@ -123,7 +117,7 @@ function createActivityStore() {
 		debugLog(`Loaded ${data?.length || 0} activities from Supabase`);
 
 		if (data && data.length > 0) {
-			const formattedActivities = await enrichActivityRecords(data as ActivityRecordRow[]);
+			const formattedActivities = enrichActivityRecords(data as ActivityRecordSource[]);
 			set(formattedActivities);
 		} else {
 			set([]);
@@ -132,6 +126,29 @@ function createActivityStore() {
 
 	return {
 		subscribe,
+		setCurriculumNodeSummaries: (summaries: CurriculumNodeSummary[]) => {
+			curriculumNodeSummaryMap = new Map(
+				summaries.map((summary) => [
+					summary.id,
+					{
+						id: summary.id,
+						key: summary.key,
+						label: summary.label,
+						is_active: summary.is_active
+					}
+				])
+			);
+			curriculumNodeSummariesConfigured = true;
+
+			updateStore((activities) =>
+				activities.map((activity) =>
+					toActivityRecord({
+						...activity,
+						location: activity.location
+					})
+				)
+			);
+		},
 		// Load activities from Supabase
 		load,
 		add: async (
@@ -247,11 +264,8 @@ function createActivityStore() {
 
 			debugLog('Activity updated in Supabase:', data);
 
-			const nodeMap = await fetchCurriculumNodeMap([data.curriculum_activity_id]);
-
 			const updatedActivity = toActivityRecord(
-				data as ActivityRecordRow,
-				nodeMap.get(data.curriculum_activity_id),
+				data as ActivityRecordSource,
 				activity
 			);
 
@@ -284,7 +298,7 @@ export async function getActivities(): Promise<ActivityRecord[]> {
 	}
 
 	if (data && data.length > 0) {
-		return enrichActivityRecords(data as ActivityRecordRow[]);
+		return enrichActivityRecords(data as ActivityRecordSource[]);
 	}
 
 	return [];
@@ -373,7 +387,7 @@ export async function getActivityById(id: string): Promise<ActivityRecord | unde
 
 	if (!data) return undefined;
 
-	const [activity] = await enrichActivityRecords([data as ActivityRecordRow]);
+	const [activity] = enrichActivityRecords([data as ActivityRecordSource]);
 	return activity;
 }
 
