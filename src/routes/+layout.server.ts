@@ -12,7 +12,13 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			if (!isPublicPath) {
 				throw redirect(303, '/login');
 			}
-			return { profile: null, teamMember: null, curriculumNodes: [], organizationName: null, professionLabel: null };
+			return {
+				profile: null,
+				teamMember: null,
+				curriculumNodes: [],
+				organizationName: null,
+				professionLabel: null
+			};
 		}
 
 		const userId = session.user.id;
@@ -38,7 +44,13 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			teamMemberResult.data && teamMemberResult.data.length > 0 ? teamMemberResult.data[0] : null;
 
 		if (!teamMember) {
-			return { profile, teamMember: null, curriculumNodes: [], organizationName: null, professionLabel: null };
+			return {
+				profile,
+				teamMember: null,
+				curriculumNodes: [],
+				organizationName: null,
+				professionLabel: null
+			};
 		}
 
 		const { data: team, error: teamError } = await locals.supabaseAdmin
@@ -49,7 +61,13 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 
 		if (teamError || !team) {
 			console.error('Team query error:', teamError);
-			return { profile, teamMember: null, curriculumNodes: [], organizationName: null, professionLabel: null };
+			return {
+				profile,
+				teamMember: null,
+				curriculumNodes: [],
+				organizationName: null,
+				professionLabel: null
+			};
 		}
 
 		// Enrich teamMember with organization and profession info
@@ -70,16 +88,18 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				.select('name')
 				.eq('id', team.organization_id)
 				.single(),
-			locals.supabaseAdmin
-				.from('professions')
-				.select('label')
-				.eq('id', team.profession_id)
-				.single()
+			locals.supabaseAdmin.from('professions').select('label').eq('id', team.profession_id).single()
 		]);
 
 		if (nodesResult.error) {
 			console.error('Curriculum nodes query error:', nodesResult.error);
-			return { profile, teamMember: enrichedTeamMember, curriculumNodes: [], organizationName: null, professionLabel: null };
+			return {
+				profile,
+				teamMember: enrichedTeamMember,
+				curriculumNodes: [],
+				organizationName: null,
+				professionLabel: null
+			};
 		}
 
 		return {
@@ -91,6 +111,12 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		};
 	} catch (error) {
 		console.error('Layout load error:', error);
-		return { profile: null, teamMember: null, curriculumNodes: [], organizationName: null, professionLabel: null };
+		return {
+			profile: null,
+			teamMember: null,
+			curriculumNodes: [],
+			organizationName: null,
+			professionLabel: null
+		};
 	}
 };
