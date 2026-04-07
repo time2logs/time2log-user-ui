@@ -21,3 +21,14 @@ Thumbs.db
 # Vite
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+.idea/.gitignore
+.idea/copilot.data.migration.ask2agent.xml
+.gitignore
+.idea/prettier.xml
+.idea/modules.xml
+.idea/inspectionProfiles/Project_Default.xml
+.idea/codeStyles/codeStyleConfig.xml
+.idea/time2log-user-ui.iml
+.gitignore
+.idea/codeStyles/Project.xml
+.idea/vcs.xml

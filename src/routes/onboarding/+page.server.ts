@@ -2,6 +2,7 @@ import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { InviteDetails } from '$lib/types';
 import * as m from '$lib/paraglide/messages.js';
+import { validateImageMagicBytes } from '$lib/server/avatarValidation';
 
 export const load: PageServerLoad = async ({
 	url,
@@ -37,7 +38,7 @@ export const load: PageServerLoad = async ({
 	}
 
 	// Validate token via service role client (bypasses RLS, no auth needed)
-	const { data: inviteDetailsRaw, error: inviteError } = await locals.supabaseServiceRole.rpc(
+	const { data: inviteDetailsRaw, error: inviteError } = await locals.supabaseSecret.rpc(
 		'get_invite_details',
 		{ invite_token: token }
 	);
@@ -75,6 +76,7 @@ export const actions: Actions = {
 		const email = formData.get('email')?.toString().trim() ?? '';
 		const avatarFile = formData.get('avatar') as File | null;
 
+		let avatarExt: string | null = null;
 		if (avatarFile && avatarFile.size > 0) {
 			if (avatarFile.size > 512 * 1024) {
 				return fail(400, {
@@ -82,7 +84,8 @@ export const actions: Actions = {
 					values: { firstName, lastName }
 				});
 			}
-			if (!avatarFile.type.startsWith('image/')) {
+			avatarExt = await validateImageMagicBytes(avatarFile);
+			if (!avatarExt) {
 				return fail(400, {
 					error: 'Unsupported file type. Please use JPEG, PNG, or WEBP.',
 					values: { firstName, lastName }
@@ -145,11 +148,12 @@ export const actions: Actions = {
 		const {
 			data: { users },
 			error: listError
-		} = await locals.supabaseServiceRole.auth.admin.listUsers();
+		} = await locals.supabaseSecret.auth.admin.listUsers();
 
 		if (listError) {
+			console.error('[Onboarding] Failed to list users:', listError.message);
 			return fail(500, {
-				error: listError.message,
+				error: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.',
 				values: { firstName, lastName }
 			});
 		}
@@ -164,15 +168,17 @@ export const actions: Actions = {
 		}
 
 		// 2. Onboarding-Status prüfen — falls bereits abgeschlossen, abbrechen
-		const { data: profile, error: profileError } = await locals.supabaseServiceRole
+		const { data: profile, error: profileError } = await locals.supabaseSecret
+			.schema('app')
 			.from('profiles')
 			.select('onboarding_status')
 			.eq('id', existingUser.id)
-			.single();
+			.maybeSingle();
 
 		if (profileError) {
+			console.error('[Onboarding] Failed to check profile status:', profileError.message);
 			return fail(500, {
-				error: profileError.message,
+				error: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.',
 				values: { firstName, lastName }
 			});
 		}
@@ -186,7 +192,7 @@ export const actions: Actions = {
 		}
 
 		// 3. Passwort + Metadaten setzen
-		const { error: updateError } = await locals.supabaseServiceRole.auth.admin.updateUserById(
+		const { error: updateError } = await locals.supabaseSecret.auth.admin.updateUserById(
 			existingUser.id,
 			{
 				password,
@@ -198,8 +204,9 @@ export const actions: Actions = {
 		);
 
 		if (updateError) {
+			console.error('[Onboarding] Failed to update user:', updateError.message);
 			return fail(500, {
-				error: updateError.message,
+				error: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.',
 				values: { firstName, lastName }
 			});
 		}
@@ -211,8 +218,9 @@ export const actions: Actions = {
 		});
 
 		if (signInError) {
+			console.error('[Onboarding] Sign-in failed:', signInError.message);
 			return fail(500, {
-				error: m.onboarding_error_signin_failed() + signInError.message,
+				error: m.onboarding_error_signin_failed(),
 				values: { firstName, lastName }
 			});
 		}
@@ -223,27 +231,32 @@ export const actions: Actions = {
 		});
 
 		if (acceptError) {
+			console.error('[Onboarding] Failed to accept invite:', acceptError.message);
 			return fail(400, {
-				error: acceptError.message,
+				error: 'Einladung konnte nicht angenommen werden. Bitte versuche es erneut.',
 				values: { firstName, lastName }
 			});
 		}
 
-		// Onboarding-Status auf completed setzen
-		const { error: statusError } = await locals.supabase
-			.from('profiles')
-			.update({ onboarding_status: 'completed' })
-			.eq('id', existingUser.id);
+		// Profil anlegen / aktualisieren
+		const { error: statusError } = await locals.supabase.from('profiles').upsert(
+			{
+				id: existingUser.id,
+				first_name: firstName,
+				last_name: lastName,
+				onboarding_status: 'completed'
+			},
+			{ onConflict: 'id' }
+		);
 
 		if (statusError) {
-			console.error('Failed to update onboarding status:', statusError);
+			console.error('Failed to upsert profile:', statusError);
 			// Kein hard fail — User ist bereits eingeloggt und Invite akzeptiert
 		}
 
 		// 6. Avatar upload
-		if (avatarFile && avatarFile.size > 0) {
-			const fileExt = avatarFile.name.split('.').pop() || 'jpg';
-			const filePath = `${existingUser.id}/avatar-${Date.now()}.${fileExt}`;
+		if (avatarFile && avatarFile.size > 0 && avatarExt) {
+			const filePath = `${existingUser.id}/avatar-${Date.now()}.${avatarExt}`;
 
 			const { error: uploadError } = await locals.supabase.storage
 				.from('avatars')

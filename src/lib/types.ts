@@ -18,6 +18,8 @@ export type CurriculumTreeNode = CurriculumNode & {
 	children: CurriculumTreeNode[];
 };
 
+export type CurriculumNodeSummary = Pick<CurriculumNode, 'id' | 'key' | 'label' | 'is_active'>;
+
 export type TeamMember = {
 	team_id: string;
 	user_id: string;
@@ -51,6 +53,24 @@ export type ActivityRecord = {
 	activity_name: string;
 	activity_key: string;
 	activity_label: string;
+};
+
+export type AbsenceType = 'sick' | 'vacation' | 'military' | 'uk' | 'berufsschule' | 'custom';
+
+export type AbsenceRecord = {
+	id: string;
+	user_id: string;
+	team_id: string | null;
+	organization_id: string;
+	absence_type_id: AbsenceType;
+	start_date: string;
+	end_date: string;
+	is_recurring: boolean;
+	rrule: string | null;
+	notes: string | null;
+	created_at: string;
+	updated_at: string;
+	absence_type_label: string;
 };
 
 export type InviteDetails = {

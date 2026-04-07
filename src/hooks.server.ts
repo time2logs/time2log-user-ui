@@ -34,13 +34,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	);
 
-	// Service role client — bypasses RLS, used for admin operations (e.g. creating users, invite lookups)
-	const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY;
-	if (!serviceRoleKey) {
-		throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured');
+	// Secret client — bypasses RLS, used for admin operations (e.g. creating users, invite lookups)
+	const secretKey = env.SUPABASE_SECRET_KEY;
+	if (!secretKey) {
+		throw new Error('SUPABASE_SECRET_KEY is not configured');
 	}
-	event.locals.supabaseServiceRole = createClient(PUBLIC_SUPABASE_URL, serviceRoleKey, {
-		db: { schema: 'app' }
+	event.locals.supabaseSecret = createClient(PUBLIC_SUPABASE_URL, secretKey, {
+		db: { schema: 'admin' }
 	});
 
 	event.locals.safeGetSession = async () => {
@@ -65,6 +65,34 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (response.status === 404) {
 		throw redirect(302, '/login');
 	}
+
+	// Security headers
+	const supabaseOrigin = new URL(PUBLIC_SUPABASE_URL).origin;
+	response.headers.set(
+		'Content-Security-Policy',
+		[
+			`default-src 'self'`,
+			// SvelteKit requires unsafe-inline for hydration scripts; unsafe-eval is not needed
+			`script-src 'self' 'unsafe-inline'`,
+			// Tailwind and Svelte emit inline styles
+			`style-src 'self' 'unsafe-inline'`,
+			// Supabase API + realtime websocket
+			`connect-src 'self' ${supabaseOrigin} wss://${new URL(PUBLIC_SUPABASE_URL).host}`,
+			// Avatars are served from Supabase storage (same origin) + data URIs for previews
+			`img-src 'self' data: blob: ${supabaseOrigin}`,
+			`font-src 'self'`,
+			`frame-src 'none'`,
+			`frame-ancestors 'none'`,
+			`object-src 'none'`,
+			`base-uri 'self'`,
+			`form-action 'self'`
+		].join('; ')
+	);
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+	// HSTS: only meaningful over HTTPS (ignored on HTTP in dev)
+	response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 
 	return response;
 };
