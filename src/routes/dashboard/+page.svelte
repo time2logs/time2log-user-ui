@@ -12,7 +12,13 @@
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import { activityStore } from '$lib/activityStorage';
 	import { absenceStore, isDateInAbsence } from '$lib/absenceStorage';
-	import type { ActivityRecord, AbsenceRecord } from '$lib/types';
+	import type {
+		ActivityRecord,
+		AbsenceRecord,
+		CurriculumNode,
+		CurriculumNodeSummary,
+		TeamMember
+	} from '$lib/types';
 	import { resolve } from '$app/paths';
 	import { LogOut, Loader2, Plus, Menu, Settings, Calendar } from 'lucide-svelte';
 	import { DateFormatter, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
@@ -22,7 +28,20 @@
 
 	const dateLocale = $derived(getDateLocale());
 
-	let { data } = $props();
+	type DashboardPageData = {
+		profile: {
+			first_name: string;
+			last_name: string;
+			avatar_url: string | null;
+		} | null;
+		teamMember: TeamMember | null;
+		curriculumNodes: CurriculumNode[];
+		curriculumNodeSummaries: CurriculumNodeSummary[];
+		organizationName: string | null;
+		professionLabel: string | null;
+	};
+
+	let { data }: { data: DashboardPageData } = $props();
 
 	let isLoggingOut = $state(false);
 	let logoutDialogOpen = $state(false);
@@ -54,7 +73,8 @@
 	});
 
 	$effect(() => {
-		activityStore.load();
+		activityStore.setCurriculumNodeSummaries(data.curriculumNodeSummaries);
+		void activityStore.load();
 	});
 
 	$effect(() => {
