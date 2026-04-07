@@ -3,10 +3,10 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN bun install
 
 COPY . .
-RUN npm run build
+RUN bun run build
 
 FROM nginx:stable-alpine
 RUN rm -rf /usr/share/nginx/html/*

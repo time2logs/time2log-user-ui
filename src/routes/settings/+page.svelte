@@ -343,18 +343,22 @@
 							<button
 								type="button"
 								onclick={toggleTheme}
-								class="relative h-6 w-12 rounded-full transition-colors {currentTheme === 'dark'
-									? 'bg-black'
+								aria-label={currentTheme === 'dark'
+									? 'Switch to light mode'
+									: 'Switch to dark mode'}
+								class="relative h-7 w-14 rounded-full transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none {currentTheme ===
+								'dark'
+									? 'bg-slate-600'
 									: 'bg-muted'}"
 							>
 								<span
-									class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-md transition-transform {currentTheme ===
+									class="absolute top-1 h-5 w-5 rounded-full bg-white shadow-md transition-all duration-300 {currentTheme ===
 									'dark'
-										? 'left-[26px]'
-										: 'left-0.5'}"
+										? 'left-[34px]'
+										: 'left-1'}"
 								>
 									{#if currentTheme === 'dark'}
-										<Moon class="mt-0.5 ml-0.5 h-4 w-4 text-black" />
+										<Moon class="mt-0.5 ml-0.5 h-4 w-4 text-slate-600" />
 									{:else}
 										<Sun class="mt-0.5 ml-0.5 h-4 w-4 text-primary" />
 									{/if}

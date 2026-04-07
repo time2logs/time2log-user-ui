@@ -11,6 +11,7 @@
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
 	import { rrulestr, Frequency } from 'rrule';
+	import { getFrequencyString, buildRruleString } from '$lib/rruleUtils';
 
 	const dateLocale = $derived(getDateLocale());
 
@@ -121,49 +122,14 @@
 		}
 	});
 
-	function getFrequencyString(freq: number): 'daily' | 'weekly' | 'monthly' {
-		switch (freq) {
-			case Frequency.DAILY:
-				return 'daily';
-			case Frequency.WEEKLY:
-				return 'weekly';
-			case Frequency.MONTHLY:
-				return 'monthly';
-			default:
-				return 'weekly';
-		}
-	}
-
-	function getFrequencyEnum(freq: string): Frequency {
-		switch (freq) {
-			case 'daily':
-				return Frequency.DAILY;
-			case 'weekly':
-				return Frequency.WEEKLY;
-			case 'monthly':
-				return Frequency.MONTHLY;
-			default:
-				return Frequency.WEEKLY;
-		}
-	}
-
-	function buildRruleString(): string {
-		if (!startDate || !isRecurring) return '';
-
-		const freq = getFrequencyEnum(recurrenceFrequency);
-		let rruleStr = `DTSTART:${startDate.replace(/-/g, '')}T000000Z\nFREQ=${Frequency[freq]}`;
-
-		if (recurrenceFrequency === 'weekly' && selectedDays.length > 0) {
-			const dayMap = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
-			const days = selectedDays.map((d) => dayMap[d]).join(',');
-			rruleStr += `;BYDAY=${days}`;
-		}
-
-		if (recurrenceUntil) {
-			rruleStr += `;UNTIL=${recurrenceUntil.replace(/-/g, '')}T235959Z`;
-		}
-
-		return rruleStr;
+	function getRruleString(): string {
+		return buildRruleString({
+			startDate,
+			isRecurring,
+			recurrenceFrequency,
+			selectedDays,
+			recurrenceUntil
+		});
 	}
 
 	function toggleDay(day: number) {
@@ -216,7 +182,7 @@
 	const previewDates = $derived(() => {
 		if (!showRecurrenceOptions || !startDate) return [];
 		try {
-			const rruleStr = buildRruleString();
+			const rruleStr = getRruleString();
 			if (!rruleStr) return [];
 			const rule = rrulestr(rruleStr, { dtstart: new Date(`${startDate}T00:00:00Z`) });
 			const today = new Date().toISOString().split('T')[0];
@@ -267,7 +233,7 @@
 				throw new Error('Missing required user information');
 			}
 
-			const rrule = isRecurring ? buildRruleString() : null;
+			const rrule = isRecurring ? getRruleString() : null;
 
 			if (absenceToEdit) {
 				await absenceStore.update(absenceToEdit.id, {
