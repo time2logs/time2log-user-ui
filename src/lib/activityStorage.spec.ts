@@ -338,4 +338,3 @@ describe('addActivity — success path', () => {
 		await expect(addActivity(activity)).rejects.toThrow('Insert failed');
 	});
 });
-t
