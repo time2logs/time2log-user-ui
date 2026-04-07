@@ -161,5 +161,13 @@
 	"recurrence_until_prefix": "fino al",
 	"absences_past_title": "Assenze passate",
 	"absences_show_past": "Mostra passate ({count})",
-	"absences_hide_past": "Nascondi passate"
+	"absences_hide_past": "Nascondi passate",
+	"stats_hours_this_week": "Ore questa settimana",
+	"stats_total_hours": "Ore totali",
+	"stats_active_days_month": "Giorni attivi questo mese",
+	"stats_weekly_hours_title": "Ore settimanali",
+	"stats_weekly_hours_desc": "Ore registrate per settimana, ultimi 8 settimane",
+	"stats_activity_breakdown_title": "Ripartizione attività",
+	"stats_activity_breakdown_desc": "Ore totali per attività",
+	"stats_other": "Altro"
 }
