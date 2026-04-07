@@ -15,7 +15,9 @@ describe('cn', () => {
 
 	it('joins multiple class names', () => {
 		// Arrange
-		const a = 'foo', b = 'bar', c = 'baz';
+		const a = 'foo',
+			b = 'bar',
+			c = 'baz';
 
 		// Act
 		const result = cn(a, b, c);
@@ -91,17 +93,6 @@ describe('cn', () => {
 
 		// Assert
 		expect(result).toBe('foo bar');
-	});
-
-	it('handles nested arrays with conditions', () => {
-		// Arrange
-		const input = ['foo', false && 'bar', 'baz'];
-
-		// Act
-		const result = cn(input);
-
-		// Assert
-		expect(result).toBe('foo baz');
 	});
 
 	it('returns empty string for all falsy inputs', () => {

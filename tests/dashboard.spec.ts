@@ -1,80 +1,32 @@
 import { expect, test } from '@playwright/test';
 
 // ---------------------------------------------------------------------------
-// The layout server does NOT redirect unauthenticated users – it returns
-// { profile: null, teamMember: null, curriculumNodes: [] } so the dashboard
-// renders in "Guest" mode.  Tests reflect this actual behaviour.
+// The layout server redirects all unauthenticated visitors to /login.
+// Guest-mode tests verify that redirect and the absence of JS errors.
 // ---------------------------------------------------------------------------
 
-test.describe('Dashboard – guest mode (unauthenticated)', () => {
+test.describe('Dashboard – unauthenticated redirect', () => {
 	test.beforeEach(async ({ page }) => {
 		// Arrange – navigate to dashboard without a session cookie
 		await page.goto('/dashboard', { waitUntil: 'networkidle' });
 	});
 
-	test('renders the page without crashing', async ({ page }) => {
+	test('redirects to /login when accessed without a session', async ({ page }) => {
 		// Arrange – page is loaded in beforeEach
 
-		// Act – (no interaction; verify rendered content)
+		// Act – (no interaction; verify URL after redirect)
 
 		// Assert
-		await expect(page.locator('main, [class*="gradient"]').first()).toBeVisible({ timeout: 8000 });
+		expect(page.url()).toContain('/login');
 	});
 
-	test('renders the calendar widget', async ({ page }) => {
+	test('renders login page without crashing after redirect', async ({ page }) => {
 		// Arrange – page is loaded in beforeEach
 
 		// Act – (no interaction; verify rendered content)
 
-		// Assert
-		await expect(
-			page.locator('[data-bits-calendar-root], [class*="calendar"]').first()
-		).toBeVisible({ timeout: 8000 });
-	});
-
-	test('renders the activity log section', async ({ page }) => {
-		// Arrange – page is loaded in beforeEach
-		// "Activity Log" (en) | "Aktivitätsprotokoll" (de-ch)
-
-		// Act – (no interaction; verify rendered content)
-
-		// Assert
-		await expect(
-			page.getByText(/activity log|aktivitätsprotokoll/i).first()
-		).toBeVisible({ timeout: 8000 });
-	});
-
-	test('shows the add-activity button', async ({ page }) => {
-		// Arrange – page is loaded in beforeEach
-		// Desktop: labelled button with text; Mobile: circular FAB.
-		// Both share the orange gradient class "from-orange-400".
-
-		// Act – (no interaction; verify rendered content)
-
-		// Assert – at least one add-activity button exists in the DOM
-		await expect(
-			page.locator('button[class*="from-orange-400"]').first()
-		).toBeAttached({ timeout: 8000 });
-	});
-
-	test('h1 greeting is visible', async ({ page }) => {
-		// Arrange – page is loaded in beforeEach
-
-		// Act – (no interaction; verify rendered content)
-
-		// Assert
-		await expect(page.locator('h1').first()).toBeVisible({ timeout: 8000 });
-	});
-
-	test('settings icon link is present', async ({ page }) => {
-		// Arrange – page is loaded in beforeEach
-		// On desktop the settings link is visible in the header.
-		// On mobile it lives inside the closed Sheet drawer (in DOM but hidden).
-
-		// Act – (no interaction; verify DOM presence)
-
-		// Assert – link exists in the DOM on every viewport
-		await expect(page.locator('a[href="/settings"]').first()).toBeAttached({ timeout: 8000 });
+		// Assert – login page has a main element
+		await expect(page.locator('main').first()).toBeVisible({ timeout: 8000 });
 	});
 
 	test('page loads without critical JavaScript errors', async ({ page }) => {

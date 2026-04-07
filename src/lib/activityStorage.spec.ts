@@ -1,11 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActivityRecord } from './types';
 
-
 const supabaseMock = { from: vi.fn() };
 
 vi.mock('./supabaseClient', () => ({ supabase: supabaseMock }));
-
 
 function makeRecord(overrides: Partial<ActivityRecord> = {}): ActivityRecord {
 	return {
@@ -45,7 +43,6 @@ afterEach(() => {
 	vi.restoreAllMocks();
 });
 
-
 describe('exported constants', () => {
 	it('MIN_HOURS equals 1', async () => {
 		// Arrange
@@ -67,7 +64,6 @@ describe('exported constants', () => {
 		expect(MAX_HOURS_PER_ENTRY).toBe(10);
 	});
 });
-
 
 describe('addActivity — validation', () => {
 	it('throws when hours is 0', async () => {
@@ -153,7 +149,6 @@ describe('addActivity — validation', () => {
 	});
 });
 
-
 describe('getLastActivityId', () => {
 	it('returns null when nothing is stored', async () => {
 		// Arrange
@@ -178,7 +173,6 @@ describe('getLastActivityId', () => {
 		expect(result).toBe('act-99');
 	});
 });
-
 
 describe('getActivities', () => {
 	it('returns an empty array when Supabase reports an error', async () => {
@@ -228,15 +222,17 @@ describe('getActivities', () => {
 			rating: 5,
 			location: 'München',
 			created_at: '2024-01-15T10:00:00Z',
-			updated_at: '2024-01-15T10:00:00Z',
-			curriculum_nodes: { id: 'act-1', key: 'diagnosis', label: 'Diagnose' }
+			updated_at: '2024-01-15T10:00:00Z'
 		};
 		const queryChain = {
 			select: vi.fn().mockReturnThis(),
 			order: vi.fn().mockResolvedValue({ data: [row], error: null })
 		};
 		supabaseMock.from.mockReturnValue(queryChain);
-		const { getActivities } = await import('./activityStorage');
+		const { getActivities, activityStore } = await import('./activityStorage');
+		activityStore.setCurriculumNodeSummaries([
+			{ id: 'act-1', key: 'diagnosis', label: 'Diagnose', is_active: true }
+		]);
 
 		// Act
 		const [activity] = await getActivities();
@@ -264,15 +260,17 @@ describe('getActivities', () => {
 			rating: null,
 			location: null,
 			created_at: '2024-01-15T10:00:00Z',
-			updated_at: '2024-01-15T10:00:00Z',
-			curriculum_nodes: { id: 'act-1', key: 'k', label: 'L' }
+			updated_at: '2024-01-15T10:00:00Z'
 		};
 		const queryChain = {
 			select: vi.fn().mockReturnThis(),
 			order: vi.fn().mockResolvedValue({ data: [row], error: null })
 		};
 		supabaseMock.from.mockReturnValue(queryChain);
-		const { getActivities } = await import('./activityStorage');
+		const { getActivities, activityStore } = await import('./activityStorage');
+		activityStore.setCurriculumNodeSummaries([
+			{ id: 'act-1', key: 'k', label: 'L', is_active: true }
+		]);
 
 		// Act
 		const [activity] = await getActivities();
@@ -281,7 +279,6 @@ describe('getActivities', () => {
 		expect(activity.location).toBe('');
 	});
 });
-
 
 describe('deleteActivity', () => {
 	it('calls supabase.delete with the correct record id', async () => {
@@ -310,7 +307,6 @@ describe('deleteActivity', () => {
 		await expect(deleteActivity('rec-1')).rejects.toThrow('Delete failed');
 	});
 });
-
 
 describe('addActivity — success path', () => {
 	it('persists the last activity id in localStorage after a successful insert', async () => {

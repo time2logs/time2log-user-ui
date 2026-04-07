@@ -8,17 +8,9 @@
 	import { Loader2, Plus } from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
+	import { escapeHtml } from '$lib/htmlUtils';
 
 	let { data, form } = $props();
-
-	function escapeHtml(str: string): string {
-		return str
-			.replace(/&/g, '&amp;')
-			.replace(/</g, '&lt;')
-			.replace(/>/g, '&gt;')
-			.replace(/"/g, '&quot;')
-			.replace(/'/g, '&#39;');
-	}
 
 	let firstName = $state('');
 	let lastName = $state('');

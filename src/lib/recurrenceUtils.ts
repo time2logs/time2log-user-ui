@@ -15,8 +15,13 @@ export function generateRecurrenceDates(
 	const start = new Date(`${startDate}T12:00:00`);
 	const until = pattern.until ? new Date(`${pattern.until}T12:00:00`) : null;
 
-	const maxDate = until || new Date(start);
-	maxDate.setMonth(maxDate.getMonth() + 12);
+	let maxDate: Date;
+	if (until) {
+		maxDate = until;
+	} else {
+		maxDate = new Date(start);
+		maxDate.setMonth(maxDate.getMonth() + 12);
+	}
 
 	const current = new Date(start);
 	let count = 0;
