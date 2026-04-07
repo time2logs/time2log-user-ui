@@ -6,6 +6,12 @@ import { expect, test } from '@playwright/test';
 // renders in "Guest" mode.  Tests reflect this actual behaviour.
 // ---------------------------------------------------------------------------
 
+// Selector shared across tests:
+// Both buttons (desktop header + mobile FAB) use the orange gradient class.
+// Using :visible ensures we only interact with the one rendered for the
+// current viewport.
+const ADD_BTN = 'button[class*="from-orange-400"]:visible';
+
 test.describe('Dashboard – guest mode (unauthenticated)', () => {
 	test.beforeEach(async ({ page }) => {
 		// Arrange – navigate to dashboard without a session cookie
@@ -46,27 +52,25 @@ test.describe('Dashboard – guest mode (unauthenticated)', () => {
 
 	test('shows the add-activity button', async ({ page }) => {
 		// Arrange – page is loaded in beforeEach
-		// Desktop: labelled button; Mobile: FAB with aria-label.
-		// Both carry data-testid="add-activity-btn".
+		// Desktop: labelled button with text; Mobile: circular FAB.
+		// Both share the orange gradient class "from-orange-400".
 
 		// Act – (no interaction; verify rendered content)
 
-		// Assert – at least one add-activity button is present in the DOM
+		// Assert – at least one add-activity button exists in the DOM
 		await expect(
-			page.locator('[data-testid="add-activity-btn"]').first()
+			page.locator('button[class*="from-orange-400"]').first()
 		).toBeAttached({ timeout: 8000 });
 	});
 
 	test('opens the activity form dialog when the add-button is clicked', async ({ page }) => {
 		// Arrange
 		// bits-ui Dialog.Content renders with data-slot="dialog-content".
-		// On mobile the visible button is the FAB; on desktop it is the header button.
-		// :visible filters out the hidden counterpart so the click always targets
-		// the button that is actually rendered for the current viewport.
-		const addBtn = page.locator('[data-testid="add-activity-btn"]:visible').first();
+		// On mobile the FAB is visible; on desktop the header button is visible.
+		// :visible filters out the hidden counterpart automatically.
 
 		// Act
-		await addBtn.click();
+		await page.locator(ADD_BTN).first().click();
 
 		// Assert
 		await expect(page.locator('[data-slot="dialog-content"]')).toBeVisible({ timeout: 6000 });
@@ -74,8 +78,7 @@ test.describe('Dashboard – guest mode (unauthenticated)', () => {
 
 	test('closes the activity form dialog when Escape is pressed', async ({ page }) => {
 		// Arrange – open the dialog first using the viewport-appropriate button
-		const addBtn = page.locator('[data-testid="add-activity-btn"]:visible').first();
-		await addBtn.click();
+		await page.locator(ADD_BTN).first().click();
 		await expect(page.locator('[data-slot="dialog-content"]')).toBeVisible({ timeout: 6000 });
 
 		// Act
@@ -97,7 +100,7 @@ test.describe('Dashboard – guest mode (unauthenticated)', () => {
 	test('settings icon link is present', async ({ page }) => {
 		// Arrange – page is loaded in beforeEach
 		// On desktop the settings link is visible in the header.
-		// On mobile it lives inside the closed Sheet drawer (in the DOM but hidden).
+		// On mobile it lives inside the closed Sheet drawer (in DOM but hidden).
 
 		// Act – (no interaction; verify DOM presence)
 

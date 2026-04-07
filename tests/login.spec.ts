@@ -33,8 +33,8 @@ test.describe('Login page', () => {
 		// Arrange – fill valid credentials and stall the Supabase token endpoint
 		await page.locator('input[type="email"]').fill('test@example.com');
 		await page.locator('input[type="password"]').fill('somepassword');
-		// Keep the request pending long enough to assert, then resolve it cleanly
-		// (NOT aborted – aborting causes Supabase SDK to catch the error and reset isLoading)
+		// Keep the request pending long enough to assert, then resolve it cleanly.
+		// NOT aborted – aborting causes Supabase SDK to catch the error and reset isLoading.
 		await page.route('**/auth/v1/token*', async (route) => {
 			await new Promise<void>((r) => setTimeout(r, 10_000));
 			await route.fulfill({
@@ -69,8 +69,8 @@ test.describe('Login page', () => {
 		// Act
 		await page.locator(SUBMIT_BTN).click();
 
-		// Assert – the red error container must appear (data-testid added to the component)
-		await expect(page.locator('[data-testid="error-message"]')).toBeVisible({ timeout: 5000 });
+		// Assert – the error div has class "text-red-700"; appears only when errorMessage is set
+		await expect(page.locator('[class*="text-red-700"]').first()).toBeVisible({ timeout: 5000 });
 	});
 
 	test('email input blocks submission for invalid format (HTML5 validation)', async ({ page }) => {
