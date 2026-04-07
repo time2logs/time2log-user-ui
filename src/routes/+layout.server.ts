@@ -7,6 +7,11 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		const session = await locals.safeGetSession();
 
 		if (!session) {
+			const isPublicPath =
+				url.pathname === '/' || url.pathname === '/login' || url.pathname.startsWith('/login/');
+			if (!isPublicPath) {
+				throw redirect(303, '/login');
+			}
 			return { profile: null, teamMember: null, curriculumNodes: [] };
 		}
 

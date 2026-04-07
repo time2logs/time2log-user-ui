@@ -69,8 +69,8 @@ test.describe('Login page', () => {
 		// Act
 		await page.locator(SUBMIT_BTN).click();
 
-		// Assert – the error div has class "text-red-700"; appears only when errorMessage is set
-		await expect(page.locator('[class*="text-red-700"]').first()).toBeVisible({ timeout: 5000 });
+		// Assert – the error div has class "text-destructive"; appears only when errorMessage is set
+		await expect(page.locator('[class*="text-destructive"]').first()).toBeVisible({ timeout: 5000 });
 	});
 
 	test('email input blocks submission for invalid format (HTML5 validation)', async ({ page }) => {

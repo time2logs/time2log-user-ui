@@ -2,7 +2,13 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
-	import { activityStore, getLastActivityId } from '$lib/activityStorage';
+	import {
+		activityStore,
+		getLastActivityId,
+		MAX_HOURS_PER_ENTRY,
+		MAX_HOURS_PER_DAY,
+		MIN_HOURS
+	} from '$lib/activityStorage';
 	import type { ActivityRecord, CurriculumNode, CurriculumTreeNode, TeamMember } from '$lib/types';
 	import {
 		Star,
@@ -14,22 +20,11 @@
 		AlertCircle
 	} from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
-	import { getLocale } from '$lib/paraglide/runtime.js';
+	import { getDateLocale } from '$lib/dateLocale';
 
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
-	const MAX_HOURS_PER_ENTRY = 10;
-	const MAX_HOURS_PER_DAY = 10;
-	const MIN_HOURS = 1;
-
-	const localeMap: Record<string, string> = {
-		en: 'en-GB',
-		'de-ch': 'de-CH',
-		it: 'it-IT',
-		fr: 'fr-FR'
-	};
-
-	const dateLocale = $derived(localeMap[getLocale()] ?? 'en-GB');
+	const dateLocale = $derived(getDateLocale());
 
 	let {
 		open = $bindable(),
@@ -115,13 +110,12 @@
 				notes = '';
 			}
 			// Auto-expand all categories to show activities
-			const newExpanded = new SvelteSet<string>();
+			expanded.clear();
 			curriculumNodes.forEach((node) => {
 				if (node.node_type === 'category') {
-					newExpanded.add(node.id);
+					expanded.add(node.id);
 				}
 			});
-			expanded = newExpanded;
 			submitError = null;
 			hasInitialized = true;
 		} else if (!open) {
