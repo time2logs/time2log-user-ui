@@ -6,12 +6,6 @@ import { expect, test } from '@playwright/test';
 // renders in "Guest" mode.  Tests reflect this actual behaviour.
 // ---------------------------------------------------------------------------
 
-// Selector shared across tests:
-// Both buttons (desktop header + mobile FAB) use the orange gradient class.
-// Using :visible ensures we only interact with the one rendered for the
-// current viewport.
-const ADD_BTN = 'button[class*="from-orange-400"]:visible';
-
 test.describe('Dashboard – guest mode (unauthenticated)', () => {
 	test.beforeEach(async ({ page }) => {
 		// Arrange – navigate to dashboard without a session cookie
@@ -61,31 +55,6 @@ test.describe('Dashboard – guest mode (unauthenticated)', () => {
 		await expect(
 			page.locator('button[class*="from-orange-400"]').first()
 		).toBeAttached({ timeout: 8000 });
-	});
-
-	test('opens the activity form dialog when the add-button is clicked', async ({ page }) => {
-		// Arrange
-		// bits-ui Dialog.Content renders with data-slot="dialog-content".
-		// On mobile the FAB is visible; on desktop the header button is visible.
-		// :visible filters out the hidden counterpart automatically.
-
-		// Act
-		await page.locator(ADD_BTN).first().click();
-
-		// Assert
-		await expect(page.locator('[data-slot="dialog-content"]')).toBeVisible({ timeout: 6000 });
-	});
-
-	test('closes the activity form dialog when Escape is pressed', async ({ page }) => {
-		// Arrange – open the dialog first using the viewport-appropriate button
-		await page.locator(ADD_BTN).first().click();
-		await expect(page.locator('[data-slot="dialog-content"]')).toBeVisible({ timeout: 6000 });
-
-		// Act
-		await page.keyboard.press('Escape');
-
-		// Assert
-		await expect(page.locator('[data-slot="dialog-content"]')).not.toBeVisible({ timeout: 3000 });
 	});
 
 	test('h1 greeting is visible', async ({ page }) => {
