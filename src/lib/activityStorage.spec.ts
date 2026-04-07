@@ -47,14 +47,14 @@ afterEach(() => {
 
 
 describe('exported constants', () => {
-	it('MIN_HOURS equals 0.5', async () => {
+	it('MIN_HOURS equals 1', async () => {
 		// Arrange
 		const { MIN_HOURS } = await import('./activityStorage');
 
 		// Act
 
 		// Assert
-		expect(MIN_HOURS).toBe(0.5);
+		expect(MIN_HOURS).toBe(1);
 	});
 
 	it('MAX_HOURS_PER_ENTRY equals 10', async () => {
@@ -97,12 +97,12 @@ describe('addActivity — validation', () => {
 		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
 	});
 
-	it('throws when hours are below MIN_HOURS (0.4 < 0.5)', async () => {
+	it('throws when hours are below MIN_HOURS (0.9 < 1)', async () => {
 		// Arrange
 		const { addActivity } = await import('./activityStorage');
-		const activity = { ...makeRecord(), hours: 0.4 };
+		const activity = { ...makeRecord(), hours: 0.9 };
 
-		// Act und  Assert
+		// Act und Assert
 		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
 	});
 
@@ -111,22 +111,22 @@ describe('addActivity — validation', () => {
 		const { addActivity } = await import('./activityStorage');
 		const activity = { ...makeRecord(), hours: 11 };
 
-		// Act und  Assert
+		// Act und Assert
 		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
 	});
 
-	it('accepts hours exactly at the MIN_HOURS lower boundary (0.5)', async () => {
+	it('accepts hours exactly at the MIN_HOURS lower boundary (1)', async () => {
 		// Arrange
-		const insertedRow = { ...makeRecord(), id: 'new-id', hours: 0.5 };
+		const insertedRow = { ...makeRecord(), id: 'new-id', hours: 1 };
 		const { insertMock } = makeInsertMock({ data: insertedRow, error: null });
 		supabaseMock.from.mockReturnValue({ insert: insertMock });
 		const { addActivity } = await import('./activityStorage');
 
 		// Act
-		const result = await addActivity({ ...makeRecord(), hours: 0.5 });
+		const result = await addActivity({ ...makeRecord(), hours: 1 });
 
 		// Assert
-		expect(result.hours).toBe(0.5);
+		expect(result.hours).toBe(1);
 	});
 
 	it('accepts hours exactly at the MAX_HOURS_PER_ENTRY upper boundary (10)', async () => {
@@ -141,6 +141,15 @@ describe('addActivity — validation', () => {
 
 		// Assert
 		expect(result.hours).toBe(10);
+	});
+
+	it('throws when hours are 0.5 (below new MIN_HOURS of 1)', async () => {
+		// Arrange
+		const { addActivity } = await import('./activityStorage');
+		const activity = { ...makeRecord(), hours: 0.5 };
+
+		// Act und Assert
+		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
 	});
 });
 
