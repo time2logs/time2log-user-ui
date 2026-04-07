@@ -1,12 +1,25 @@
 import type { ActivityRecord } from './types';
 import { writable } from 'svelte/store';
-import { supabase } from './supabaseClient';
+import { supabase, supabaseAdmin } from './supabaseClient';
 
 const LAST_ACTIVITY_KEY = 'last_activity_id';
 const DEBUG = import.meta.env.DEV ?? false;
 
 export const MAX_HOURS_PER_ENTRY = 10;
 export const MIN_HOURS = 0.5;
+
+type ActivityRecordRow = Omit<
+	ActivityRecord,
+	'location' | 'activity_name' | 'activity_key' | 'activity_label'
+> & {
+	location: string | null;
+};
+
+type CurriculumNodeSummary = {
+	id: string;
+	key: string;
+	label: string;
+};
 
 function debugLog(message: string, data?: any) {
 	if (DEBUG && typeof window !== 'undefined') {
@@ -35,6 +48,59 @@ function validateActivity(activity: { hours: number }): boolean {
 	return true;
 }
 
+async function fetchCurriculumNodeMap(
+	curriculumNodeIds: string[]
+): Promise<Map<string, CurriculumNodeSummary>> {
+	const uniqueIds = Array.from(
+		new Set(curriculumNodeIds.filter((id): id is string => typeof id === 'string' && id.length > 0))
+	);
+
+	if (uniqueIds.length === 0) {
+		return new Map();
+	}
+
+	const { data, error } = await supabaseAdmin
+		.from('curriculum_nodes')
+		.select('id, key, label')
+		.in('id', uniqueIds);
+
+	if (error) {
+		console.error('[ActivityStorage] Error loading curriculum nodes from admin schema:', error);
+		return new Map();
+	}
+
+	return new Map(
+		((data as CurriculumNodeSummary[] | null) ?? []).map((node) => [
+			node.id,
+			{ id: node.id, key: node.key, label: node.label }
+		])
+	);
+}
+
+function toActivityRecord(
+	record: ActivityRecordRow,
+	node?: CurriculumNodeSummary,
+	fallback: Partial<Pick<ActivityRecord, 'activity_name' | 'activity_key' | 'activity_label'>> = {}
+): ActivityRecord {
+	return {
+		...record,
+		location: record.location || '',
+		activity_name: node?.label || fallback.activity_name || '',
+		activity_key: node?.key || fallback.activity_key || '',
+		activity_label: fallback.activity_label || ''
+	};
+}
+
+async function enrichActivityRecords(records: ActivityRecordRow[]): Promise<ActivityRecord[]> {
+	if (records.length === 0) {
+		return [];
+	}
+
+	const nodeMap = await fetchCurriculumNodeMap(records.map((record) => record.curriculum_activity_id));
+
+	return records.map((record) => toActivityRecord(record, nodeMap.get(record.curriculum_activity_id)));
+}
+
 // Create a writable store for activities
 function createActivityStore() {
 	const { subscribe, set, update: updateStore } = writable<ActivityRecord[]>([]);
@@ -45,7 +111,7 @@ function createActivityStore() {
 
 		const { data, error } = await supabase
 			.from('activity_records')
-			.select('*, curriculum_nodes!inner(id, key, label)')
+			.select('*')
 			.order('created_at', { ascending: false });
 
 		if (error) {
@@ -57,24 +123,7 @@ function createActivityStore() {
 		debugLog(`Loaded ${data?.length || 0} activities from Supabase`);
 
 		if (data && data.length > 0) {
-			const formattedActivities: ActivityRecord[] = data.map((record: any) => ({
-				id: record.id,
-				organization_id: record.organization_id,
-				profession_id: record.profession_id,
-				user_id: record.user_id,
-				team_id: record.team_id,
-				curriculum_activity_id: record.curriculum_activity_id,
-				entry_date: record.entry_date,
-				hours: record.hours,
-				notes: record.notes,
-				rating: record.rating,
-				location: record.location || '',
-				created_at: record.created_at,
-				updated_at: record.updated_at,
-				activity_name: record.curriculum_nodes?.label || '',
-				activity_key: record.curriculum_nodes?.key || '',
-				activity_label: ''
-			}));
+			const formattedActivities = await enrichActivityRecords(data as ActivityRecordRow[]);
 			set(formattedActivities);
 		} else {
 			set([]);
@@ -188,7 +237,7 @@ function createActivityStore() {
 				.from('activity_records')
 				.update(updateData)
 				.eq('id', id)
-				.select('*, curriculum_nodes!inner(id, key, label)')
+				.select('*')
 				.single();
 
 			if (error) {
@@ -198,12 +247,13 @@ function createActivityStore() {
 
 			debugLog('Activity updated in Supabase:', data);
 
-			const updatedActivity: ActivityRecord = {
-				...data,
-				activity_name: data.curriculum_nodes?.label || activity.activity_name || '',
-				activity_key: data.curriculum_nodes?.key || activity.activity_key || '',
-				activity_label: activity.activity_label || ''
-			};
+			const nodeMap = await fetchCurriculumNodeMap([data.curriculum_activity_id]);
+
+			const updatedActivity = toActivityRecord(
+				data as ActivityRecordRow,
+				nodeMap.get(data.curriculum_activity_id),
+				activity
+			);
 
 			updateStore((activities) => activities.map((a) => (a.id === id ? updatedActivity : a)));
 
@@ -225,7 +275,7 @@ export async function getActivities(): Promise<ActivityRecord[]> {
 
 	const { data, error } = await supabase
 		.from('activity_records')
-		.select('*, curriculum_nodes!inner(id, key, label)')
+		.select('*')
 		.order('created_at', { ascending: false });
 
 	if (error) {
@@ -234,24 +284,7 @@ export async function getActivities(): Promise<ActivityRecord[]> {
 	}
 
 	if (data && data.length > 0) {
-		return data.map((record: any) => ({
-			id: record.id,
-			organization_id: record.organization_id,
-			profession_id: record.profession_id,
-			user_id: record.user_id,
-			team_id: record.team_id,
-			curriculum_activity_id: record.curriculum_activity_id,
-			entry_date: record.entry_date,
-			hours: record.hours,
-			notes: record.notes,
-			rating: record.rating,
-			location: record.location || '',
-			created_at: record.created_at,
-			updated_at: record.updated_at,
-			activity_name: record.curriculum_nodes?.label || '',
-			activity_key: record.curriculum_nodes?.key || '',
-			activity_label: ''
-		}));
+		return enrichActivityRecords(data as ActivityRecordRow[]);
 	}
 
 	return [];
@@ -329,7 +362,7 @@ export function getLastActivityId(): string | null {
 export async function getActivityById(id: string): Promise<ActivityRecord | undefined> {
 	const { data, error } = await supabase
 		.from('activity_records')
-		.select('*, curriculum_nodes!inner(id, key, label)')
+		.select('*')
 		.eq('id', id)
 		.single();
 
@@ -340,13 +373,8 @@ export async function getActivityById(id: string): Promise<ActivityRecord | unde
 
 	if (!data) return undefined;
 
-	return {
-		...data,
-		location: data.location || '',
-		activity_name: data.curriculum_nodes?.label || '',
-		activity_key: data.curriculum_nodes?.key || '',
-		activity_label: ''
-	};
+	const [activity] = await enrichActivityRecords([data as ActivityRecordRow]);
+	return activity;
 }
 
 // Debug functions to expose to console for debugging

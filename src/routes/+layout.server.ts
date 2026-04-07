@@ -64,10 +64,13 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			profession_id: team.profession_id
 		};
 
-		const { data: nodes, error: nodesError } = await locals.supabase
+		const { data: nodes, error: nodesError } = await locals.supabaseAdmin
 			.from('curriculum_nodes')
 			.select('*')
+			.eq('organization_id', team.organization_id)
 			.eq('profession_id', team.profession_id)
+			.eq('is_active', true)
+			.order('sort_order')
 			.order('key');
 
 		if (nodesError) {
