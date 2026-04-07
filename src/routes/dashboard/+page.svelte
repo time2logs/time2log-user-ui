@@ -18,6 +18,7 @@
 	import { DateFormatter, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
 	import { getDateLocale } from '$lib/dateLocale';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
+	import StatsOverview from '$lib/components/stats-overview.svelte';
 
 	const dateLocale = $derived(getDateLocale());
 
@@ -243,6 +244,8 @@
 					</Card.Content>
 				</Card.Root>
 			</div>
+
+			<StatsOverview {activities} />
 
 			{#if refreshKey >= 0}
 				<ActivityFormDialog
