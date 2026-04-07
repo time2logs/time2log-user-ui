@@ -1,9 +1,19 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog';
+	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
-	import { activityStore, getLastActivityId } from '$lib/activityStorage';
-	import type { CurriculumNode, CurriculumTreeNode, TeamMember } from '$lib/types';
+	import { Input } from '$lib/components/ui/input';
+	import { Textarea } from '$lib/components/ui/textarea';
+	import {
+		activityStore,
+		getLastActivityId,
+		getLastLocation,
+		MAX_HOURS_PER_ENTRY,
+		MAX_HOURS_PER_DAY,
+		MIN_HOURS
+	} from '$lib/activityStorage';
+	import type { ActivityRecord, CurriculumNode, CurriculumTreeNode, TeamMember } from '$lib/types';
 	import {
 		Star,
 		ChevronRight,
@@ -11,27 +21,37 @@
 		Folder,
 		FileText,
 		Check,
-		AlertCircle
+		AlertCircle,
+		Trash2
 	} from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
+	import { getDateLocale } from '$lib/dateLocale';
+
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+
+	const dateLocale = $derived(getDateLocale());
 
 	let {
 		open = $bindable(),
 		curriculumNodes,
 		teamMember,
 		onActivityAdded,
-		selectedDate
+		selectedDate,
+		activityToEdit = null,
+		existingActivities = []
 	}: {
 		open: boolean;
 		curriculumNodes: CurriculumNode[];
 		teamMember: TeamMember | null;
 		onActivityAdded: () => void;
 		selectedDate?: string;
+		activityToEdit?: ActivityRecord | null;
+		existingActivities?: ActivityRecord[];
 	} = $props();
 
 	// Build tree from flat list
 	function buildTree(nodes: CurriculumNode[]): CurriculumTreeNode[] {
-		const map = new Map<string, CurriculumTreeNode>();
+		const map = new SvelteMap<string, CurriculumTreeNode>();
 		const roots: CurriculumTreeNode[] = [];
 
 		nodes.forEach((node) => {
@@ -63,36 +83,47 @@
 	// Get all activity nodes for pre-selection
 	const activityNodes = $derived(curriculumNodes.filter((node) => node.node_type === 'activity'));
 
-	let expanded = $state<Set<string>>(new Set());
+	let expanded = new SvelteSet<string>();
 	let selectedActivityId = $state<string>('');
 	let rating = $state<number>(0);
 	let hours = $state<number>(0);
+	let location = $state<string>('');
 	let notes = $state<string>('');
 	let isSubmitting = $state(false);
 	let hasInitialized = $state(false);
 	let submitError = $state<string | null>(null);
+	let deleteDialogOpen = $state(false);
+	let isDeleting = $state(false);
+	let deleteError = $state<string | null>(null);
 
-	// Pre-fill with last activity when dialog opens
+	// Pre-fill with last activity or edit activity when dialog opens
 	$effect(() => {
 		if (open && !hasInitialized) {
-			const lastActivityId = getLastActivityId();
-			if (lastActivityId && activityNodes.find((n) => n.id === lastActivityId)) {
-				selectedActivityId = lastActivityId;
-			} else if (activityNodes.length > 0) {
-				selectedActivityId = activityNodes[0].id;
+			if (activityToEdit) {
+				selectedActivityId = activityToEdit.curriculum_activity_id;
+				rating = activityToEdit.rating || 0;
+				hours = activityToEdit.hours;
+				location = activityToEdit.location || '';
+				notes = activityToEdit.notes || '';
+			} else {
+				const lastActivityId = getLastActivityId();
+				if (lastActivityId && activityNodes.find((n) => n.id === lastActivityId)) {
+					selectedActivityId = lastActivityId;
+				} else if (activityNodes.length > 0) {
+					selectedActivityId = activityNodes[0].id;
+				}
+				rating = 0;
+				hours = 0;
+				location = getLastLocation() || '';
+				notes = '';
 			}
 			// Auto-expand all categories to show activities
-			const newExpanded = new Set<string>();
+			expanded.clear();
 			curriculumNodes.forEach((node) => {
 				if (node.node_type === 'category') {
-					newExpanded.add(node.id);
+					expanded.add(node.id);
 				}
 			});
-			expanded = newExpanded;
-			// Reset other fields
-			rating = 0;
-			hours = 0;
-			notes = '';
 			submitError = null;
 			hasInitialized = true;
 		} else if (!open) {
@@ -108,7 +139,6 @@
 		} else {
 			expanded.add(id);
 		}
-		expanded = new Set(expanded);
 	}
 
 	function selectActivity(id: string) {
@@ -119,7 +149,25 @@
 		if (!selectedActivity || hours === 0 || isSubmitting) return;
 		if (!teamMember) {
 			submitError = 'Team information not found. Please contact support.';
-			console.error('[ActivityForm] teamMember is null or undefined');
+			return;
+		}
+
+		if (hours < MIN_HOURS) {
+			submitError = m.error_hours_min({ min: MIN_HOURS.toString() });
+			return;
+		}
+
+		if (hours > MAX_HOURS_PER_ENTRY) {
+			submitError = m.error_hours_max_entry({ max: MAX_HOURS_PER_ENTRY.toString() });
+			return;
+		}
+
+		if (wouldExceedDailyMax) {
+			const remaining = MAX_HOURS_PER_DAY - currentDayHours;
+			submitError = m.error_hours_max_day({
+				max: MAX_HOURS_PER_DAY.toString(),
+				remaining: remaining > 0 ? remaining.toString() : '0'
+			});
 			return;
 		}
 
@@ -127,48 +175,71 @@
 		submitError = null;
 
 		try {
-			// Prepare activity data
-			const activityData = {
-				organization_id: teamMember.organization_id || '',
-				profession_id: teamMember.profession_id || '',
-				user_id: teamMember.user_id || '',
-				team_id: teamMember.team_id || null,
-				curriculum_activity_id: selectedActivity.id,
-				entry_date: selectedDate || new Date().toISOString().split('T')[0],
-				hours,
-				notes: notes || null,
-				rating: rating || null,
-				activity_name: selectedActivity.label,
-				activity_key: selectedActivity.key,
-				activity_label: ''
-			};
+			if (activityToEdit) {
+				const updateData = {
+					curriculum_activity_id: selectedActivity.id,
+					entry_date: selectedDate || activityToEdit.entry_date,
+					hours,
+					notes: notes || null,
+					rating: rating || null,
+					location,
+					activity_name: selectedActivity.label,
+					activity_key: selectedActivity.key,
+					activity_label: ''
+				};
 
-			// Validate data before sending
-			if (!activityData.organization_id || !activityData.profession_id || !activityData.user_id) {
-				console.error('[ActivityForm] Validation failed:', {
-					organization_id: activityData.organization_id,
-					profession_id: activityData.profession_id,
-					user_id: activityData.user_id
-				});
-				throw new Error('Missing required user information');
+				if (updateData.hours <= 0) {
+					throw new Error('Hours must be greater than 0');
+				}
+
+				if (!updateData.location.trim()) {
+					throw new Error('Location is required');
+				}
+
+				if (updateData.rating !== null && (updateData.rating < 1 || updateData.rating > 5)) {
+					throw new Error('Rating must be between 1 and 5');
+				}
+
+				await activityStore.update(activityToEdit.id, updateData);
+			} else {
+				const activityData = {
+					organization_id: teamMember.organization_id || '',
+					profession_id: teamMember.profession_id || '',
+					user_id: teamMember.user_id || '',
+					team_id: teamMember.team_id || null,
+					curriculum_activity_id: selectedActivity.id,
+					entry_date: selectedDate || new Date().toISOString().split('T')[0],
+					hours,
+					notes: notes || null,
+					rating: rating || null,
+					location,
+					activity_name: selectedActivity.label,
+					activity_key: selectedActivity.key,
+					activity_label: ''
+				};
+
+				if (!activityData.organization_id || !activityData.profession_id || !activityData.user_id) {
+					throw new Error('Missing required user information');
+				}
+
+				if (activityData.hours <= 0) {
+					throw new Error('Hours must be greater than 0');
+				}
+
+				if (!activityData.location.trim()) {
+					throw new Error('Location is required');
+				}
+
+				if (activityData.rating !== null && (activityData.rating < 1 || activityData.rating > 5)) {
+					throw new Error('Rating must be between 1 and 5');
+				}
+
+				await activityStore.add(activityData);
 			}
 
-			if (activityData.hours <= 0) {
-				throw new Error('Hours must be greater than 0');
-			}
-
-			if (activityData.rating !== null && (activityData.rating < 1 || activityData.rating > 5)) {
-				throw new Error('Rating must be between 1 and 5');
-			}
-
-			// Add activity via centralized store (writes to Supabase)
-			await activityStore.add(activityData);
-
-			// Close dialog and notify parent
 			open = false;
 			onActivityAdded();
 		} catch (error) {
-			console.error('[ActivityForm] Failed to save activity:', error);
 			submitError =
 				error instanceof Error ? error.message : 'Failed to save activity. Please try again.';
 		} finally {
@@ -180,15 +251,50 @@
 		rating = value;
 	}
 
-	const isValid = $derived(selectedActivityId && hours > 0 && !isSubmitting);
+	async function handleDelete() {
+		if (!activityToEdit) return;
+
+		isDeleting = true;
+		deleteError = null;
+
+		try {
+			await activityStore.delete(activityToEdit.id);
+			deleteDialogOpen = false;
+			open = false;
+			onActivityAdded();
+		} catch (error) {
+			deleteError = error instanceof Error ? error.message : 'Failed to delete activity';
+		} finally {
+			isDeleting = false;
+		}
+	}
+
+	const hoursExceedsMax = $derived(hours > MAX_HOURS_PER_ENTRY);
+	const currentDayHours = $derived(
+		existingActivities
+			.filter((a) => a.entry_date === (selectedDate || new Date().toISOString().split('T')[0]))
+			.reduce((sum, a) => {
+				if (activityToEdit && a.id === activityToEdit.id) return sum;
+				return sum + a.hours;
+			}, 0)
+	);
+	const wouldExceedDailyMax = $derived(currentDayHours + hours > MAX_HOURS_PER_DAY);
+	const isValid = $derived(
+		selectedActivityId &&
+			hours >= MIN_HOURS &&
+			!hoursExceedsMax &&
+			!wouldExceedDailyMax &&
+			location.trim() &&
+			!isSubmitting
+	);
 	const selectedDateLabel = $derived(
 		selectedDate
-			? new Date(`${selectedDate}T12:00:00`).toLocaleDateString('en-US', {
+			? new Intl.DateTimeFormat(dateLocale, {
 					weekday: 'long',
 					month: 'long',
 					day: 'numeric',
 					year: 'numeric'
-				})
+				}).format(new Date(`${selectedDate}T12:00:00`))
 			: null
 	);
 </script>
@@ -196,17 +302,25 @@
 <Dialog.Root bind:open>
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>{m.log_activity_title()}</Dialog.Title>
-			<Dialog.Description>{m.log_activity_description()}</Dialog.Description>
+			<Dialog.Title
+				>{activityToEdit ? m.edit_activity_title() : m.log_activity_title()}</Dialog.Title
+			>
+			<Dialog.Description
+				>{activityToEdit
+					? m.edit_activity_description()
+					: m.log_activity_description()}</Dialog.Description
+			>
 		</Dialog.Header>
 
 		<!-- Error Display -->
 		{#if submitError}
-			<div class="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
-				<AlertCircle class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
+			<div
+				class="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950"
+			>
+				<AlertCircle class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500 dark:text-red-400" />
 				<div class="flex-1">
-					<p class="text-sm font-medium text-red-800">Error</p>
-					<p class="text-sm text-red-600">{submitError}</p>
+					<p class="text-sm font-medium text-red-800 dark:text-red-300">Error</p>
+					<p class="text-sm text-red-600 dark:text-red-400">{submitError}</p>
 				</div>
 			</div>
 		{/if}
@@ -214,74 +328,74 @@
 		<div class="grid gap-4 py-4">
 			{#if selectedDateLabel}
 				<div
-					class="rounded-lg border border-orange-200 bg-orange-50/80 px-4 py-3 text-sm text-stone-700"
+					class="rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
 				>
-					This activity will be saved for <span class="font-semibold">{selectedDateLabel}</span>.
+					{m.activity_saved_for_date({ date: selectedDateLabel })}
 				</div>
 			{/if}
 
 			<!-- Activity Tree Selector -->
 			<div class="grid gap-2">
 				<Label>{m.activity_label()}</Label>
-				<div class="rounded-lg border border-stone-200 bg-white/60 shadow-sm backdrop-blur-sm">
+				<div class="rounded-lg border border-border bg-card shadow-sm">
 					{#if tree.length === 0}
 						<div class="flex h-32 items-center justify-center">
-							<p class="text-stone-400">{m.no_activities_available()}</p>
+							<p class="text-muted-foreground">{m.no_activities_available()}</p>
 						</div>
 					{:else}
-						<div class="max-h-64 divide-y divide-white/30 overflow-y-auto">
+						<div class="max-h-64 divide-y divide-border overflow-y-auto">
 							{#snippet treeNode(node: CurriculumTreeNode, depth: number)}
 								{#if node.node_type === 'category'}
 									<button
 										type="button"
-										class="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-white/40"
+										class="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-accent"
 										style="padding-left: {depth * 20 + 12}px"
 										onclick={() => toggleExpand(node.id)}
 									>
 										{#if expanded.has(node.id)}
-											<ChevronDown class="pointer-events-none h-4 w-4 text-stone-400" />
+											<ChevronDown class="pointer-events-none h-4 w-4 text-muted-foreground" />
 										{:else}
-											<ChevronRight class="pointer-events-none h-4 w-4 text-stone-400" />
+											<ChevronRight class="pointer-events-none h-4 w-4 text-muted-foreground" />
 										{/if}
-										<Folder class="pointer-events-none h-4 w-4 text-orange-400" />
-										<span class="font-mono text-sm text-stone-500">{node.key}</span>
-										<span class="text-sm font-medium text-stone-800">{node.label}</span>
+										<Folder class="pointer-events-none h-4 w-4 text-primary" />
+										<span class="font-mono text-sm text-muted-foreground">{node.key}</span>
+										<span class="text-sm font-medium text-foreground">{node.label}</span>
 									</button>
 
 									{#if expanded.has(node.id)}
-										{#each node.children as child}
+										{#each node.children as child (child.id)}
 											{@render treeNode(child, depth + 1)}
 										{/each}
 									{/if}
 								{:else}
 									<button
 										type="button"
-										class="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-white/40 {selectedActivityId ===
+										class="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-accent {selectedActivityId ===
 										node.id
-											? 'bg-orange-50'
+											? 'bg-accent'
 											: ''}"
 										style="padding-left: {depth * 20 + 32}px"
 										onclick={() => selectActivity(node.id)}
 									>
 										<span class="w-4"></span>
-										<FileText class="pointer-events-none h-4 w-4 text-rose-400" />
-										<span class="font-mono text-sm text-stone-500">{node.key}</span>
-										<span class="text-sm font-medium text-stone-800">{node.label}</span>
+										<FileText class="pointer-events-none h-4 w-4 text-muted-foreground" />
+										<span class="font-mono text-sm text-muted-foreground">{node.key}</span>
+										<span class="text-sm font-medium text-foreground">{node.label}</span>
 										{#if selectedActivityId === node.id}
-											<Check class="pointer-events-none ml-auto h-4 w-4 text-orange-500" />
+											<Check class="pointer-events-none ml-auto h-4 w-4 text-primary" />
 										{/if}
 									</button>
 								{/if}
 							{/snippet}
 
-							{#each tree as node}
+							{#each tree as node (node.id)}
 								{@render treeNode(node, 0)}
 							{/each}
 						</div>
 					{/if}
 				</div>
 				{#if selectedActivity}
-					<p class="text-sm text-stone-600">
+					<p class="text-sm text-muted-foreground">
 						{m.selected_activity({ name: `${selectedActivity.key} - ${selectedActivity.label}` })}
 					</p>
 				{/if}
@@ -291,7 +405,7 @@
 			<div class="grid gap-2">
 				<Label>{m.rating_label()}</Label>
 				<div class="flex gap-1">
-					{#each [1, 2, 3, 4, 5] as star}
+					{#each [1, 2, 3, 4, 5] as star (star)}
 						<button
 							type="button"
 							onclick={() => setRating(star)}
@@ -300,8 +414,8 @@
 						>
 							<Star
 								class="h-6 w-6 {star <= rating
-									? 'fill-orange-400 text-orange-400'
-									: 'fill-stone-200 text-stone-200'}"
+									? 'fill-primary text-primary'
+									: 'fill-muted-foreground/25 text-muted-foreground/25'}"
 							/>
 						</button>
 					{/each}
@@ -311,56 +425,115 @@
 			<!-- Time Input -->
 			<div class="grid gap-2">
 				<Label for="hours">{m.hours_label()}</Label>
-				<input
+				<Input
 					id="hours"
 					type="number"
-					min="0.5"
-					step="0.5"
+					min={MIN_HOURS}
+					max={MAX_HOURS_PER_ENTRY}
+					step="1"
 					bind:value={hours}
 					placeholder={m.hours_placeholder()}
-					class="flex h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-stone-500 focus-visible:ring-1 focus-visible:ring-stone-950 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+					aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
+				/>
+				{#if hoursExceedsMax}
+					<p class="text-sm text-red-600">
+						{m.error_hours_max_entry({ max: MAX_HOURS_PER_ENTRY.toString() })}
+					</p>
+				{:else if wouldExceedDailyMax && hours > 0}
+					<p class="text-sm text-red-600">
+						{m.error_hours_max_day({
+							max: MAX_HOURS_PER_DAY.toString(),
+							remaining: Math.max(0, MAX_HOURS_PER_DAY - currentDayHours).toString()
+						})}
+					</p>
+				{:else if hours > 0 && hours < MIN_HOURS}
+					<p class="text-sm text-amber-600">
+						{m.error_hours_min({ min: MIN_HOURS.toString() })}
+					</p>
+				{/if}
+			</div>
+
+			<!-- Location -->
+			<div class="grid gap-2">
+				<Label for="location">{m.location_label()}</Label>
+				<Input
+					id="location"
+					type="text"
+					bind:value={location}
+					placeholder={m.location_placeholder()}
 				/>
 			</div>
 
 			<!-- Notes (Optional) -->
 			<div class="grid gap-2">
 				<Label for="notes">{m.notes_optional()}</Label>
-				<textarea
-					id="notes"
-					bind:value={notes}
-					placeholder={m.notes_placeholder()}
-					rows="3"
-					class="flex min-h-[60px] w-full rounded-md border border-stone-200 bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-stone-400 focus-visible:ring-1 focus-visible:ring-stone-950 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-				></textarea>
+				<Textarea id="notes" bind:value={notes} placeholder={m.notes_placeholder()} />
 			</div>
 		</div>
 
-		<Dialog.Footer>
-			<Button
-				variant="outline"
-				onclick={() => {
-					open = false;
-					submitError = null;
-				}}
-				disabled={isSubmitting}
-			>
-				{m.cancel()}
-			</Button>
-			<Button
-				variant="default"
-				onclick={handleSubmit}
-				disabled={!isValid || isSubmitting}
-				class="bg-gradient-to-r from-orange-400 to-rose-400 text-white hover:from-orange-500 hover:to-rose-500"
-			>
-				{#if isSubmitting}
-					<span class="flex items-center gap-2">
-						<span class="h-4 w-4 animate-spin">⟳</span>
-						Saving...
-					</span>
-				{:else}
-					{m.log_activity_button()}
-				{/if}
-			</Button>
+		<Dialog.Footer class={activityToEdit ? 'flex gap-2' : ''}>
+			{#if activityToEdit}
+				<Button
+					variant="destructive"
+					onclick={() => (deleteDialogOpen = true)}
+					disabled={isSubmitting || isDeleting}
+					class="flex-1"
+				>
+					<Trash2 class="mr-2 h-4 w-4" />
+					{m.delete_activity_confirm_button()}
+				</Button>
+			{/if}
+			<div class="flex gap-2">
+				<Button
+					variant="outline"
+					onclick={() => {
+						open = false;
+						submitError = null;
+					}}
+					disabled={isSubmitting || isDeleting}
+				>
+					{m.cancel()}
+				</Button>
+				<Button variant="default" onclick={handleSubmit} disabled={!isValid || isSubmitting}>
+					{#if isSubmitting}
+						<span class="flex items-center gap-2">
+							<span class="h-4 w-4 animate-spin">⟳</span>
+							Saving...
+						</span>
+					{:else}
+						{activityToEdit ? m.save_changes_button() : m.log_activity_button()}
+					{/if}
+				</Button>
+			</div>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>
+
+<AlertDialog.Root bind:open={deleteDialogOpen}>
+	<AlertDialog.Content>
+		<AlertDialog.Header>
+			<AlertDialog.Title>{m.delete_activity_confirm()}</AlertDialog.Title>
+			{#if deleteError}
+				<AlertDialog.Description class="text-red-500">{deleteError}</AlertDialog.Description>
+			{/if}
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel disabled={isDeleting}>{m.cancel()}</AlertDialog.Cancel>
+			<AlertDialog.Action
+				onclick={handleDelete}
+				disabled={isDeleting}
+				class="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+			>
+				{#if isDeleting}
+					<span class="flex items-center gap-2">
+						<span class="h-4 w-4 animate-spin">⟳</span>
+						Deleting...
+					</span>
+				{:else}
+					<Trash2 class="mr-2 h-4 w-4" />
+					{m.delete_activity_confirm_button()}
+				{/if}
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>

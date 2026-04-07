@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { SupabaseClient, Session } from '@supabase/supabase-js';
 
 declare global {
@@ -5,7 +6,7 @@ declare global {
 		interface Locals {
 			supabase: SupabaseClient<any, any, any>;
 			supabaseAdmin: SupabaseClient<any, any, any>;
-			supabaseServiceRole: SupabaseClient<any, any, any>;
+			supabaseSecret: SupabaseClient<any, any, any>;
 			safeGetSession: () => Promise<Session | null>;
 		}
 	}
