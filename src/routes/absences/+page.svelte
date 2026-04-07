@@ -96,11 +96,7 @@
 			const freq = options.freq;
 			const byweekdayRaw = options.byweekday;
 			const weekdayArray =
-				byweekdayRaw == null
-					? []
-					: Array.isArray(byweekdayRaw)
-						? byweekdayRaw
-						: [byweekdayRaw];
+				byweekdayRaw == null ? [] : Array.isArray(byweekdayRaw) ? byweekdayRaw : [byweekdayRaw];
 
 			if (freq === 2) {
 				// WEEKLY
@@ -262,9 +258,9 @@
 								onclick={() => (showPast = !showPast)}
 								class="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
 							>
-								<span
-									class="transition-transform duration-200 {showPast ? 'rotate-90' : ''}"
-								>▶</span>
+								<span class="transition-transform duration-200 {showPast ? 'rotate-90' : ''}"
+									>▶</span
+								>
 								{showPast
 									? m.absences_hide_past()
 									: m.absences_show_past({ count: pastAbsences.length })}
