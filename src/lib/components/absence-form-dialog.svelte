@@ -11,7 +11,7 @@
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
 	import { rrulestr, Frequency } from 'rrule';
-	import { getFrequencyString, getFrequencyEnum, buildRruleString } from '$lib/rruleUtils';
+	import { getFrequencyString, buildRruleString } from '$lib/rruleUtils';
 
 	const dateLocale = $derived(getDateLocale());
 
