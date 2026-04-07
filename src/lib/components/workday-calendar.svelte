@@ -20,13 +20,15 @@
 		locale?: string;
 		isDateDisabled?: (date: DateValue) => boolean;
 		activityDates?: Set<string>;
+		isAbsenceDate?: (dateStr: string) => boolean;
 	};
 
 	let {
 		value = $bindable<DateValue | undefined>(),
 		locale = 'en-GB',
 		isDateDisabled = () => false,
-		activityDates = new Set<string>()
+		activityDates = new Set<string>(),
+		isAbsenceDate = () => false
 	}: WorkdayCalendarProps = $props();
 
 	const timeZone = getLocalTimeZone();
@@ -72,7 +74,9 @@
 			const disabled = outsideMonth || isDateDisabled(date);
 			const selected = value ? isEqualDay(date, value) : false;
 			const isToday = isEqualDay(date, todayDate);
-			const hasActivity = activityDates.has(date.toString());
+			const dateStr = date.toString();
+			const hasActivity = activityDates.has(dateStr);
+			const hasAbsence = isAbsenceDate(dateStr);
 
 			return {
 				date,
@@ -82,7 +86,8 @@
 				disabled,
 				selected,
 				isToday,
-				hasActivity
+				hasActivity,
+				hasAbsence
 			};
 		});
 	});
@@ -176,7 +181,7 @@
 				aria-label={formatFullDate(cell.date)}
 			>
 				<span>{cell.dayNumber}</span>
-				{#if !cell.outsideMonth && !cell.isWeekend && !cell.disabled && !cell.hasActivity}
+				{#if !cell.outsideMonth && !cell.isWeekend && !cell.disabled && !cell.hasActivity && !cell.hasAbsence}
 					<span
 						class={cn(
 							'h-1 w-1 rounded-full sm:h-1.5 sm:w-1.5',

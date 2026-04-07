@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import { Trash2, Calendar, Clock, Star, Pencil, MapPin, AlertCircle } from 'lucide-svelte';
+	import { Trash2, Calendar, Clock, Star, Pencil, MapPin } from 'lucide-svelte';
 	import { activityStore } from '$lib/activityStorage';
 	import { absenceStore } from '$lib/absenceStorage';
 	import type { ActivityRecord, AbsenceRecord } from '$lib/types';
 	import * as m from '$lib/paraglide/messages.js';
+	import { getDateLocale } from '$lib/dateLocale';
+
+	const dateLocale = $derived(getDateLocale());
 
 	let {
 		onRefresh,
@@ -107,7 +110,7 @@
 
 	function formatDate(dateStr: string): string {
 		const date = new Date(`${dateStr}T12:00:00`);
-		return date.toLocaleDateString('en-US', {
+		return date.toLocaleDateString(dateLocale, {
 			month: 'short',
 			day: 'numeric',
 			year: 'numeric'
@@ -244,8 +247,8 @@
 					<div
 						class="group relative flex flex-col gap-2 rounded-lg border border-orange-200 bg-orange-50/60 p-2 shadow-sm backdrop-blur-sm transition-all hover:bg-orange-100/80 hover:shadow-md sm:flex-row sm:items-center sm:gap-4 sm:p-3"
 					>
-						<div class="min-w-0 flex-1 pr-16 sm:pr-0">
-							<div class="mb-1 flex flex-wrap items-center gap-1 sm:gap-2">
+						<div class="min-w-0 flex-1 pr-10 sm:pr-0">
+							<div class="mb-1.5 flex flex-wrap items-center gap-1.5">
 								<span
 									class="rounded-full bg-orange-200 px-2 py-0.5 text-xs font-medium text-orange-700"
 								>
@@ -259,24 +262,18 @@
 									</span>
 								{/if}
 							</div>
-							<div
-								class="flex flex-wrap items-center gap-2 text-xs text-stone-600 sm:gap-3 sm:text-sm"
-							>
-								<div class="flex items-center gap-1">
-									<Calendar class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-									<span>
-										{#if absence.start_date === absence.end_date}
-											{formatDate(absence.start_date)}
-										{:else}
-											{formatDate(absence.start_date)} - {formatDate(absence.end_date)}
-										{/if}
-									</span>
-								</div>
-								<AlertCircle class="h-3 w-3 text-orange-500 sm:h-3.5 sm:w-3.5" />
-								<span class="font-medium text-orange-600">{m.absence_label()}</span>
+							<div class="flex items-center gap-1 text-xs text-stone-600 sm:text-sm">
+								<Calendar class="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
+								<span>
+									{#if absence.start_date === absence.end_date}
+										{formatDate(absence.start_date)}
+									{:else}
+										{formatDate(absence.start_date)} – {formatDate(absence.end_date)}
+									{/if}
+								</span>
 							</div>
 							{#if absence.notes}
-								<p class="mt-1 line-clamp-2 text-xs text-stone-600 sm:mt-2 sm:text-sm">
+								<p class="mt-1.5 line-clamp-2 text-xs text-stone-600 sm:text-sm">
 									{absence.notes}
 								</p>
 							{/if}

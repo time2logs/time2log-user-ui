@@ -14,7 +14,7 @@
 	import { absenceStore, isDateInAbsence } from '$lib/absenceStorage';
 	import type { ActivityRecord, AbsenceRecord } from '$lib/types';
 	import { resolve } from '$app/paths';
-	import { LogOut, Loader2, Plus, Menu, Settings, AlertCircle, Calendar } from 'lucide-svelte';
+	import { LogOut, Loader2, Plus, Menu, Settings, Calendar } from 'lucide-svelte';
 	import { DateFormatter, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
 	import { getDateLocale } from '$lib/dateLocale';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
@@ -164,9 +164,9 @@
 					<LanguageSwitcher />
 					<a
 						href="/absences"
-						aria-label="Absences"
+						aria-label={m.absences_title()}
 						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-						title="Manage absences"
+						title={m.absences_title()}
 					>
 						<Calendar class="h-4 w-4" />
 					</a>
@@ -206,6 +206,7 @@
 					{isDateDisabled}
 					locale={dateLocale}
 					{activityDates}
+					isAbsenceDate={(dateStr) => absences.some((a) => isDateInAbsence(dateStr, a))}
 				/>
 				<Card.Root class="flex-1">
 					<Card.Header
@@ -220,16 +221,6 @@
 							</Card.Description>
 						</div>
 						<div class="flex flex-col gap-1 sm:gap-2">
-							<Button
-								onclick={() => (absenceDialogOpen = true)}
-								disabled={selectedDateHasAbsence}
-								variant="outline"
-								class="hidden sm:inline-flex"
-								size="lg"
-							>
-								<AlertCircle class="mr-2 h-5 w-5" />
-								{m.log_absence_button()}
-							</Button>
 							<Button
 								onclick={() => (activityDialogOpen = true)}
 								disabled={selectedDateHasAbsence}
@@ -276,14 +267,6 @@
 
 	<!-- Mobile FAB -->
 	<div class="fixed right-6 bottom-6 z-50 flex gap-3 sm:hidden">
-		<Button
-			onclick={() => (absenceDialogOpen = true)}
-			disabled={selectedDateHasAbsence}
-			variant="outline"
-			class="h-14 w-14 rounded-full p-0 shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
-		>
-			<AlertCircle class="h-6 w-6" />
-		</Button>
 		<Button
 			onclick={() => (activityDialogOpen = true)}
 			disabled={selectedDateHasAbsence}
@@ -335,7 +318,7 @@
 				class="flex items-center gap-2 rounded-md px-3 py-2 text-foreground transition-colors hover:bg-muted"
 			>
 				<Calendar class="h-4 w-4" />
-				Absences
+				{m.absences_title()}
 			</a>
 			<a
 				href={resolve('/settings')}

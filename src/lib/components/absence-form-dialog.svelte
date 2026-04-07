@@ -82,7 +82,13 @@
 								? options.until.toISOString().split('T')[0]
 								: String(options.until)
 							: '';
-						const byweekday = options.byweekday || [];
+						const byweekdayRaw = options.byweekday;
+						const byweekday =
+							byweekdayRaw == null
+								? []
+								: Array.isArray(byweekdayRaw)
+									? byweekdayRaw
+									: [byweekdayRaw];
 						selectedDays = byweekday.map((d: number | { weekday: number }) =>
 							typeof d === 'number' ? d : d.weekday
 						);
@@ -106,6 +112,12 @@
 		} else if (!open) {
 			hasInitialized = false;
 			deleteChoice = null;
+		}
+	});
+
+	$effect(() => {
+		if (hasInitialized && startDate && (!endDate || endDate < startDate)) {
+			endDate = startDate;
 		}
 	});
 
@@ -208,12 +220,10 @@
 			if (!rruleStr) return [];
 			const rule = rrulestr(rruleStr, { dtstart: new Date(`${startDate}T00:00:00Z`) });
 			const today = new Date().toISOString().split('T')[0];
+			// Cap at 50 to prevent infinite loops on rules without UNTIL/COUNT
 			const dates = rule
-				.all()
-				.filter((date) => {
-					const dateStr = date.toISOString().split('T')[0];
-					return dateStr > today;
-				})
+				.all((_, i) => i < 50)
+				.filter((date) => date.toISOString().split('T')[0] > today)
 				.slice(0, 6);
 			return dates.map((d) => d.toISOString().split('T')[0]);
 		} catch (e) {
@@ -225,28 +235,28 @@
 	async function handleSubmit() {
 		submitError = null;
 		if (!teamMember) {
-			submitError = 'Team information not found. Please contact support.';
+			submitError = m.error_team_not_found();
 			console.error('[AbsenceForm] teamMember is null or undefined');
 			return;
 		}
 
 		if (!selectedAbsenceType) {
-			submitError = 'Please select an absence type.';
+			submitError = m.error_select_absence_type();
 			return;
 		}
 
 		if (!startDate || !endDate) {
-			submitError = 'Please select start and end dates.';
+			submitError = m.error_select_dates();
 			return;
 		}
 
 		if (startDate > endDate) {
-			submitError = 'End date must be after or equal to start date.';
+			submitError = m.error_end_date_after_start();
 			return;
 		}
 
 		if (isRecurring && !canSubmitRecurring) {
-			submitError = 'Please select at least one day of the week.';
+			submitError = m.error_select_weekday();
 			return;
 		}
 
@@ -286,8 +296,7 @@
 			onAbsenceAdded();
 		} catch (error) {
 			console.error('[AbsenceForm] Failed to save:', error);
-			submitError =
-				error instanceof Error ? error.message : 'Failed to save absence. Please try again.';
+			submitError = error instanceof Error ? error.message : m.error_save_absence_failed();
 		} finally {
 			isSubmitting = false;
 		}
@@ -313,7 +322,7 @@
 			open = false;
 			onAbsenceAdded();
 		} catch (error) {
-			deleteError = error instanceof Error ? error.message : 'Failed to delete absence';
+			deleteError = error instanceof Error ? error.message : m.error_delete_absence_failed();
 		} finally {
 			isDeleting = false;
 		}
@@ -337,7 +346,7 @@
 			>
 				<AlertCircle class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500 dark:text-red-400" />
 				<div class="flex-1">
-					<p class="text-sm font-medium text-red-800 dark:text-red-300">Error</p>
+					<p class="text-sm font-medium text-red-800 dark:text-red-300">{m.error_label()}</p>
 					<p class="text-sm text-red-600 dark:text-red-400">{submitError}</p>
 				</div>
 			</div>
@@ -380,11 +389,11 @@
 				<div class="grid gap-3 rounded-lg border border-border bg-muted/20 p-4">
 					<div class="grid gap-3 sm:grid-cols-2">
 						<div class="grid gap-2">
-							<Label for="startDate">From</Label>
+							<Label for="startDate">{m.absence_start_date_label()}</Label>
 							<Input id="startDate" type="date" bind:value={startDate} />
 						</div>
 						<div class="grid gap-2">
-							<Label for="endDate">To</Label>
+							<Label for="endDate">{m.absence_end_date_label()}</Label>
 							<Input id="endDate" type="date" bind:value={endDate} />
 						</div>
 					</div>
@@ -408,7 +417,7 @@
 						{#if showRecurrenceOptions}
 							<div class="mt-2 grid gap-3">
 								<div class="grid gap-2">
-									<Label>Frequency</Label>
+									<Label>{m.recurring_frequency_label()}</Label>
 									<div class="flex gap-2">
 										<button
 											type="button"
@@ -418,7 +427,7 @@
 												? 'border-primary bg-primary/10 text-primary'
 												: 'border-border bg-background text-foreground hover:bg-accent'}"
 										>
-											Daily
+											{m.recurring_frequency_daily()}
 										</button>
 										<button
 											type="button"
@@ -428,7 +437,7 @@
 												? 'border-primary bg-primary/10 text-primary'
 												: 'border-border bg-background text-foreground hover:bg-accent'}"
 										>
-											Weekly
+											{m.recurring_frequency_weekly()}
 										</button>
 										<button
 											type="button"
@@ -438,14 +447,14 @@
 												? 'border-primary bg-primary/10 text-primary'
 												: 'border-border bg-background text-foreground hover:bg-accent'}"
 										>
-											Monthly
+											{m.recurring_frequency_monthly()}
 										</button>
 									</div>
 								</div>
 
 								{#if recurrenceFrequency !== 'monthly'}
 									<div class="grid gap-2">
-										<Label>Days of Week</Label>
+										<Label>{m.recurring_days_of_week()}</Label>
 										<div class="flex flex-wrap gap-2">
 											{#each weekdays as day (day.value)}
 												<button
@@ -465,12 +474,12 @@
 								{/if}
 
 								<div class="grid gap-2">
-									<Label for="recurrenceUntil">Until (optional)</Label>
+									<Label for="recurrenceUntil">{m.recurring_until()}</Label>
 									<Input id="recurrenceUntil" type="date" bind:value={recurrenceUntil} />
 								</div>
 
 								<div class="grid gap-2">
-									<Label>Preview ({previewDates().length} upcoming)</Label>
+									<Label>{m.recurring_preview({ count: previewDates().length })}</Label>
 									<div class="flex flex-wrap gap-1">
 										{#each previewDates() as date (date)}
 											<span class="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary">
@@ -528,7 +537,7 @@
 					{#if isSubmitting}
 						<span class="flex items-center gap-2">
 							<span class="h-4 w-4 animate-spin">⟳</span>
-							Saving...
+							{m.saving()}
 						</span>
 					{:else}
 						{absenceToEdit ? m.save_changes_button() : m.log_absence_button()}
@@ -542,16 +551,16 @@
 <AlertDialog.Root bind:open={deleteDialogOpen}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>Delete Absence</AlertDialog.Title>
+			<AlertDialog.Title>{m.delete_absence_title()}</AlertDialog.Title>
 			{#if deleteError}
 				<AlertDialog.Description class="text-red-500">{deleteError}</AlertDialog.Description>
 			{/if}
 		</AlertDialog.Header>
 		<AlertDialog.Description>
 			{#if absenceToEdit?.is_recurring}
-				Delete this occurrence only, or delete the entire recurring rule?
+				{m.delete_absence_recurring_confirm()}
 			{:else}
-				Are you sure you want to delete this absence?
+				{m.delete_absence_confirm()}
 			{/if}
 		</AlertDialog.Description>
 		<AlertDialog.Footer>
@@ -565,7 +574,7 @@
 					}}
 					disabled={isDeleting}
 				>
-					This Occurrence
+					{m.delete_absence_this_occurrence()}
 				</Button>
 			{/if}
 			<AlertDialog.Action
@@ -579,14 +588,14 @@
 				{#if isDeleting}
 					<span class="flex items-center gap-2">
 						<span class="h-4 w-4 animate-spin">⟳</span>
-						Deleting...
+						{m.deleting()}
 					</span>
 				{:else}
 					<Trash2 class="mr-2 h-4 w-4" />
 					{#if absenceToEdit?.is_recurring}
-						Delete All
+						{m.delete_absence_all()}
 					{:else}
-						Delete
+						{m.delete_activity_confirm_button()}
 					{/if}
 				{/if}
 			</AlertDialog.Action>

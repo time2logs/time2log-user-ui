@@ -18,6 +18,21 @@
 	let isLoading = $state(true);
 	let formDialogOpen = $state(false);
 	let editingAbsence = $state<AbsenceRecord | null>(null);
+	let showPast = $state(false);
+
+	const todayStr = new Date().toISOString().split('T')[0];
+
+	const upcomingAbsences = $derived(
+		absences
+			.filter((a) => a.end_date >= todayStr)
+			.sort((a, b) => a.start_date.localeCompare(b.start_date))
+	);
+
+	const pastAbsences = $derived(
+		absences
+			.filter((a) => a.end_date < todayStr)
+			.sort((a, b) => b.start_date.localeCompare(a.start_date))
+	);
 
 	onMount(async () => {
 		await loadAbsences();
@@ -62,6 +77,12 @@
 		return `${formatter.format(start)} - ${formatter.format(end)}`;
 	}
 
+	function getWeekdayName(dayNum: number): string {
+		// Jan 7 2024 is Sunday (dayNum 0), Jan 8 is Monday (1), etc.
+		const date = new Date(2024, 0, 7 + dayNum);
+		return date.toLocaleDateString(dateLocale, { weekday: 'long' });
+	}
+
 	function getRecurrenceDescription(absence: AbsenceRecord): string {
 		if (!absence.is_recurring || !absence.rrule) {
 			return '';
@@ -71,44 +92,45 @@
 			const rule = rrulestr(absence.rrule);
 			const options = rule.origOptions || {};
 
-			let desc = 'Every ';
+			let desc = m.recurrence_prefix() + ' ';
 			const freq = options.freq;
-			const byweekday = options.byweekday || [];
-
-			const weekdayMap: Record<number, string> = {
-				0: 'Sunday',
-				1: 'Monday',
-				2: 'Tuesday',
-				3: 'Wednesday',
-				4: 'Thursday',
-				5: 'Friday',
-				6: 'Saturday'
-			};
+			const byweekdayRaw = options.byweekday;
+			const weekdayArray =
+				byweekdayRaw == null
+					? []
+					: Array.isArray(byweekdayRaw)
+						? byweekdayRaw
+						: [byweekdayRaw];
 
 			if (freq === 2) {
 				// WEEKLY
-				if (byweekday.length > 0) {
-					const days = byweekday
+				if (weekdayArray.length > 0) {
+					const days = weekdayArray
 						.map((d: number | { weekday: number }) => {
 							const dayNum = typeof d === 'number' ? d : d.weekday;
-							return weekdayMap[dayNum];
+							return getWeekdayName(dayNum);
 						})
 						.join(', ');
 					desc += days;
 				} else {
-					desc += 'week';
+					desc += m.recurrence_week();
 				}
 			} else if (freq === 3) {
 				// MONTHLY
-				desc += 'month';
+				desc += m.recurrence_month();
 			} else if (freq === 1) {
 				// DAILY
-				desc += 'day';
+				desc += m.recurrence_day();
 			}
 
 			if (options.until) {
 				const until = options.until instanceof Date ? options.until : new Date(options.until);
-				desc += ` until ${new Intl.DateTimeFormat(dateLocale, { month: 'short', day: 'numeric', year: 'numeric' }).format(until)}`;
+				const untilStr = new Intl.DateTimeFormat(dateLocale, {
+					month: 'short',
+					day: 'numeric',
+					year: 'numeric'
+				}).format(until);
+				desc += ` ${m.recurrence_until_prefix()} ${untilStr}`;
 			}
 
 			return desc;
@@ -129,6 +151,48 @@
 	}
 </script>
 
+{#snippet absenceCard(absence: AbsenceRecord)}
+	<Card.Root>
+		<Card.Content>
+			<div class="flex flex-col py-4 sm:flex-row sm:items-start sm:justify-between">
+				<div class="min-w-0 flex-1">
+					<div class="flex flex-wrap items-center gap-2">
+						<h3 class="text-base font-semibold text-foreground sm:text-lg">
+							{getAbsenceTypeLabel(absence.absence_type_id)}
+						</h3>
+						{#if absence.is_recurring}
+							<span
+								class="rounded-full bg-blue-100 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+							>
+								{m.recurring_label()}
+							</span>
+						{/if}
+					</div>
+					<p class="mt-2 text-sm text-muted-foreground">
+						{formatDateRange(absence.start_date, absence.end_date)}
+					</p>
+					{#if absence.is_recurring}
+						<p class="mt-1 text-xs text-muted-foreground">
+							{getRecurrenceDescription(absence)}
+						</p>
+					{/if}
+					{#if absence.notes}
+						<p class="mt-3 text-sm text-foreground">{absence.notes}</p>
+					{/if}
+				</div>
+				<Button
+					variant="outline"
+					size="sm"
+					class="flex-shrink-0"
+					onclick={() => handleEditAbsence(absence)}
+				>
+					<Edit2 class="h-4 w-4" />
+				</Button>
+			</div>
+		</Card.Content>
+	</Card.Root>
+{/snippet}
+
 <div class="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
 	<main class="relative z-10 flex-1 p-3 sm:p-4 lg:p-8">
 		<div class="mx-auto max-w-4xl">
@@ -136,17 +200,17 @@
 			<div class="mb-4 flex items-center gap-2 sm:mb-6 sm:gap-4 lg:mb-8">
 				<a
 					href={resolve('/dashboard')}
-					aria-label="Back to dashboard"
+					aria-label={m.back_to_dashboard()}
 					class="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 				>
 					<ArrowLeft class="h-4 w-4" />
 				</a>
 				<div class="min-w-0">
 					<h1 class="truncate text-base font-bold text-foreground sm:text-xl lg:text-2xl">
-						Absences
+						{m.absences_title()}
 					</h1>
 					<p class="text-xs text-muted-foreground sm:text-sm lg:text-base">
-						Manage your absence rules and schedules
+						{m.absences_description()}
 					</p>
 				</div>
 			</div>
@@ -155,7 +219,7 @@
 			<div class="mb-4 sm:mb-6">
 				<Button onclick={() => (formDialogOpen = true)} size="lg">
 					<Plus class="mr-2 h-5 w-5" />
-					New Absence
+					{m.absence_new_button()}
 				</Button>
 			</div>
 
@@ -167,67 +231,54 @@
 							<div
 								class="mb-2 inline-flex h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-primary"
 							></div>
-							<p class="text-sm text-muted-foreground">Loading absences...</p>
+							<p class="text-sm text-muted-foreground">{m.absences_loading()}</p>
 						</div>
 					</Card.Content>
 				</Card.Root>
 			{:else if absences.length === 0}
 				<Card.Root>
-					<Card.Content class="flex flex-col items-center justify-center py-12">
+					<Card.Content class="flex flex-col items-center justify-center">
 						<AlertCircle class="mb-2 h-12 w-12 text-muted-foreground/50" />
-						<h3 class="mb-1 text-lg font-medium">No absences yet</h3>
+						<h3 class="mb-1 text-lg font-medium">{m.no_absences_found()}</h3>
 						<p class="mb-4 text-sm text-muted-foreground">
-							Create your first absence to get started
+							{m.absences_empty_hint()}
 						</p>
 						<Button onclick={() => (formDialogOpen = true)} variant="outline">
 							<Plus class="mr-2 h-4 w-4" />
-							Add Absence
+							{m.absence_add_button()}
 						</Button>
 					</Card.Content>
 				</Card.Root>
 			{:else}
-				<div class="grid gap-4 lg:gap-6">
-					{#each absences as absence (absence.id)}
-						<Card.Root>
-							<Card.Content class="pt-3 sm:pt-6">
-								<div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-									<div class="min-w-0 flex-1">
-										<div class="flex flex-wrap items-center gap-2">
-											<h3 class="text-base font-semibold text-foreground sm:text-lg">
-												{getAbsenceTypeLabel(absence.absence_type_id)}
-											</h3>
-											{#if absence.is_recurring}
-												<span
-													class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-												>
-													Recurring
-												</span>
-											{/if}
-										</div>
-										<p class="mt-2 text-sm text-muted-foreground">
-											{formatDateRange(absence.start_date, absence.end_date)}
-										</p>
-										{#if absence.is_recurring}
-											<p class="mt-1 text-xs text-muted-foreground">
-												{getRecurrenceDescription(absence)}
-											</p>
-										{/if}
-										{#if absence.notes}
-											<p class="mt-3 text-sm text-foreground">{absence.notes}</p>
-										{/if}
-									</div>
-									<Button
-										variant="outline"
-										size="sm"
-										class="flex-shrink-0"
-										onclick={() => handleEditAbsence(absence)}
-									>
-										<Edit2 class="h-4 w-4" />
-									</Button>
-								</div>
-							</Card.Content>
-						</Card.Root>
+				<div class="grid lg:gap-6">
+					{#each upcomingAbsences as absence (absence.id)}
+						{@render absenceCard(absence)}
 					{/each}
+
+					{#if pastAbsences.length > 0}
+						<div class="mt-2">
+							<button
+								type="button"
+								onclick={() => (showPast = !showPast)}
+								class="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+							>
+								<span
+									class="transition-transform duration-200 {showPast ? 'rotate-90' : ''}"
+								>▶</span>
+								{showPast
+									? m.absences_hide_past()
+									: m.absences_show_past({ count: pastAbsences.length })}
+							</button>
+
+							{#if showPast}
+								<div class="mt-3 grid gap-3 opacity-60 lg:gap-4">
+									{#each pastAbsences as absence (absence.id)}
+										{@render absenceCard(absence)}
+									{/each}
+								</div>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</div>
