@@ -37,7 +37,7 @@ export const load: PageServerLoad = async ({
 	}
 
 	// Validate token via service role client (bypasses RLS, no auth needed)
-	const { data: inviteDetailsRaw, error: inviteError } = await locals.supabaseServiceRole.rpc(
+	const { data: inviteDetailsRaw, error: inviteError } = await locals.supabaseSecret.rpc(
 		'get_invite_details',
 		{ invite_token: token }
 	);
@@ -145,7 +145,7 @@ export const actions: Actions = {
 		const {
 			data: { users },
 			error: listError
-		} = await locals.supabaseServiceRole.auth.admin.listUsers();
+		} = await locals.supabaseSecret.auth.admin.listUsers();
 
 		if (listError) {
 			return fail(500, {
@@ -164,7 +164,7 @@ export const actions: Actions = {
 		}
 
 		// 2. Onboarding-Status prüfen — falls bereits abgeschlossen, abbrechen
-		const { data: profile, error: profileError } = await locals.supabaseServiceRole
+		const { data: profile, error: profileError } = await locals.supabaseSecret
 			.schema('app')
 			.from('profiles')
 			.select('onboarding_status')
@@ -187,7 +187,7 @@ export const actions: Actions = {
 		}
 
 		// 3. Passwort + Metadaten setzen
-		const { error: updateError } = await locals.supabaseServiceRole.auth.admin.updateUserById(
+		const { error: updateError } = await locals.supabaseSecret.auth.admin.updateUserById(
 			existingUser.id,
 			{
 				password,

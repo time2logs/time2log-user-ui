@@ -6,7 +6,7 @@ declare global {
 		interface Locals {
 			supabase: SupabaseClient<any, any, any>;
 			supabaseAdmin: SupabaseClient<any, any, any>;
-			supabaseServiceRole: SupabaseClient<any, any, any>;
+			supabaseSecret: SupabaseClient<any, any, any>;
 			safeGetSession: () => Promise<Session | null>;
 		}
 	}
