@@ -153,6 +153,11 @@
 						<p class="text-xs text-muted-foreground sm:text-sm lg:text-base">
 							{m.dashboard_subtitle()}
 						</p>
+						{#if data.professionLabel || data.organizationName}
+							<p class="mt-0.5 truncate text-xs text-muted-foreground/70 sm:text-sm">
+								{[data.professionLabel, data.organizationName].filter(Boolean).join(' · ')}
+							</p>
+						{/if}
 					</div>
 				</div>
 				<div class="hidden items-center gap-2 sm:flex">
