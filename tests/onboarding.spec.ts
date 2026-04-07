@@ -49,9 +49,9 @@ test.describe('Onboarding – authenticated, no invite token', () => {
 
 	test('shows the "invalid invite" error card when no token is provided', async ({ page }) => {
 		// "Invalid invitation" (en) | "Ungültige Einladung" (de-ch) | key: onboarding_invalid_invite
-		await expect(
-			page.getByText(/invalid invitation|ungültige einladung/i).first()
-		).toBeVisible({ timeout: 8000 });
+		await expect(page.getByText(/invalid invitation|ungültige einladung/i).first()).toBeVisible({
+			timeout: 8000
+		});
 	});
 
 	test('does not show the onboarding form without a token', async ({ page }) => {

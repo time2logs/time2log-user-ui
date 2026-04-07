@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import type { CurriculumNode } from './types';
 import { buildTree } from './curriculumTree';
 
-function makeNode(overrides: Partial<CurriculumNode> & { id: string; key: string }): CurriculumNode {
+function makeNode(
+	overrides: Partial<CurriculumNode> & { id: string; key: string }
+): CurriculumNode {
 	return {
 		organization_id: 'org-1',
 		profession_id: 'prof-1',

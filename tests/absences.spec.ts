@@ -57,12 +57,18 @@ test.describe('Absences page – authenticated UI', () => {
 	test('shows an "add absence" button', async ({ page }) => {
 		// "New Absence" (en) | "Neue Abwesenheit" (de-ch)
 		await expect(
-			page.getByRole('button').filter({ hasText: /add|hinzufügen|neue/i }).first()
+			page
+				.getByRole('button')
+				.filter({ hasText: /add|hinzufügen|neue/i })
+				.first()
 		).toBeVisible({ timeout: 8000 });
 	});
 
 	test('add absence dialog opens when the add button is clicked', async ({ page }) => {
-		const addBtn = page.getByRole('button').filter({ hasText: /add|hinzufügen|neue/i }).first();
+		const addBtn = page
+			.getByRole('button')
+			.filter({ hasText: /add|hinzufügen|neue/i })
+			.first();
 		await addBtn.click();
 		await expect(page.getByRole('dialog').first()).toBeVisible({ timeout: 5000 });
 	});

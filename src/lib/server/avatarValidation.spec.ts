@@ -29,9 +29,18 @@ describe('validateImageMagicBytes', () => {
 	it('detects WEBP by RIFF...WEBP signature', async () => {
 		// RIFF at 0–3, arbitrary file size at 4–7, WEBP at 8–11
 		const bytes = [
-			0x52, 0x49, 0x46, 0x46, // RIFF
-			0x00, 0x00, 0x00, 0x00, // file size (ignored)
-			0x57, 0x45, 0x42, 0x50  // WEBP
+			0x52,
+			0x49,
+			0x46,
+			0x46, // RIFF
+			0x00,
+			0x00,
+			0x00,
+			0x00, // file size (ignored)
+			0x57,
+			0x45,
+			0x42,
+			0x50 // WEBP
 		];
 		const file = makeFile(bytes);
 		expect(await validateImageMagicBytes(file)).toBe('webp');

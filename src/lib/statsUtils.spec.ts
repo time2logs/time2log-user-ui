@@ -111,7 +111,7 @@ describe('computeHoursThisWeek', () => {
 		const activities = [
 			makeActivity('2024-01-01', 4), // Monday — in week
 			makeActivity('2024-01-02', 3), // Tuesday — in week
-			makeActivity('2024-01-03', 2)  // Wednesday (today) — in week
+			makeActivity('2024-01-03', 2) // Wednesday (today) — in week
 		];
 		expect(computeHoursThisWeek(activities, today)).toBe(9);
 	});
@@ -148,7 +148,7 @@ describe('computeActiveDaysThisMonth', () => {
 	it('excludes days in a different month', () => {
 		const activities = [
 			makeActivity('2024-02-28', 5), // previous month
-			makeActivity('2024-04-01', 3)  // next month
+			makeActivity('2024-04-01', 3) // next month
 		];
 		expect(computeActiveDaysThisMonth(activities, today)).toBe(0);
 	});
@@ -239,7 +239,7 @@ describe('computeWeeklyData', () => {
 		const activities = [
 			makeActivity('2024-01-08', 4), // current week (Mon)
 			makeActivity('2024-01-10', 3), // current week (Wed = today)
-			makeActivity('2024-01-01', 5)  // previous week
+			makeActivity('2024-01-01', 5) // previous week
 		];
 		const result = computeWeeklyData(activities, today, 1);
 		// result[0] = week of 2024-01-01, result[1] = week of 2024-01-08

@@ -30,8 +30,9 @@ export function computeTotalHours(activities: ActivityRecord[]): number {
 
 export function computeActiveDaysThisMonth(activities: ActivityRecord[], today: Date): number {
 	const monthPrefix = isoFromDate(today).slice(0, 7); // "YYYY-MM"
-	return new Set(activities.filter((a) => a.entry_date.startsWith(monthPrefix)).map((a) => a.entry_date))
-		.size;
+	return new Set(
+		activities.filter((a) => a.entry_date.startsWith(monthPrefix)).map((a) => a.entry_date)
+	).size;
 }
 
 /**

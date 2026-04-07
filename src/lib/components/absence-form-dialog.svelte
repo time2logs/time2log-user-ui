@@ -123,7 +123,13 @@
 	});
 
 	function getRruleString(): string {
-		return buildRruleString({ startDate, isRecurring, recurrenceFrequency, selectedDays, recurrenceUntil });
+		return buildRruleString({
+			startDate,
+			isRecurring,
+			recurrenceFrequency,
+			selectedDays,
+			recurrenceUntil
+		});
 	}
 
 	function toggleDay(day: number) {
