@@ -14,19 +14,39 @@
 	let selectedLocale = $state<Locale>('de-ch');
 	let open = $state(false);
 
-	// Initialize from current locale
-	try {
-		const current = getLocale();
-		if (current && locales.some((l) => l.code === current)) {
-			selectedLocale = current as Locale;
+	// Initialize from current locale, localStorage, browser language, or default
+	$effect.pre(() => {
+		try {
+			const current = getLocale();
+			if (current && locales.some((l) => l.code === current)) {
+				selectedLocale = current as Locale;
+				return;
+			}
+		} catch {
+			// Continue to fallbacks
 		}
-	} catch {
+
 		// Fall back to localStorage
 		const stored = localStorage.getItem('PARAGLIDE_LOCALE');
 		if (stored && locales.some((l) => l.code === stored)) {
 			selectedLocale = stored as Locale;
+			return;
 		}
-	}
+
+		// Detect browser language
+		if (typeof window !== 'undefined' && navigator.language) {
+			const browserLang = navigator.language.toLowerCase();
+			if (browserLang.startsWith('en')) {
+				selectedLocale = 'en';
+			} else if (browserLang.startsWith('fr')) {
+				selectedLocale = 'fr';
+			} else if (browserLang.startsWith('it')) {
+				selectedLocale = 'it';
+			} else if (browserLang.includes('de') || browserLang.includes('ch')) {
+				selectedLocale = 'de-ch';
+			}
+		}
+	});
 
 	function handleChange() {
 		if (!selectedLocale) return;
