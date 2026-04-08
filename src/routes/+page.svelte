@@ -154,8 +154,7 @@
 
 			<div class="rounded-lg border border-border bg-card p-8 text-center">
 				<div class="flex aspect-video items-center justify-center rounded-lg bg-muted">
-					<img src="src/lib/assets/screenshots/dashboard.png" alt="">
-
+					<img src="src/lib/assets/screenshots/dashboard.png" alt="" />
 				</div>
 			</div>
 		</div>
