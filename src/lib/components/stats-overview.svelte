@@ -6,23 +6,15 @@
 	import { Chart, Bars, Svg, Axis, Tooltip } from 'layerchart';
 	import { scaleBand, pie, arc as d3Arc } from 'd3';
 
+	import {
+		computeHoursThisWeek,
+		computeTotalHours,
+		computeActiveDaysThisMonth,
+		computeActivityBreakdown,
+		computeWeeklyData
+	} from '$lib/statsUtils';
+
 	let { activities }: { activities: ActivityRecord[] } = $props();
-
-	// ── helpers ──────────────────────────────────────────────────────────────
-
-	function getMondayOfWeek(date: Date): Date {
-		const day = date.getDay(); // 0 = Sun
-		const diff = day === 0 ? -6 : 1 - day;
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity
-		const monday = new Date(date);
-		monday.setDate(date.getDate() + diff);
-		monday.setHours(0, 0, 0, 0);
-		return monday;
-	}
-
-	function isoFromDate(date: Date): string {
-		return date.toISOString().slice(0, 10);
-	}
 
 	// ── stat cards ───────────────────────────────────────────────────────────
 
@@ -35,48 +27,16 @@
 
 	const today = $derived(getTodayMidnight());
 
-	const currentWeekStart = $derived(getMondayOfWeek(today));
-	const currentWeekStartIso = $derived(isoFromDate(currentWeekStart));
-	const todayIso = $derived(isoFromDate(today));
-
-	const hoursThisWeek = $derived(
-		activities
-			.filter((a) => a.entry_date >= currentWeekStartIso && a.entry_date <= todayIso)
-			.reduce((sum, a) => sum + a.hours, 0)
-	);
-
-	const totalHours = $derived(activities.reduce((sum, a) => sum + a.hours, 0));
-
-	const currentMonthPrefix = $derived(todayIso.slice(0, 7)); // "2026-04"
-
-	const activeDaysThisMonth = $derived(
-		new Set(
-			activities.filter((a) => a.entry_date.startsWith(currentMonthPrefix)).map((a) => a.entry_date)
-		).size
-	);
+	const hoursThisWeek = $derived(computeHoursThisWeek(activities, today));
+	const totalHours = $derived(computeTotalHours(activities));
+	const activeDaysThisMonth = $derived(computeActiveDaysThisMonth(activities, today));
 
 	// ── weekly bar chart data (last 8 weeks) ─────────────────────────────────
 
-	const weeklyData = $derived.by(() => {
-		const weeks: { label: string; hours: number }[] = [];
-		for (let i = 7; i >= 0; i--) {
-			const monday = getMondayOfWeek(new Date(today.getTime() - i * 7 * 86_400_000));
-			const sunday = new Date(monday.getTime() + 6 * 86_400_000);
-			const from = isoFromDate(monday);
-			const to = isoFromDate(sunday);
-			const hours = activities
-				.filter((a) => a.entry_date >= from && a.entry_date <= to)
-				.reduce((sum, a) => sum + a.hours, 0);
-			// Short label: "Apr 7"
-			const label = monday.toLocaleDateString('en', { month: 'short', day: 'numeric' });
-			weeks.push({ label, hours });
-		}
-		return weeks;
-	});
+	const weeklyData = $derived(computeWeeklyData(activities, today));
 
 	// ── donut / activity breakdown ────────────────────────────────────────────
 
-	const TOP_N = 5;
 	const CHART_COLORS = [
 		'var(--chart-1)',
 		'var(--chart-2)',
@@ -86,18 +46,8 @@
 	];
 
 	const activityBreakdown = $derived.by(() => {
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity
-		const map = new Map<string, number>();
-		for (const a of activities) {
-			map.set(a.activity_name, (map.get(a.activity_name) ?? 0) + a.hours);
-		}
-		const sorted = [...map.entries()].sort((a, b) => b[1] - a[1]);
-		const top = sorted.slice(0, TOP_N);
-		const rest = sorted.slice(TOP_N).reduce((sum, [, h]) => sum + h, 0);
-		const slices = top.map(([name, hours], i) => ({ name, hours, color: CHART_COLORS[i] }));
-		if (rest > 0)
-			slices.push({ name: m.stats_other(), hours: rest, color: CHART_COLORS[TOP_N % 5] });
-		return slices;
+		const slices = computeActivityBreakdown(activities, 5, m.stats_other());
+		return slices.map((s, i) => ({ ...s, color: CHART_COLORS[i % CHART_COLORS.length] }));
 	});
 </script>
 

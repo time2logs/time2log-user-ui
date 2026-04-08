@@ -27,7 +27,8 @@
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
 
-	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+	import { SvelteSet } from 'svelte/reactivity';
+	import { buildTree } from '$lib/curriculumTree';
 
 	const dateLocale = $derived(getDateLocale());
 
@@ -48,35 +49,6 @@
 		activityToEdit?: ActivityRecord | null;
 		existingActivities?: ActivityRecord[];
 	} = $props();
-
-	// Build tree from flat list
-	function buildTree(nodes: CurriculumNode[]): CurriculumTreeNode[] {
-		const map = new SvelteMap<string, CurriculumTreeNode>();
-		const roots: CurriculumTreeNode[] = [];
-
-		nodes.forEach((node) => {
-			map.set(node.id, { ...node, children: [] });
-		});
-
-		nodes.forEach((node) => {
-			const treeNode = map.get(node.id)!;
-			if (node.parent_id && map.has(node.parent_id)) {
-				map.get(node.parent_id)!.children.push(treeNode);
-			} else {
-				roots.push(treeNode);
-			}
-		});
-
-		const sortByKey = (a: CurriculumTreeNode, b: CurriculumTreeNode) =>
-			a.key.localeCompare(b.key, undefined, { numeric: true });
-		const sortTree = (nodes: CurriculumTreeNode[]) => {
-			nodes.sort(sortByKey);
-			nodes.forEach((n) => sortTree(n.children));
-		};
-		sortTree(roots);
-
-		return roots;
-	}
 
 	const tree = $derived(buildTree(curriculumNodes));
 

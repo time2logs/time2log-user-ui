@@ -343,8 +343,10 @@
 							<button
 								type="button"
 								onclick={toggleTheme}
-								aria-label={currentTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-								class="relative h-7 w-14 rounded-full transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring {currentTheme ===
+								aria-label={currentTheme === 'dark'
+									? 'Switch to light mode'
+									: 'Switch to dark mode'}
+								class="relative h-7 w-14 rounded-full transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none {currentTheme ===
 								'dark'
 									? 'bg-slate-600'
 									: 'bg-muted'}"

@@ -1,19 +1,14 @@
 import { expect, test } from '@playwright/test';
 
-// ---------------------------------------------------------------------------
-// Authenticated tests – only run when real credentials are supplied:
-//   TEST_USER_EMAIL=... TEST_USER_PASSWORD=... npx playwright test
-// ---------------------------------------------------------------------------
-
 test.describe('Dashboard – authenticated UI', () => {
 	test.beforeEach(async ({ page }) => {
-		// Arrange – skip unless credentials are available
+		// Arrange
 		test.skip(
 			!process.env.TEST_USER_EMAIL || !process.env.TEST_USER_PASSWORD,
 			'Set TEST_USER_EMAIL + TEST_USER_PASSWORD to run authenticated tests'
 		);
 
-		// Arrange – log in via the real login form so the server gets a valid session cookie
+		// Arrange
 		await page.goto('/login', { waitUntil: 'networkidle' });
 		await page.locator('input[type="email"]').fill(process.env.TEST_USER_EMAIL!);
 		await page.locator('input[type="password"]').fill(process.env.TEST_USER_PASSWORD!);
@@ -24,9 +19,7 @@ test.describe('Dashboard – authenticated UI', () => {
 	});
 
 	test('shows a personalised greeting in h1 (not "Guest")', async ({ page }) => {
-		// Arrange – user is logged in via beforeEach
-
-		// Act – (no interaction; verify rendered content)
+		// Arrange
 
 		// Assert
 		await expect(page.locator('h1').first()).toBeVisible({ timeout: 8000 });
@@ -36,8 +29,6 @@ test.describe('Dashboard – authenticated UI', () => {
 	});
 
 	test('logout confirmation dialog opens when the logout button is clicked', async ({ page }) => {
-		// Arrange – user is logged in via beforeEach
-		// "Logout" (en) | "Abmelden" (de-ch)
 		const logoutBtn = page.getByRole('button', { name: /^(Logout|Abmelden)$/i }).first();
 
 		// Act
@@ -48,7 +39,7 @@ test.describe('Dashboard – authenticated UI', () => {
 	});
 
 	test('settings link navigates to /settings', async ({ page }) => {
-		// Arrange – user is logged in via beforeEach
+		// Arrange
 
 		// Act
 		await page.locator('a[href="/settings"]').first().click();
