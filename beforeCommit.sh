@@ -36,7 +36,8 @@ if [ "$choice" = "y" ]; then
     read -p "Please enter a commit message: " message
     
     git commit -m "$message"
-    git push -u origin "$CURRENT_BRANCH"else
+    git push -u origin "$CURRENT_BRANCH"
+else
     echo "ABORTING"
     exit 1
 fi
