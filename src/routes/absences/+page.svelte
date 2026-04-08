@@ -158,7 +158,7 @@
 						</h3>
 						{#if absence.is_recurring}
 							<span
-								class="rounded-full bg-blue-100 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+								class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
 							>
 								{m.recurring_label()}
 							</span>
@@ -179,7 +179,7 @@
 				<Button
 					variant="outline"
 					size="sm"
-					class="flex-shrink-0"
+					class="mt-3 flex-shrink-0 self-start sm:mt-0"
 					onclick={() => handleEditAbsence(absence)}
 				>
 					<Edit2 class="h-4 w-4" />
@@ -233,7 +233,7 @@
 				</Card.Root>
 			{:else if absences.length === 0}
 				<Card.Root>
-					<Card.Content class="flex flex-col items-center justify-center">
+					<Card.Content class="flex flex-col items-center justify-center py-12">
 						<AlertCircle class="mb-2 h-12 w-12 text-muted-foreground/50" />
 						<h3 class="mb-1 text-lg font-medium">{m.no_absences_found()}</h3>
 						<p class="mb-4 text-sm text-muted-foreground">
@@ -246,7 +246,7 @@
 					</Card.Content>
 				</Card.Root>
 			{:else}
-				<div class="grid lg:gap-6">
+				<div class="grid gap-3 lg:gap-6">
 					{#each upcomingAbsences as absence (absence.id)}
 						{@render absenceCard(absence)}
 					{/each}
