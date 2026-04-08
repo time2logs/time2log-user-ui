@@ -1,10 +1,49 @@
-<footer class="mt-auto px-4 py-8">
-	<div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
-		<div class="flex items-center gap-2">
-			<span class="font-semibold text-stone-700 dark:text-slate-300">time2log</span>
+<footer class="mt-auto border-t border-border px-4 py-8">
+	<div class="mx-auto max-w-6xl">
+		<div class="mb-8 grid gap-8 sm:grid-cols-3">
+			<div>
+				<span class="font-semibold text-foreground">time2log</span>
+				<p class="mt-2 text-sm text-muted-foreground">Track your learning journey with ease.</p>
+			</div>
+
+			<div>
+				<h4 class="mb-4 font-semibold text-foreground">Links</h4>
+				<ul class="space-y-2 text-sm">
+					<li>
+						<a href="/" class="text-muted-foreground transition-colors hover:text-foreground"
+							>Home</a
+						>
+					</li>
+					<li>
+						<a href="/login" class="text-muted-foreground transition-colors hover:text-foreground"
+							>Login</a
+						>
+					</li>
+				</ul>
+			</div>
+
+			<div>
+				<h4 class="mb-4 font-semibold text-foreground">Legal</h4>
+				<ul class="space-y-2 text-sm">
+					<li>
+						<a
+							href="/impressum"
+							class="text-muted-foreground transition-colors hover:text-foreground">Impressum</a
+						>
+					</li>
+					<li>
+						<a href="/privacy" class="text-muted-foreground transition-colors hover:text-foreground"
+							>Privacy</a
+						>
+					</li>
+				</ul>
+			</div>
 		</div>
-		<p class="text-sm text-stone-500 dark:text-slate-500">
-			(c) {new Date().getFullYear()} time2log. All rights reserved.
-		</p>
+
+		<div class="border-t border-border pt-8">
+			<p class="text-center text-sm text-muted-foreground">
+				© {new Date().getFullYear()} time2log. All rights reserved.
+			</p>
+		</div>
 	</div>
 </footer>
