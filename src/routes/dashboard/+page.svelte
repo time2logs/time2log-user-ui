@@ -240,7 +240,7 @@
 <div
     class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start xl:gap-6"
 >
-<div class="order-2 lg:order-1">
+<div class="order-2 flex justify-center lg:order-1 lg:justify-start">
     <WorkdayCalendar
         bind:value={selectedDate}
         {isDateDisabled}
