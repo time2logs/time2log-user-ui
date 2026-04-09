@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
 	import { ArrowRight, Clock, TrendingUp, Lock, Users } from 'lucide-svelte';
+	import SiteHeader from '$lib/components/site-header.svelte';
 	import SiteFooter from '$lib/components/site-footer.svelte';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
+	import * as m from '$lib/paraglide/messages.js';
 
 	let { data } = $props();
 	let isLoggedIn = $derived(data.profile !== null);
@@ -10,24 +12,23 @@
 	const features = [
 		{
 			icon: 'clock',
-			title: 'Easy Activity Logging',
-			description:
-				'Log activities with just a few clicks. Track hours per day with intuitive controls.'
+			title: m.home_feature_logging_title(),
+			description: m.home_feature_logging_desc()
 		},
 		{
 			icon: 'trending',
-			title: 'Progress Tracking',
-			description: 'Visualize your learning progress with detailed statistics and insights.'
+			title: m.home_feature_progress_title(),
+			description: m.home_feature_progress_desc()
 		},
 		{
 			icon: 'lock',
-			title: 'Secure & Private',
-			description: 'Your data is safe and protected. Only you control your information.'
+			title: m.home_feature_secure_title(),
+			description: m.home_feature_secure_desc()
 		},
 		{
 			icon: 'users',
-			title: 'Team Collaboration',
-			description: 'Invite team members and track collective progress on shared goals.'
+			title: m.home_feature_collaboration_title(),
+			description: m.home_feature_collaboration_desc()
 		}
 	];
 </script>
@@ -36,31 +37,33 @@
 	<!-- Subtle background glow -->
 	<AmbientGlow />
 
+	<!-- Header -->
+	<SiteHeader />
+
 	<!-- Hero Section -->
 	<section class="relative z-10 flex flex-grow items-center justify-center px-4 py-20">
 		<div
 			class="mx-auto max-w-2xl rounded-xl border border-border bg-card p-8 text-center shadow-sm sm:p-12"
 		>
 			<h1 class="mb-6 text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-				Track Your
-				<span class="text-primary"> Learning </span>
-				Journey
+				{m.home_heading_track()}
+				<span class="text-primary"> {m.home_heading_learning()} </span>
+				{m.home_heading_journey()}
 			</h1>
 
 			<p class="mx-auto mb-10 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
-				Simple, intuitive time logging for students and professionals. Stay organized, track your
-				progress, and achieve your goals.
+				{m.home_hero_description()}
 			</p>
 
 			<div class="flex flex-col items-center justify-center gap-4 sm:flex-row">
 				{#if isLoggedIn}
 					<Button href="/dashboard" size="lg" class="min-w-[200px]">
-						Go to Dashboard
+						{m.home_go_dashboard()}
 						<ArrowRight class="ml-2 h-4 w-4" />
 					</Button>
 				{:else}
 					<Button href="/login" size="lg" class="min-w-[200px]">
-						Get Started
+						{m.home_get_started()}
 						<ArrowRight class="ml-2 h-4 w-4" />
 					</Button>
 				{/if}
@@ -72,8 +75,10 @@
 	<section class="relative z-10 px-4 py-20">
 		<div class="mx-auto max-w-6xl">
 			<div class="mb-16 text-center">
-				<h2 class="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">Powerful Features</h2>
-				<p class="text-lg text-muted-foreground">Everything you need to succeed</p>
+				<h2 class="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
+					{m.home_features_title()}
+				</h2>
+				<p class="text-lg text-muted-foreground">{m.home_features_subtitle()}</p>
 			</div>
 
 			<div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
@@ -104,8 +109,10 @@
 	<section class="relative z-10 bg-card/50 px-4 py-20">
 		<div class="mx-auto max-w-6xl">
 			<div class="mb-16 text-center">
-				<h2 class="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">How It Works</h2>
-				<p class="text-lg text-muted-foreground">Get started in three simple steps</p>
+				<h2 class="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
+					{m.home_howitworks_title()}
+				</h2>
+				<p class="text-lg text-muted-foreground">{m.home_howitworks_subtitle()}</p>
 			</div>
 
 			<div class="grid gap-8 sm:grid-cols-3">
@@ -115,9 +122,9 @@
 					>
 						1
 					</div>
-					<h3 class="mb-2 text-lg font-semibold">Create Account</h3>
+					<h3 class="mb-2 text-lg font-semibold">{m.home_step1_title()}</h3>
 					<p class="text-sm text-muted-foreground">
-						Sign up and get invited to your team workspace
+						{m.home_step1_desc()}
 					</p>
 				</div>
 
@@ -127,8 +134,8 @@
 					>
 						2
 					</div>
-					<h3 class="mb-2 text-lg font-semibold">Log Activities</h3>
-					<p class="text-sm text-muted-foreground">Record your learning and work sessions daily</p>
+					<h3 class="mb-2 text-lg font-semibold">{m.home_step2_title()}</h3>
+					<p class="text-sm text-muted-foreground">{m.home_step2_desc()}</p>
 				</div>
 
 				<div class="text-center">
@@ -137,8 +144,8 @@
 					>
 						3
 					</div>
-					<h3 class="mb-2 text-lg font-semibold">Track Progress</h3>
-					<p class="text-sm text-muted-foreground">View insights and celebrate your achievements</p>
+					<h3 class="mb-2 text-lg font-semibold">{m.home_step3_title()}</h3>
+					<p class="text-sm text-muted-foreground">{m.home_step3_desc()}</p>
 				</div>
 			</div>
 		</div>
@@ -148,8 +155,10 @@
 	<section class="relative z-10 px-4 py-20">
 		<div class="mx-auto max-w-6xl">
 			<div class="mb-16 text-center">
-				<h2 class="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">See It In Action</h2>
-				<p class="text-lg text-muted-foreground">A clean, intuitive interface designed for you</p>
+				<h2 class="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
+					{m.home_seeitinaction_title()}
+				</h2>
+				<p class="text-lg text-muted-foreground">{m.home_seeitinaction_subtitle()}</p>
 			</div>
 
 			<div class="rounded-lg border border-border bg-card p-8 text-center">
@@ -163,14 +172,14 @@
 	<!-- CTA Section -->
 	<section class="relative z-10 bg-primary/5 px-4 py-20">
 		<div class="mx-auto max-w-2xl text-center">
-			<h2 class="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">Ready to Get Started?</h2>
+			<h2 class="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">{m.home_cta_title()}</h2>
 			<p class="mb-8 text-lg text-muted-foreground">
-				Join others who are already tracking their learning journey
+				{m.home_cta_description()}
 			</p>
 
 			{#if !isLoggedIn}
 				<Button href="/login" size="lg" class="min-w-[200px]">
-					Get Started Today
+					{m.home_cta_button()}
 					<ArrowRight class="ml-2 h-4 w-4" />
 				</Button>
 			{/if}

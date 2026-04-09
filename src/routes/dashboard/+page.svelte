@@ -209,27 +209,49 @@
 						<LogOut class="h-4 w-4" />
 					</Button>
 				</div>
-				<Button
-					variant="outline"
-					onclick={() => (mobileMenuOpen = true)}
-					aria-label={m.open_menu()}
-					class="h-10 w-10 shrink-0 rounded-full p-0 sm:hidden"
-				>
-					<Menu class="h-4 w-4" />
-				</Button>
+<div class="flex items-center gap-1 sm:hidden">
+    <a
+        href="/absences"
+        aria-label={m.absences_title()}
+        class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+    >
+        <Calendar class="h-4 w-4" />
+    </a>
+    <a
+        href={resolve('/settings')}
+        data-sveltekit-reload
+        aria-label={m.settings_title()}
+        class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+    >
+        <Settings class="h-4 w-4" />
+    </a>
+    <Button
+        variant="outline"
+        onclick={() => (mobileMenuOpen = true)}
+        aria-label={m.open_menu()}
+        class="h-9 w-9 shrink-0 rounded-full p-0"
+    >
+        <Menu class="h-4 w-4" />
+    </Button>
+</div>
+
 			</div>
 
-			<div
-				class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start xl:gap-6"
-			>
-				<WorkdayCalendar
-					bind:value={selectedDate}
-					{isDateDisabled}
-					locale={dateLocale}
-					{activityDates}
-					isAbsenceDate={(dateStr) => absences.some((a) => isDateInAbsence(dateStr, a))}
-				/>
-				<Card.Root class="flex-1">
+<div
+    class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start xl:gap-6"
+>
+<div class="order-2 flex justify-center lg:order-1 lg:justify-start">
+    <WorkdayCalendar
+        bind:value={selectedDate}
+        {isDateDisabled}
+        locale={dateLocale}
+        {activityDates}
+        isAbsenceDate={(dateStr) => absences.some((a) => isDateInAbsence(dateStr, a))}
+    />
+</div>
+
+
+<Card.Root class="order-1 flex-1 lg:order-2">
 					<Card.Header
 						class="flex flex-col gap-1 pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:pt-6"
 					>
@@ -328,38 +350,63 @@
 		side="right"
 		class="flex h-full w-full flex-col bg-background sm:w-3/4 sm:max-w-sm"
 	>
-		<Sheet.Header>
-			<Sheet.Title>{m.welcome_back()}</Sheet.Title>
-			<Sheet.Description class="text-lg font-semibold text-foreground">{fullName}</Sheet.Description
-			>
-		</Sheet.Header>
-		<Separator />
-		<div class="flex flex-col gap-3 p-4">
-			<LanguageSwitcher />
+		<!-- User Info Header -->
+		<div class="flex items-center gap-3 border-b border-border p-5">
+			{#if data.profile?.avatar_url}
+				<div class="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border-2 border-border shadow-sm">
+					<img src={data.profile.avatar_url} alt={fullName} class="h-full w-full object-cover" />
+				</div>
+			{:else}
+				<div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary ring-1 ring-primary/20">
+					{initials}
+				</div>
+			{/if}
+			<div class="min-w-0">
+				<p class="truncate text-base font-semibold text-foreground">{fullName}</p>
+				<p class="text-xs text-muted-foreground">{m.welcome_back()}</p>
+			</div>
+		</div>
+
+		<!-- Navigation Links -->
+		<div class="flex flex-col gap-1 p-3">
 			<a
 				href="/absences"
-				class="flex items-center gap-2 rounded-md px-3 py-2 text-foreground transition-colors hover:bg-muted"
+				onclick={() => (mobileMenuOpen = false)}
+				class="flex items-center gap-3 rounded-lg px-3 py-3 text-foreground transition-colors hover:bg-muted"
 			>
-				<Calendar class="h-4 w-4" />
-				{m.absences_title()}
+				<div class="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+					<Calendar class="h-4 w-4" />
+				</div>
+				<span class="text-sm font-medium">{m.absences_title()}</span>
 			</a>
 			<a
 				href={resolve('/settings')}
-				class="flex items-center gap-2 rounded-md px-3 py-2 text-foreground transition-colors hover:bg-muted"
+				data-sveltekit-reload
+				onclick={() => (mobileMenuOpen = false)}
+				class="flex items-center gap-3 rounded-lg px-3 py-3 text-foreground transition-colors hover:bg-muted"
 			>
-				<Settings class="h-4 w-4" />
-				{m.settings_title()}
+				<div class="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+					<Settings class="h-4 w-4" />
+				</div>
+				<span class="text-sm font-medium">{m.settings_title()}</span>
 			</a>
 		</div>
-		<div class="mt-auto p-4">
-			<Separator class="mb-4" />
+
+		<!-- Language Switcher -->
+		<div class="border-t border-border px-4 py-3">
+			<p class="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Sprache</p>
+			<LanguageSwitcher />
+		</div>
+
+		<!-- Logout -->
+		<div class="mt-auto border-t border-border p-4">
 			<Button
-				variant="destructive"
+				variant="outline"
 				onclick={() => {
 					mobileMenuOpen = false;
 					logoutDialogOpen = true;
 				}}
-				class="w-full justify-start gap-2"
+				class="w-full justify-start gap-3 border-destructive/30 text-destructive hover:bg-destructive/10"
 			>
 				<LogOut class="h-4 w-4" />
 				{m.logout()}
