@@ -8,7 +8,11 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 
 		if (!session) {
 			const isPublicPath =
-				url.pathname === '/' || url.pathname === '/login' || url.pathname.startsWith('/login/');
+				url.pathname === '/' ||
+				url.pathname === '/login' ||
+				url.pathname.startsWith('/login/') ||
+				url.pathname === '/onboarding' ||
+				url.pathname.startsWith('/onboarding/');
 			if (!isPublicPath) {
 				throw redirect(303, '/login');
 			}
