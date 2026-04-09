@@ -1,6 +1,6 @@
 <footer class="mt-auto border-t border-border px-4 py-8">
 	<div class="mx-auto max-w-6xl">
-		<div class="mb-8 grid gap-8 sm:grid-cols-3">
+		<div class="mb-8 grid gap-8 text-center sm:grid-cols-3">
 			<div>
 				<span class="font-semibold text-foreground">time2log</span>
 				<p class="mt-2 text-sm text-muted-foreground">Track your learning journey with ease.</p>

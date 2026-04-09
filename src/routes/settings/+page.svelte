@@ -192,16 +192,17 @@
 
 <div class="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
 	<AmbientGlow />
-	<main class="relative z-10 flex flex-1 flex-col items-center justify-center p-4 sm:p-8">
-		<div class="w-full max-w-md">
-			<Button variant="ghost" href="/dashboard" class="mb-6 gap-2 self-start text-muted-foreground">
-				<ArrowLeft class="h-4 w-4" />
-				{m.back_to_dashboard()}
-			</Button>
+<main class="relative z-10 flex flex-1 flex-col items-center p-4 pt-6 sm:p-8 sm:pt-12">
+	<div class="w-full max-w-md">
 
-			<h1 class="mb-8 text-3xl font-bold text-foreground">
-				{m.settings_title()}
-			</h1>
+        <Button variant="ghost" href="/dashboard" class="mb-4 gap-2 self-start text-muted-foreground sm:mb-6">
+             <ArrowLeft class="h-4 w-4" />
+             {m.back_to_dashboard()}
+         </Button>
+
+         <h1 class="mb-4 text-2xl font-bold text-foreground sm:mb-8 sm:text-3xl">
+             {m.settings_title()}
+         </h1>
 
 			<div class="space-y-6">
 				<div class="rounded-xl border border-border bg-card shadow-sm">

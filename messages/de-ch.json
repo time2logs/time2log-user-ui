@@ -1,6 +1,6 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
-	"unavailable_activity_name": "AktivitÃ¤t nicht verfÃ¼gbar",
+	"unavailable_activity_name": "Aktivität nicht verfügbar",
 	"unavailable_activity_key": "N/V",
 	"hello_world": "Hello, {name} from de-ch!",
 	"welcome": "Willkommen, {name}",
