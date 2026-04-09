@@ -11,6 +11,10 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				url.pathname === '/' ||
 				url.pathname === '/login' ||
 				url.pathname.startsWith('/login/') ||
+				url.pathname === '/impressum' ||
+				url.pathname.startsWith('/impressum/') ||
+				url.pathname === '/privacy' ||
+				url.pathname.startsWith('/privacy/') ||
 				url.pathname === '/onboarding' ||
 				url.pathname.startsWith('/onboarding/');
 			if (!isPublicPath) {
