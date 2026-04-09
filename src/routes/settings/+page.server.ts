@@ -1,13 +1,14 @@
 import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import * as m from '$lib/paraglide/messages.js';
+import { base } from '$app/paths';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const session = await locals.safeGetSession();
 
 	if (!session) {
-		throw redirect(302, '/login');
+		throw redirect(302, base + '/login');
 	}
 
 	const userId = session.user.id;
@@ -52,7 +53,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
 	updateProfile: async ({ request, locals }) => {
 		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
+		if (!session) throw redirect(302, base + '/login');
 
 		const formData = await request.formData();
 		const firstName = formData.get('first_name')?.toString().trim() ?? '';
@@ -112,7 +113,7 @@ export const actions: Actions = {
 
 	updateEmail: async ({ request, locals }) => {
 		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
+		if (!session) throw redirect(302, base + '/login');
 
 		const formData = await request.formData();
 		const email = formData.get('email')?.toString().trim() ?? '';
@@ -138,7 +139,7 @@ export const actions: Actions = {
 
 	updatePassword: async ({ request, locals }) => {
 		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
+		if (!session) throw redirect(302, base + '/login');
 
 		const formData = await request.formData();
 		const password = formData.get('password')?.toString() ?? '';

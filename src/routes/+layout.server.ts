@@ -1,6 +1,7 @@
 import { redirect, isRedirect, isHttpError } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import type { CurriculumNode, CurriculumNodeSummary, Team } from '$lib/types';
+import { base } from '$app/paths';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	try {
@@ -10,7 +11,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			const isPublicPath =
 				url.pathname === '/' || url.pathname === '/login' || url.pathname.startsWith('/login/');
 			if (!isPublicPath) {
-				throw redirect(303, '/login');
+				throw redirect(303, base + '/login');
 			}
 			return {
 				profile: null,
@@ -37,7 +38,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			url.pathname === '/login' ||
 			url.pathname.startsWith('/login/');
 		if (profile && profile.onboarding_status !== 'completed' && !isAllowedPath) {
-			throw redirect(303, '/onboarding');
+			throw redirect(303, base + '/onboarding');
 		}
 
 		const teamMember =

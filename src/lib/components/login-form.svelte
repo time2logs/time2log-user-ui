@@ -7,6 +7,7 @@
 	import { supabase } from '$lib/supabaseClient';
 	import { cn } from '$lib/utils';
 	import * as m from '$lib/paraglide/messages.js';
+	import { base } from '$app/paths';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 
@@ -25,7 +26,7 @@
 		isLoading = false;
 
 		if (!error) {
-			window.location.href = '/dashboard';
+			window.location.href = base + '/dashboard';
 		}
 	}
 </script>

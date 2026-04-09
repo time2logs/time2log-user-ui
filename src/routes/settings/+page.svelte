@@ -7,6 +7,7 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { enhance } from '$app/forms';
+	import { base } from '$app/paths';
 	import {
 		ArrowLeft,
 		User,
@@ -62,7 +63,7 @@
 
 	function handleLogout() {
 		isLoggingOut = true;
-		window.location.href = '/logout';
+		window.location.href = base + '/logout';
 	}
 
 	function toggleTheme() {

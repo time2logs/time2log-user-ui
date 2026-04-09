@@ -3,6 +3,7 @@ import { type Handle, redirect } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
 import { env } from '$env/dynamic/private';
+import { base } from '$app/paths';
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const cookieOptions = {
@@ -63,7 +64,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	});
 
 	if (response.status === 404) {
-		throw redirect(302, '/login');
+		throw redirect(302, base + '/login');
 	}
 
 	// Security headers

@@ -3,6 +3,7 @@ import type { PageServerLoad, Actions } from './$types';
 import type { InviteDetails } from '$lib/types';
 import * as m from '$lib/paraglide/messages.js';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
+import { base } from '$app/paths';
 
 export const load: PageServerLoad = async ({
 	url,
@@ -24,7 +25,7 @@ export const load: PageServerLoad = async ({
 			.single();
 
 		if (profile?.onboarding_status === 'completed') {
-			throw redirect(303, '/dashboard');
+			throw redirect(303, base + '/dashboard');
 		}
 	}
 
@@ -278,6 +279,6 @@ export const actions: Actions = {
 			}
 		}
 
-		throw redirect(303, '/dashboard');
+		throw redirect(303, base + '/dashboard');
 	}
 };
