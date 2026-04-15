@@ -34,10 +34,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	);
 
-	// Secret client — bypasses RLS, used for admin operations (e.g. creating users, invite lookups)
-	const secretKey = env.SUPABASE_SECRET_KEY;
+	// Secret client — bypasses RLS, used for admin operations (e.g. creating users, invite lookups).
+	// Support both key names for compatibility across local/remote environments.
+	const secretKey = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
 	if (!secretKey) {
-		throw new Error('SUPABASE_SECRET_KEY is not configured');
+		throw new Error('SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY) is not configured');
 	}
 	event.locals.supabaseSecret = createClient(PUBLIC_SUPABASE_URL, secretKey, {
 		db: { schema: 'admin' }

@@ -49,7 +49,7 @@
 	<!-- Main Content -->
 	<main class="relative z-10 flex flex-1 items-center justify-center px-4 py-12">
 		<Card.Root class="w-full max-w-sm">
-			<Card.Header>
+			<Card.Header class="pt-8">
 				<Card.Title class="text-2xl font-bold">
 					{m.login_title()}
 				</Card.Title>
@@ -57,13 +57,13 @@
 					{m.login_description()}
 				</Card.Description>
 			</Card.Header>
-			<Card.Content>
+			<Card.Content class="pb-8">
 				<form
 					onsubmit={(e) => {
 						e.preventDefault();
 						signInWithEmail();
 					}}
-					class="grid gap-4"
+					class="grid gap-8"
 				>
 					{#if errorMessage}
 						<div
