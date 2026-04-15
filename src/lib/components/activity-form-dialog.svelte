@@ -30,6 +30,7 @@
 	import { SvelteSet } from 'svelte/reactivity';
 	import { buildTree } from '$lib/curriculumTree';
 
+	type Depth = number;
 	const dateLocale = $derived(getDateLocale());
 
 	let {
@@ -89,13 +90,15 @@
 				location = getLastLocation() || '';
 				notes = '';
 			}
-			// Auto-expand all categories to show activities
+
 			expanded.clear();
-			curriculumNodes.forEach((node) => {
-				if (node.node_type === 'category') {
-					expanded.add(node.id);
+			if (selectedActivityId) {
+				let current = curriculumNodes.find((n) => n.id === selectedActivityId);
+				while (current?.parent_id) {
+					expanded.add(current.parent_id);
+					current = curriculumNodes.find((n) => n.id === current!.parent_id);
 				}
-			});
+			}
 			submitError = null;
 			hasInitialized = true;
 		} else if (!open) {
@@ -316,7 +319,7 @@
 						</div>
 					{:else}
 						<div class="max-h-64 divide-y divide-border overflow-y-auto">
-							{#snippet treeNode(node: CurriculumTreeNode, depth: number)}
+							{#snippet treeNode(node: CurriculumTreeNode, depth: Depth = 0)}
 								{#if node.node_type === 'category'}
 									<button
 										type="button"
