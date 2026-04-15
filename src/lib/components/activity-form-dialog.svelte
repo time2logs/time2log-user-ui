@@ -92,13 +92,6 @@
 			}
 
 			expanded.clear();
-			if (selectedActivityId) {
-				let current = curriculumNodes.find((n) => n.id === selectedActivityId);
-				while (current?.parent_id) {
-					expanded.add(current.parent_id);
-					current = curriculumNodes.find((n) => n.id === current!.parent_id);
-				}
-			}
 			submitError = null;
 			hasInitialized = true;
 		} else if (!open) {
