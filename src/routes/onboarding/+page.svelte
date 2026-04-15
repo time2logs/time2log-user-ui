@@ -15,8 +15,15 @@
 	let firstName = $state('');
 	let lastName = $state('');
 	let password = $state('');
+	let phoneNumber = $state('');
+	let phoneCode = $state('');
+	let phoneVerified = $state(false);
+	let verifiedPhoneNumber = $state('');
 	let isSubmitting = $state(false);
 	let isCompressing = $state(false);
+	let isSendingCode = $state(false);
+	let isVerifyingCode = $state(false);
+	let cooldownSeconds = $state(0);
 
 	let avatarFile: File | null = $state(null);
 	let avatarPreviewUrl = $state('');
@@ -147,11 +154,28 @@
 		};
 	});
 
-	// Reactively sync initial values from form (on action failure)
 	$effect(() => {
-		firstName = form?.values?.firstName ?? '';
-		lastName = form?.values?.lastName ?? '';
-		password = '';
+		const nextFirstName = form?.values?.firstName;
+		const nextLastName = form?.values?.lastName;
+		if (typeof nextFirstName === 'string' || typeof nextLastName === 'string') {
+			firstName = nextFirstName ?? firstName;
+			lastName = nextLastName ?? lastName;
+			password = '';
+		}
+	});
+
+	$effect(() => {
+		if (!cooldownSeconds || cooldownSeconds <= 0) return;
+		const timeout = window.setTimeout(() => {
+			cooldownSeconds = Math.max(0, cooldownSeconds - 1);
+		}, 1000);
+		return () => window.clearTimeout(timeout);
+	});
+
+	$effect(() => {
+		if (verifiedPhoneNumber && phoneNumber !== verifiedPhoneNumber) {
+			phoneVerified = false;
+		}
 	});
 </script>
 
@@ -164,7 +188,7 @@
 	<main class="relative z-10 flex-1 p-8">
 		<div class="mx-auto max-w-lg">
 			<div class="mt-4 rounded-xl border border-border bg-card p-8 shadow-sm">
-				{#if data.inviteError || !data.token}
+				{#if data.inviteError || !data.token || !data.inviteDetails}
 					<!-- Error state: invalid or expired token -->
 					<Card.Header>
 						<Card.Title class="text-lg font-bold text-foreground">
@@ -188,7 +212,7 @@
 						<Card.Description class="text-sm text-muted-foreground">
 							<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 							{@html m.onboarding_welcome_description({
-								orgName: escapeHtml(data.inviteDetails.organization_name)
+								orgName: escapeHtml(data.inviteDetails?.organization_name ?? '')
 							})}
 						</Card.Description>
 					</Card.Header>
@@ -205,14 +229,50 @@
 							method="POST"
 							action="?/complete"
 							enctype="multipart/form-data"
-							use:enhance={({ formData }) => {
-								isSubmitting = true;
+							use:enhance={({ formData, submitter }) => {
+								const submitterPath = submitter?.getAttribute('formaction') ?? '';
+								const isSendAction = submitterPath.includes('sendPhoneCode');
+								const isVerifyAction = submitterPath.includes('verifyPhoneCode');
+
+								if (isSendAction) {
+									isSendingCode = true;
+								} else if (isVerifyAction) {
+									isVerifyingCode = true;
+								} else {
+									isSubmitting = true;
+								}
+
 								if (avatarFile) {
 									formData.set('avatar', avatarFile);
 								}
-								return async ({ update }) => {
+								return async ({ update, result }) => {
 									isSubmitting = false;
-									await update();
+									isSendingCode = false;
+									isVerifyingCode = false;
+
+									if (isSendAction) {
+										if (result.type === 'success' && result.data?.phoneSent) {
+											cooldownSeconds = 30;
+										} else if (
+											result.type === 'failure' &&
+											typeof result.data?.cooldownSeconds === 'number' &&
+											result.data.cooldownSeconds > 0
+										) {
+											cooldownSeconds = result.data.cooldownSeconds;
+										}
+									}
+
+									if (isVerifyAction) {
+										if (result.type === 'success' && result.data?.phoneVerified) {
+											phoneVerified = true;
+											verifiedPhoneNumber = phoneNumber;
+										}
+									}
+
+									await update({
+										reset: !(isSendAction || isVerifyAction),
+										invalidateAll: !(isSendAction || isVerifyAction)
+									});
 								};
 							}}
 							class="space-y-4"
@@ -279,10 +339,66 @@
 									id="email"
 									name="email"
 									type="email"
-									value={data.inviteDetails.email}
+									value={data.inviteDetails?.email ?? ''}
 									readonly
 									class="bg-muted text-muted-foreground"
 								/>
+							</div>
+
+							<div class="space-y-2">
+								<Label for="phone_number">{m.onboarding_phone_label()}</Label>
+								<div class="flex gap-2">
+									<Input
+										id="phone_number"
+										name="phone_number"
+										bind:value={phoneNumber}
+										placeholder={m.onboarding_phone_placeholder()}
+										required
+										readonly={isSubmitting || isSendingCode || phoneVerified}
+									/>
+									<Button
+										type="submit"
+										formaction="?/sendPhoneCode"
+										formnovalidate
+										class="shrink-0"
+										variant="outline"
+										disabled={!phoneNumber || isSendingCode || isSubmitting || cooldownSeconds > 0}
+									>
+										{#if isSendingCode}
+											<Loader2 class="h-4 w-4 animate-spin" />
+										{:else if cooldownSeconds > 0}
+											{cooldownSeconds}s
+										{:else}
+											{m.onboarding_phone_send_button()}
+										{/if}
+									</Button>
+								</div>
+								<div class="flex gap-2">
+									<Input
+										id="phone_code"
+										name="phone_code"
+										bind:value={phoneCode}
+										placeholder={m.onboarding_phone_code_placeholder()}
+										maxlength={6}
+										readonly={isSubmitting || isVerifyingCode || phoneVerified}
+									/>
+									<Button
+										type="submit"
+										formaction="?/verifyPhoneCode"
+										formnovalidate
+										class="shrink-0"
+										variant={phoneVerified ? 'secondary' : 'outline'}
+										disabled={!phoneCode || isVerifyingCode || isSubmitting || phoneVerified}
+									>
+										{#if phoneVerified}
+											{m.onboarding_phone_verified_badge()}
+										{:else if isVerifyingCode}
+											<Loader2 class="h-4 w-4 animate-spin" />
+										{:else}
+											{m.onboarding_phone_verify_button()}
+										{/if}
+									</Button>
+								</div>
 							</div>
 
 							<div>
@@ -323,7 +439,11 @@
 								/>
 							</div>
 
-							<Button type="submit" class="w-full" disabled={isSubmitting || isCompressing}>
+							<Button
+								type="submit"
+								class="w-full"
+								disabled={isSubmitting || isCompressing || !phoneVerified}
+							>
 								{#if isSubmitting}
 									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
 									{m.onboarding_creating_account()}
