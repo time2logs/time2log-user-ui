@@ -91,9 +91,6 @@
 
 	const selectedDateIso = $derived(selectedDate.toString());
 	const activityDates = $derived(new Set(activities.map((a) => a.entry_date)));
-	const selectedDateHasAbsence = $derived(
-		absences.some((a) => isDateInAbsence(selectedDateIso, a))
-	);
 	const selectedDateLabel = $derived(
 		new DateFormatter(dateLocale, {
 			weekday: 'long',
@@ -266,7 +263,6 @@
 						<div class="flex flex-col gap-1 sm:gap-2">
 							<Button
 								onclick={() => (activityDialogOpen = true)}
-								disabled={selectedDateHasAbsence}
 								class="hidden sm:inline-flex"
 								size="lg"
 							>
@@ -314,8 +310,7 @@
 	<div class="fixed right-6 bottom-6 z-50 flex gap-3 sm:hidden">
 		<Button
 			onclick={() => (activityDialogOpen = true)}
-			disabled={selectedDateHasAbsence}
-			class="h-14 w-14 rounded-full p-0 shadow-lg disabled:cursor-not-allowed disabled:opacity-50"
+			class="h-14 w-14 rounded-full p-0 shadow-lg"
 		>
 			<Plus class="h-6 w-6" />
 		</Button>
