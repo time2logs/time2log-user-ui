@@ -5,9 +5,10 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
-	import { absenceStore } from '$lib/absenceStorage';
-	import type { AbsenceType, AbsenceRecord, TeamMember } from '$lib/types';
-	import { AlertCircle, Calendar, Trash2 } from 'lucide-svelte';
+	import { MAX_HOURS_PER_DAY } from '$lib/activityStorage';
+	import { absenceStore, getAbsenceFractionForDate } from '$lib/absenceStorage';
+	import type { AbsenceType, AbsenceRecord, ActivityRecord, TeamMember } from '$lib/types';
+	import { AlertCircle, Calendar, Info, Trash2 } from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
 	import { rrulestr, Frequency } from 'rrule';
@@ -39,19 +40,24 @@
 		teamMember,
 		onAbsenceAdded,
 		selectedDate,
-		absenceToEdit = null
+		absenceToEdit = null,
+		existingActivities = [],
+		existingAbsences = []
 	}: {
 		open: boolean;
 		teamMember: TeamMember | null;
 		onAbsenceAdded: () => void;
 		selectedDate?: string;
 		absenceToEdit?: AbsenceRecord | null;
+		existingActivities?: ActivityRecord[];
+		existingAbsences?: AbsenceRecord[];
 	} = $props();
 
 	let selectedAbsenceType = $state<AbsenceType | null>(null);
 	let isRecurring = $state(false);
 	let startDate = $state<string>('');
 	let endDate = $state<string>('');
+	let dayFraction = $state<number>(1);
 	let recurrenceFrequency = $state<'daily' | 'weekly' | 'monthly'>('weekly');
 	let selectedDays = $state<number[]>([]);
 	let recurrenceUntil = $state<string>('');
@@ -63,6 +69,41 @@
 	let deleteChoice = $state<'this' | 'all' | null>(null);
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
+	let showDayFractionInfo = $state(false);
+
+	function closeDayFractionInfoIfFocusLeaves(event: FocusEvent) {
+		const nextTarget = event.relatedTarget;
+		const currentTarget = event.currentTarget;
+		if (!(currentTarget instanceof Node) || !(nextTarget instanceof Node) || !currentTarget.contains(nextTarget)) {
+			showDayFractionInfo = false;
+		}
+	}
+
+	function formatHoursValue(value: number): string {
+		const rounded = Math.round(value * 10) / 10;
+		return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
+	}
+
+	function formatCalendarDate(date: string): string {
+		return new Intl.DateTimeFormat(dateLocale, {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric'
+		}).format(new Date(`${date}T12:00:00`));
+	}
+
+	function getDatesInRange(start: string, end: string): string[] {
+		const dates: string[] = [];
+		const current = new Date(`${start}T12:00:00`);
+		const endDateValue = new Date(`${end}T12:00:00`);
+
+		while (current <= endDateValue) {
+			dates.push(current.toISOString().split('T')[0]);
+			current.setDate(current.getDate() + 1);
+		}
+
+		return dates;
+	}
 
 	$effect(() => {
 		if (open && !hasInitialized) {
@@ -70,6 +111,7 @@
 				selectedAbsenceType = absenceToEdit.absence_type_id;
 				startDate = absenceToEdit.start_date;
 				endDate = absenceToEdit.end_date;
+				dayFraction = absenceToEdit.day_fraction ?? 1;
 				isRecurring = absenceToEdit.is_recurring;
 				notes = absenceToEdit.notes || '';
 
@@ -90,9 +132,13 @@
 								: Array.isArray(byweekdayRaw)
 									? byweekdayRaw
 									: [byweekdayRaw];
-						selectedDays = byweekday.map((d: number | { weekday: number }) =>
-							typeof d === 'number' ? d : d.weekday
-						);
+						selectedDays = byweekday
+							.map((d) => {
+								if (typeof d === 'number') return d;
+								if (typeof d === 'string') return weekdays.find((day) => day.short === d)?.value;
+								return d.weekday;
+							})
+							.filter((value): value is number => value !== undefined);
 					} catch (e) {
 						console.error('Failed to parse rrule:', e);
 					}
@@ -102,6 +148,7 @@
 				isRecurring = false;
 				startDate = selectedDate || '';
 				endDate = selectedDate || '';
+				dayFraction = 1;
 				recurrenceFrequency = 'weekly';
 				selectedDays = [];
 				recurrenceUntil = '';
@@ -221,9 +268,39 @@
 			return;
 		}
 
+		if (dayFraction <= 0 || dayFraction > 1) {
+			submitError = m.error_day_fraction_range();
+			return;
+		}
+
 		if (isRecurring && !canSubmitRecurring) {
 			submitError = m.error_select_weekday();
 			return;
+		}
+
+		const otherAbsences = existingAbsences.filter((absence) => absence.id !== absenceToEdit?.id);
+		const affectedDates = isRecurring
+			? Array.from(new Set([startDate, ...previewDates()]))
+			: getDatesInRange(startDate, endDate);
+
+		for (const date of affectedDates) {
+			const activityHours = existingActivities
+				.filter((activity) => activity.entry_date === date)
+				.reduce((sum, activity) => sum + activity.hours, 0);
+			const blockedFraction = Math.min(
+				1,
+				getAbsenceFractionForDate(date, otherAbsences) + Number(dayFraction)
+			);
+			const availableHours = Math.max(0, MAX_HOURS_PER_DAY * (1 - blockedFraction));
+
+			if (activityHours > availableHours) {
+				submitError = m.error_absence_conflicts_with_activities({
+					date: formatCalendarDate(date),
+					activityHours: `${formatHoursValue(activityHours)}h`,
+					available: `${formatHoursValue(availableHours)}h`
+				});
+				return;
+			}
 		}
 
 		isSubmitting = true;
@@ -240,6 +317,7 @@
 					absence_type_id: selectedAbsenceType,
 					start_date: startDate,
 					end_date: endDate,
+					day_fraction: dayFraction,
 					is_recurring: isRecurring,
 					rrule,
 					notes: notes || null
@@ -252,6 +330,7 @@
 					absence_type_id: selectedAbsenceType,
 					start_date: startDate,
 					end_date: endDate,
+					day_fraction: dayFraction,
 					is_recurring: isRecurring,
 					rrule,
 					notes: notes || null
@@ -353,14 +432,50 @@
 
 			{#if selectedAbsenceType}
 				<div class="grid gap-3 rounded-lg border border-border bg-muted/20 p-4">
-					<div class="grid gap-3 sm:grid-cols-2">
+					<div class="grid gap-3 sm:grid-cols-3">
 						<div class="grid gap-2">
 							<Label for="startDate">{m.absence_start_date_label()}</Label>
-							<Input id="startDate" type="date" bind:value={startDate} />
+							<Input id="startDate" type="date" lang={dateLocale} bind:value={startDate} />
 						</div>
 						<div class="grid gap-2">
 							<Label for="endDate">{m.absence_end_date_label()}</Label>
-							<Input id="endDate" type="date" bind:value={endDate} />
+							<Input id="endDate" type="date" lang={dateLocale} bind:value={endDate} />
+						</div>
+						<div
+							class="relative grid gap-2"
+							role="presentation"
+							onmouseleave={() => (showDayFractionInfo = false)}
+							onfocusout={closeDayFractionInfoIfFocusLeaves}
+						>
+							<div class="flex items-center gap-2">
+								<Label for="dayFraction">{m.absence_day_fraction_label()}</Label>
+								<button
+									type="button"
+									class="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
+									aria-label={m.absence_day_fraction_hint()}
+									aria-expanded={showDayFractionInfo}
+									onmouseenter={() => (showDayFractionInfo = true)}
+									onfocus={() => (showDayFractionInfo = true)}
+									onclick={() => (showDayFractionInfo = !showDayFractionInfo)}
+								>
+									<Info class="h-3.5 w-3.5" />
+								</button>
+							</div>
+							<Input
+								id="dayFraction"
+								type="number"
+								min="0.1"
+								max="1"
+								step="0.1"
+								bind:value={dayFraction}
+							/>
+							{#if showDayFractionInfo}
+								<div
+									class="absolute top-full left-0 z-20 mt-2 w-full rounded-lg border border-border bg-popover p-3 text-xs text-popover-foreground shadow-lg sm:w-64"
+								>
+									{m.absence_day_fraction_hint()}
+								</div>
+							{/if}
 						</div>
 					</div>
 				</div>
@@ -441,7 +556,12 @@
 
 								<div class="grid gap-2">
 									<Label for="recurrenceUntil">{m.recurring_until()}</Label>
-									<Input id="recurrenceUntil" type="date" bind:value={recurrenceUntil} />
+									<Input
+										id="recurrenceUntil"
+										type="date"
+										lang={dateLocale}
+										bind:value={recurrenceUntil}
+									/>
 								</div>
 
 								<div class="grid gap-2">

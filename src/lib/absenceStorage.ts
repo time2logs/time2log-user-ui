@@ -11,6 +11,7 @@ type AbsenceRow = {
 	absence_type_id: string;
 	start_date: string;
 	end_date: string;
+	day_fraction: number;
 	is_recurring: boolean;
 	rrule: string | null;
 	notes: string | null;
@@ -53,6 +54,19 @@ export function isDateInAbsence(date: string, absence: AbsenceRow | AbsenceRecor
 	return false;
 }
 
+export function getAbsenceFractionForDate(
+	date: string,
+	absences: Array<AbsenceRow | AbsenceRecord>
+): number {
+	return Math.min(
+		1,
+		absences.reduce((sum, absence) => {
+			if (!isDateInAbsence(date, absence)) return sum;
+			return sum + Number(absence.day_fraction ?? 1);
+		}, 0)
+	);
+}
+
 function createAbsenceStore() {
 	const { subscribe, set, update: updateStore } = writable<AbsenceRecord[]>([]);
 
@@ -83,6 +97,7 @@ function createAbsenceStore() {
 				absence_type_id: record.absence_type_id as AbsenceType,
 				start_date: record.start_date,
 				end_date: record.end_date,
+				day_fraction: Number(record.day_fraction ?? 1),
 				is_recurring: record.is_recurring ?? false,
 				rrule: record.rrule ?? null,
 				notes: record.notes ?? null,
@@ -113,6 +128,7 @@ function createAbsenceStore() {
 					absence_type_id: absence.absence_type_id,
 					start_date: absence.start_date,
 					end_date: absence.end_date,
+					day_fraction: absence.day_fraction,
 					is_recurring: absence.is_recurring,
 					rrule: absence.rrule,
 					notes: absence.notes
@@ -156,7 +172,13 @@ function createAbsenceStore() {
 			absence: Partial<
 				Pick<
 					AbsenceRecord,
-					'absence_type_id' | 'start_date' | 'end_date' | 'is_recurring' | 'rrule' | 'notes'
+					| 'absence_type_id'
+					| 'start_date'
+					| 'end_date'
+					| 'day_fraction'
+					| 'is_recurring'
+					| 'rrule'
+					| 'notes'
 				>
 			>
 		): Promise<AbsenceRecord | null> => {
@@ -167,6 +189,7 @@ function createAbsenceStore() {
 				updateData.absence_type_id = absence.absence_type_id;
 			if (absence.start_date !== undefined) updateData.start_date = absence.start_date;
 			if (absence.end_date !== undefined) updateData.end_date = absence.end_date;
+			if (absence.day_fraction !== undefined) updateData.day_fraction = absence.day_fraction;
 			if (absence.is_recurring !== undefined) updateData.is_recurring = absence.is_recurring;
 			if (absence.rrule !== undefined) updateData.rrule = absence.rrule;
 			if (absence.notes !== undefined) updateData.notes = absence.notes;
@@ -226,6 +249,7 @@ export async function getAbsences(): Promise<AbsenceRecord[]> {
 			absence_type_id: record.absence_type_id as AbsenceType,
 			start_date: record.start_date,
 			end_date: record.end_date,
+			day_fraction: Number(record.day_fraction ?? 1),
 			is_recurring: record.is_recurring ?? false,
 			rrule: record.rrule ?? null,
 			notes: record.notes ?? null,
@@ -279,6 +303,7 @@ export async function getAbsenceById(id: string): Promise<AbsenceRecord | undefi
 		absence_type_id: data.absence_type_id as AbsenceType,
 		start_date: data.start_date,
 		end_date: data.end_date,
+		day_fraction: Number(data.day_fraction ?? 1),
 		is_recurring: data.is_recurring ?? false,
 		rrule: data.rrule ?? null,
 		notes: data.notes ?? null,
@@ -314,6 +339,7 @@ export async function getAbsencesForDate(userId: string, date: string): Promise<
 			absence_type_id: record.absence_type_id as AbsenceType,
 			start_date: record.start_date,
 			end_date: record.end_date,
+			day_fraction: Number(record.day_fraction ?? 1),
 			is_recurring: record.is_recurring ?? false,
 			rrule: record.rrule ?? null,
 			notes: record.notes ?? null,

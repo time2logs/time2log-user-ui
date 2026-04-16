@@ -13,7 +13,14 @@
 		MAX_HOURS_PER_DAY,
 		MIN_HOURS
 	} from '$lib/activityStorage';
-	import type { ActivityRecord, CurriculumNode, CurriculumTreeNode, TeamMember } from '$lib/types';
+	import { getAbsenceFractionForDate } from '$lib/absenceStorage';
+	import type {
+		ActivityRecord,
+		AbsenceRecord,
+		CurriculumNode,
+		CurriculumTreeNode,
+		TeamMember
+	} from '$lib/types';
 	import {
 		Star,
 		ChevronRight,
@@ -32,6 +39,11 @@
 
 	const dateLocale = $derived(getDateLocale());
 
+	function formatHoursValue(value: number): string {
+		const rounded = Math.round(value * 10) / 10;
+		return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
+	}
+
 	let {
 		open = $bindable(),
 		curriculumNodes,
@@ -39,7 +51,8 @@
 		onActivityAdded,
 		selectedDate,
 		activityToEdit = null,
-		existingActivities = []
+		existingActivities = [],
+		existingAbsences = []
 	}: {
 		open: boolean;
 		curriculumNodes: CurriculumNode[];
@@ -48,6 +61,7 @@
 		selectedDate?: string;
 		activityToEdit?: ActivityRecord | null;
 		existingActivities?: ActivityRecord[];
+		existingAbsences?: AbsenceRecord[];
 	} = $props();
 
 	const tree = $derived(buildTree(curriculumNodes));
@@ -135,9 +149,9 @@
 		}
 
 		if (wouldExceedDailyMax) {
-			const remaining = MAX_HOURS_PER_DAY - currentDayHours;
+			const remaining = maxHoursForDate - currentDayHours;
 			submitError = m.error_hours_max_day({
-				max: MAX_HOURS_PER_DAY.toString(),
+				max: maxHoursForDate.toString(),
 				remaining: remaining > 0 ? remaining.toString() : '0'
 			});
 			return;
@@ -242,15 +256,21 @@
 	}
 
 	const hoursExceedsMax = $derived(hours > MAX_HOURS_PER_ENTRY);
+	const entryDate = $derived(
+		selectedDate || activityToEdit?.entry_date || new Date().toISOString().split('T')[0]
+	);
+	const absenceFraction = $derived(getAbsenceFractionForDate(entryDate, existingAbsences));
+	const blockedHoursForDate = $derived(MAX_HOURS_PER_DAY * absenceFraction);
+	const maxHoursForDate = $derived(Math.max(0, MAX_HOURS_PER_DAY * (1 - absenceFraction)));
 	const currentDayHours = $derived(
 		existingActivities
-			.filter((a) => a.entry_date === (selectedDate || new Date().toISOString().split('T')[0]))
+			.filter((a) => a.entry_date === entryDate)
 			.reduce((sum, a) => {
 				if (activityToEdit && a.id === activityToEdit.id) return sum;
 				return sum + a.hours;
 			}, 0)
 	);
-	const wouldExceedDailyMax = $derived(currentDayHours + hours > MAX_HOURS_PER_DAY);
+	const wouldExceedDailyMax = $derived(currentDayHours + hours > maxHoursForDate);
 	const isValid = $derived(
 		selectedActivityId &&
 			hours >= MIN_HOURS &&
@@ -303,6 +323,14 @@
 					class="rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
 				>
 					{m.activity_saved_for_date({ date: selectedDateLabel })}
+				</div>
+			{/if}
+			{#if absenceFraction > 0}
+				<div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+					{m.activity_hours_remaining_with_absence({
+						blocked: `${formatHoursValue(blockedHoursForDate)}h`,
+						available: `${formatHoursValue(maxHoursForDate)}h`
+					})}
 				</div>
 			{/if}
 
@@ -414,8 +442,8 @@
 				{:else if wouldExceedDailyMax && hours > 0}
 					<p class="text-sm text-red-600">
 						{m.error_hours_max_day({
-							max: MAX_HOURS_PER_DAY.toString(),
-							remaining: Math.max(0, MAX_HOURS_PER_DAY - currentDayHours).toString()
+							max: maxHoursForDate.toString(),
+							remaining: Math.max(0, maxHoursForDate - currentDayHours).toString()
 						})}
 					</p>
 				{:else if hours > 0 && hours < MIN_HOURS}
