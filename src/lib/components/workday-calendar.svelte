@@ -190,7 +190,7 @@
 					></span>
 				{:else}
 					<span class="h-1 w-1 rounded-full opacity-0 sm:h-1.5 sm:w-1.5"></span>
-				{/if}$
+				{/if}
 			</button>
 		{/each}
 	</div>
