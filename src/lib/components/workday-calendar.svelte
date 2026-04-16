@@ -181,7 +181,7 @@
 				aria-label={formatFullDate(cell.date)}
 			>
 				<span>{cell.dayNumber}</span>
-				{#if !cell.outsideMonth && !cell.isWeekend && !cell.disabled && !cell.hasActivity && !cell.hasAbsence}
+				{#if !cell.outsideMonth && !cell.isWeekend && !cell.disabled && cell.hasActivity}
 					<span
 						class={cn(
 							'h-1 w-1 rounded-full sm:h-1.5 sm:w-1.5',
@@ -190,7 +190,7 @@
 					></span>
 				{:else}
 					<span class="h-1 w-1 rounded-full opacity-0 sm:h-1.5 sm:w-1.5"></span>
-				{/if}
+				{/if}$
 			</button>
 		{/each}
 	</div>
