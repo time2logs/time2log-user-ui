@@ -27,7 +27,6 @@
 	import StatsOverview from '$lib/components/stats-overview.svelte';
 
 	const dateLocale = $derived(getDateLocale());
-
 	type DashboardPageData = {
 		profile: {
 			first_name: string;
@@ -39,6 +38,8 @@
 		curriculumNodeSummaries: CurriculumNodeSummary[];
 		organizationName: string | null;
 		professionLabel: string | null;
+		userLocations: string[];
+
 	};
 
 	let { data }: { data: DashboardPageData } = $props();
@@ -287,6 +288,7 @@
 
 			{#if refreshKey >= 0}
 				<ActivityFormDialog
+					userLocations={data.userLocations}
 					bind:open={activityDialogOpen}
 					curriculumNodes={data.curriculumNodes}
 					teamMember={data.teamMember}
