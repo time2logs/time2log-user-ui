@@ -27,7 +27,6 @@
 	import StatsOverview from '$lib/components/stats-overview.svelte';
 
 	const dateLocale = $derived(getDateLocale());
-
 	type DashboardPageData = {
 		profile: {
 			first_name: string;
@@ -39,6 +38,8 @@
 		curriculumNodeSummaries: CurriculumNodeSummary[];
 		organizationName: string | null;
 		professionLabel: string | null;
+		userLocations: string[];
+
 	};
 
 	let { data }: { data: DashboardPageData } = $props();
@@ -276,6 +277,7 @@
 							onRefresh={handleActivityAdded}
 							onAbsenceRefresh={handleAbsenceAdded}
 							selectedDate={selectedDateIso}
+							existingAbsences={absences}
 							onEdit={handleEditActivity}
 							onEditAbsence={handleEditAbsence}
 						/>
@@ -287,6 +289,7 @@
 
 			{#if refreshKey >= 0}
 				<ActivityFormDialog
+					userLocations={data.userLocations}
 					bind:open={activityDialogOpen}
 					curriculumNodes={data.curriculumNodes}
 					teamMember={data.teamMember}
@@ -294,6 +297,7 @@
 					selectedDate={selectedDateIso}
 					activityToEdit={editingActivity}
 					existingActivities={activities}
+					existingAbsences={absences}
 				/>
 				<AbsenceFormDialog
 					bind:open={absenceDialogOpen}
@@ -301,6 +305,8 @@
 					onAbsenceAdded={handleAbsenceAdded}
 					selectedDate={selectedDateIso}
 					absenceToEdit={editingAbsence}
+					existingActivities={activities}
+					existingAbsences={absences}
 				/>
 			{/if}
 		</div>

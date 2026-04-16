@@ -3,7 +3,7 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Trash2, Calendar, Clock, Star, Pencil, MapPin } from 'lucide-svelte';
 	import { activityStore } from '$lib/activityStorage';
-	import { absenceStore } from '$lib/absenceStorage';
+	import { absenceStore, isDateInAbsence } from '$lib/absenceStorage';
 	import type { ActivityRecord, AbsenceRecord } from '$lib/types';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
@@ -14,26 +14,19 @@
 		onRefresh,
 		onAbsenceRefresh,
 		selectedDate,
+		existingAbsences = [],
 		onEdit,
 		onEditAbsence
 	}: {
 		onRefresh: () => void;
 		onAbsenceRefresh?: () => void;
 		selectedDate?: string;
+		existingAbsences?: AbsenceRecord[];
 		onEdit?: (activity: ActivityRecord) => void;
 		onEditAbsence?: (absence: AbsenceRecord) => void;
 	} = $props();
 
 	const activities = $derived($activityStore);
-
-	let absences = $state<AbsenceRecord[]>([]);
-	absenceStore.subscribe((data) => {
-		absences = data;
-	});
-
-	$effect(() => {
-		absenceStore.load();
-	});
 
 	const filteredActivities = $derived(
 		selectedDate
@@ -43,13 +36,8 @@
 
 	const filteredAbsences = $derived(
 		selectedDate
-			? absences.filter(
-					(absence) =>
-						selectedDate >= absence.start_date &&
-						selectedDate <= absence.end_date &&
-						(!absence.is_recurring || absence.start_date === absence.end_date)
-				)
-			: absences
+			? existingAbsences.filter((absence) => isDateInAbsence(selectedDate, absence))
+			: existingAbsences
 	);
 
 	const sortedEntries = $derived(() => {
@@ -62,7 +50,7 @@
 		const absenceEntries = filteredAbsences.map((a) => ({
 			type: 'absence' as const,
 			id: a.id,
-			date: a.entry_date,
+			date: a.start_date,
 			data: a
 		}));
 		return [...activityEntries, ...absenceEntries].sort((x, y) => {
@@ -124,6 +112,11 @@
 		return '0h';
 	}
 
+	function formatBlockedHours(dayFraction: number): string {
+		const blockedHours = Math.round(dayFraction * 10 * 10) / 10;
+		return Number.isInteger(blockedHours) ? `${blockedHours}h` : `${blockedHours.toFixed(1)}h`;
+	}
+
 	function getAbsenceTypeLabel(typeId: string): string {
 		switch (typeId) {
 			case 'sick':
@@ -148,7 +141,7 @@
 </script>
 
 <div class="flex h-full flex-col">
-	{#if activities.length === 0 && absences.length === 0}
+	{#if activities.length === 0 && existingAbsences.length === 0}
 		<div class="flex-1 rounded-lg border border-border bg-muted/30 p-6 text-center sm:p-12">
 			<div
 				class="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground sm:gap-3"
@@ -254,6 +247,11 @@
 								>
 									{getAbsenceTypeLabel(absence.absence_type_id)}
 								</span>
+								<span
+									class="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600"
+								>
+									{absence.day_fraction} {m.absence_day_fraction_short()}
+								</span>
 								{#if absence.is_recurring}
 									<span
 										class="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600"
@@ -270,6 +268,15 @@
 									{:else}
 										{formatDate(absence.start_date)} – {formatDate(absence.end_date)}
 									{/if}
+								</span>
+							</div>
+							<div class="mt-1 flex items-center gap-1 text-xs text-stone-600 sm:text-sm">
+								<Clock class="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
+								<span>
+									{m.absence_hours_consumed({
+										hours: formatBlockedHours(Number(absence.day_fraction ?? 1)),
+										max: '10h'
+									})}
 								</span>
 							</div>
 							{#if absence.notes}
