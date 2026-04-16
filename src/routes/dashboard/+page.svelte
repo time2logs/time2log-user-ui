@@ -277,6 +277,7 @@
 							onRefresh={handleActivityAdded}
 							onAbsenceRefresh={handleAbsenceAdded}
 							selectedDate={selectedDateIso}
+							existingAbsences={absences}
 							onEdit={handleEditActivity}
 							onEditAbsence={handleEditAbsence}
 						/>
@@ -296,6 +297,7 @@
 					selectedDate={selectedDateIso}
 					activityToEdit={editingActivity}
 					existingActivities={activities}
+					existingAbsences={absences}
 				/>
 				<AbsenceFormDialog
 					bind:open={absenceDialogOpen}
@@ -303,6 +305,8 @@
 					onAbsenceAdded={handleAbsenceAdded}
 					selectedDate={selectedDateIso}
 					absenceToEdit={editingAbsence}
+					existingActivities={activities}
+					existingAbsences={absences}
 				/>
 			{/if}
 		</div>
