@@ -96,11 +96,6 @@
 			}
 			// Auto-expand all categories to show activities
 			expanded.clear();
-			curriculumNodes.forEach((node) => {
-				if (node.node_type === 'category') {
-					expanded.add(node.id);
-				}
-			});
 			submitError = null;
 			hasInitialized = true;
 		} else if (!open) {
