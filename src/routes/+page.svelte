@@ -37,7 +37,6 @@
 	<!-- Subtle background glow -->
 	<AmbientGlow />
 
-	<!-- Header -->
 	<SiteHeader />
 
 	<!-- Hero Section -->
