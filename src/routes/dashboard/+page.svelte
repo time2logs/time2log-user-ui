@@ -288,6 +288,7 @@
 
 			{#if refreshKey >= 0}
 				<ActivityFormDialog
+					userLocations={data.userLocations}
 					bind:open={activityDialogOpen}
 					curriculumNodes={data.curriculumNodes}
 					teamMember={data.teamMember}
