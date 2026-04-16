@@ -77,4 +77,5 @@ export type InviteDetails = {
 	organization_name: string;
 	email: string;
 	role: string;
+	current_semester: string | null;
 };
