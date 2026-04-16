@@ -185,7 +185,7 @@
 					<span
 						class={cn(
 							'h-1 w-1 rounded-full sm:h-1.5 sm:w-1.5',
-							cell.selected ? 'bg-primary-foreground' : 'bg-amber-500 dark:bg-amber-400'
+							cell.selected ? 'bg-primary-foreground' : 'bg-green-500 dark:bg-green-400'
 						)}
 					></span>
 				{:else}
