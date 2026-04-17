@@ -7,6 +7,7 @@
 	import type { ActivityRecord, AbsenceRecord } from '$lib/types';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
+	import { isWithinEditWindow, EDIT_WINDOW_DAYS } from '$lib/utils';
 
 	const dateLocale = $derived(getDateLocale());
 
@@ -212,28 +213,30 @@
 						</div>
 
 						<!-- Action Buttons -->
-						<div
-							class="absolute top-2 right-2 flex flex-col items-center gap-0.5 sm:static sm:flex-row sm:gap-1"
-						>
-							<Button
-								variant="ghost"
-								size="icon"
-								aria-label={m.edit_activity_title()}
-								onclick={() => onEdit?.(activity)}
-								class="h-7 w-7 text-muted-foreground transition-opacity hover:text-foreground sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
+						{#if isWithinEditWindow(activity.entry_date)}
+							<div
+								class="absolute top-2 right-2 flex flex-col items-center gap-0.5 sm:static sm:flex-row sm:gap-1"
 							>
-								<Pencil class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-							</Button>
-							<Button
-								variant="ghost"
-								size="icon"
-								aria-label={m.delete_activity_confirm_button()}
-								onclick={() => requestDelete(activity.id)}
-								class="hidden h-7 w-7 text-muted-foreground transition-opacity hover:bg-destructive/10 hover:text-destructive sm:flex sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
-							>
-								<Trash2 class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-							</Button>
-						</div>
+								<Button
+									variant="ghost"
+									size="icon"
+									aria-label={m.edit_activity_title()}
+									onclick={() => onEdit?.(activity)}
+									class="h-7 w-7 text-muted-foreground transition-opacity hover:text-foreground sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
+								>
+									<Pencil class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+								</Button>
+								<Button
+									variant="ghost"
+									size="icon"
+									aria-label={m.delete_activity_confirm_button()}
+									onclick={() => requestDelete(activity.id)}
+									class="hidden h-7 w-7 text-muted-foreground transition-opacity hover:bg-destructive/10 hover:text-destructive sm:flex sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
+								>
+									<Trash2 class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+								</Button>
+							</div>
+						{/if}
 					</div>
 				{:else}
 					{@const absence = entry.data}
