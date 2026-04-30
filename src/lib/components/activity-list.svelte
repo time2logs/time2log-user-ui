@@ -7,8 +7,12 @@
 	import type { ActivityRecord, AbsenceRecord } from '$lib/types';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
+	import { buildLabelResolver } from '$lib/curriculumLabel';
+	import type { CurriculumNode } from '$lib/types';
 
+	 
 	const dateLocale = $derived(getDateLocale());
+
 
 	let {
 		onRefresh,
