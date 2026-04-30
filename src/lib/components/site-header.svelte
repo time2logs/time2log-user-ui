@@ -12,8 +12,7 @@
 		<div class="flex items-center gap-2">
 			<a
 				class="text-xl font-bold text-stone-800 dark:text-slate-100"
-				href={loggedIn ? resolve('/dashboard') : resolve('/')}
-				>time2log</a
+				href={loggedIn ? resolve('/dashboard') : resolve('/')}>time2log</a
 			>
 		</div>
 		<LanguageSwitcher />

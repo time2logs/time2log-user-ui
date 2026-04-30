@@ -14,7 +14,9 @@ type ResolvedInviteUser =
 	  };
 
 function isSupabaseAuthSecretError(message: string): boolean {
-	return /invalid jwt|unable to parse or verify signature|signing method hs256 is invalid/i.test(message);
+	return /invalid jwt|unable to parse or verify signature|signing method hs256 is invalid/i.test(
+		message
+	);
 }
 
 export const load: PageServerLoad = async ({
@@ -528,10 +530,7 @@ type FindUserByEmailResult =
 	| { ok: true; user: { id: string; email?: string } }
 	| { ok: false; reason: 'auth_misconfigured' | 'not_found' };
 
-async function findUserByEmail(
-	locals: App.Locals,
-	email: string
-): Promise<FindUserByEmailResult> {
+async function findUserByEmail(locals: App.Locals, email: string): Promise<FindUserByEmailResult> {
 	const normalizedEmail = email.toLowerCase();
 	const { data: authUser, error: authUserError } = await locals.supabaseSecret
 		.schema('auth')
@@ -601,12 +600,11 @@ async function resolveInvitedUser(
 		return { ok: false, reason: 'auth_misconfigured' };
 	}
 
-	const { data: createdUserData, error: createUserError } = await locals.supabaseSecret.auth.admin.createUser(
-		{
+	const { data: createdUserData, error: createUserError } =
+		await locals.supabaseSecret.auth.admin.createUser({
 			email: normalizedEmail,
 			email_confirm: true
-		}
-	);
+		});
 
 	if (createUserError || !createdUserData.user?.id) {
 		if (createUserError) {
