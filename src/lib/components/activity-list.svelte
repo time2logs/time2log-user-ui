@@ -253,7 +253,8 @@
 								<span
 									class="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600"
 								>
-									{absence.day_fraction} {m.absence_day_fraction_short()}
+									{absence.day_fraction}
+									{m.absence_day_fraction_short()}
 								</span>
 								{#if absence.is_recurring}
 									<span

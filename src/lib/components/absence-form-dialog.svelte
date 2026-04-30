@@ -74,7 +74,11 @@
 	function closeDayFractionInfoIfFocusLeaves(event: FocusEvent) {
 		const nextTarget = event.relatedTarget;
 		const currentTarget = event.currentTarget;
-		if (!(currentTarget instanceof Node) || !(nextTarget instanceof Node) || !currentTarget.contains(nextTarget)) {
+		if (
+			!(currentTarget instanceof Node) ||
+			!(nextTarget instanceof Node) ||
+			!currentTarget.contains(nextTarget)
+		) {
 			showDayFractionInfo = false;
 		}
 	}
@@ -451,7 +455,7 @@
 								<Label for="dayFraction">{m.absence_day_fraction_label()}</Label>
 								<button
 									type="button"
-									class="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-2"
+									class="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
 									aria-label={m.absence_day_fraction_hint()}
 									aria-expanded={showDayFractionInfo}
 									onmouseenter={() => (showDayFractionInfo = true)}
