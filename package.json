@@ -31,7 +31,7 @@
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",
 		"@tailwindcss/postcss": "^4.2.2",
 		"@tailwindcss/typography": "^0.5.19",
-		"@tailwindcss/vite": "^4.2.2",
+		"@tailwindcss/vite": "^4.2.4",
 		"@types/cookie": "^0.6.0",
 		"@types/node": "^25",
 		"autoprefixer": "^10.4.27",
