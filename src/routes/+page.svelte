@@ -186,6 +186,6 @@
 	</section>
 
 	<div class="relative z-10">
-		<SiteFooter loggedIn={isLoggedIn} />
+		<SiteFooter />
 	</div>
 </div>

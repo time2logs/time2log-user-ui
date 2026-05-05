@@ -63,7 +63,8 @@ export const load: PageServerLoad = async ({
 		? {
 				organization_name: inviteDetailsRaw.organization_name,
 				email: inviteDetailsRaw.email,
-				role: inviteDetailsRaw.role
+				role: inviteDetailsRaw.role,
+				current_semester: inviteDetailsRaw.current_semester ?? null
 			}
 		: null;
 
