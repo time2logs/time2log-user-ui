@@ -12,6 +12,7 @@
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import { activityStore } from '$lib/activityStorage';
 	import { absenceStore, isDateInAbsence } from '$lib/absenceStorage';
+	import ThemeToggle from '$lib/components/theme-toggle.svelte';
 	import type {
 		ActivityRecord,
 		AbsenceRecord,
@@ -180,6 +181,7 @@
 					</div>
 				</div>
 				<div class="hidden items-center gap-2 sm:flex">
+					<ThemeToggle />
 					<LanguageSwitcher />
 					<a
 						href="/absences"
