@@ -35,7 +35,7 @@
 		"@types/cookie": "^0.6.0",
 		"@types/node": "^25",
 		"autoprefixer": "^10.4.27",
-		"bits-ui": "^2.16.3",
+		"bits-ui": "^2.18.1",
 		"clsx": "^2.1.1",
 		"cookie": "^0.6.0",
 		"eslint": "^10.0.3",
