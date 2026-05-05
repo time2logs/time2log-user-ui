@@ -372,69 +372,74 @@
 				</div>
 
 				<div class="rounded-xl border border-border bg-card shadow-sm">
-					<form
+					<div class="p-4">
+						<div class="mb-4 flex items-center gap-2 text-foreground">
+							<MapPin class="h-5 w-5" />
+							<h3 class="font-semibold">{m.locations_settings()}</h3>
+						</div>
+
+						<form
 							method="POST"
 							action="?/addLocation"
 							use:enhance={() => {
-            isSavingLocation = true;
-            return async ({ update }) => {
-                isSavingLocation = false;
-                newLocation = '';
-                await update();
-            };
-        }}
-					>
-						<div class="p-4">
-							<div class="mb-4 flex items-center gap-2 text-foreground">
-								<MapPin class="h-5 w-5" />
-								<h3 class="font-semibold">{m.locations_settings()}</h3>
-							</div>
-
-							<div class="flex gap-2">
-								<Input
-										name="location"
-										type="text"
-										bind:value={newLocation}
-										placeholder={m.add_location_placeholder()}
-										disabled={isSavingLocation}
-								/>
-								<Button type="submit" disabled={isSavingLocation || !newLocation.trim()}>
-									{#if isSavingLocation}
-										<Loader2 class="h-4 w-4 animate-spin" />
-									{:else}
-										+
-									{/if}
-								</Button>
-							</div>
-
-							{#if form?.locationError}
-								<p class="mt-2 text-sm text-destructive">{form.locationError}</p>
-							{/if}
-							{#if form?.locationSuccess}
-								<p class="mt-2 text-sm text-green-600">{m.add_location_success()}</p>
-							{/if}
-
-							<div class="mt-4 space-y-2">
-								{#if data.pastLocations.length === 0}
-									<p class="text-sm text-muted-foreground">{m.no_locations_hint()}</p>
+								isSavingLocation = true;
+								return async ({ update }) => {
+									isSavingLocation = false;
+									newLocation = '';
+									await update();
+								};
+							}}
+							class="flex gap-2"
+						>
+							<Input
+								name="location"
+								type="text"
+								bind:value={newLocation}
+								placeholder={m.add_location_placeholder()}
+								disabled={isSavingLocation}
+							/>
+							<Button type="submit" disabled={isSavingLocation || !newLocation.trim()}>
+								{#if isSavingLocation}
+									<Loader2 class="h-4 w-4 animate-spin" />
 								{:else}
-									{#each data.pastLocations as loc (loc.location)}
-										<div class="flex items-center justify-between rounded-lg border border-border px-3 py-2">
-											<span class="text-sm">{loc.location}</span>
-											<form method="POST" action="?/deleteLocation" use:enhance={() => {
-                                return async ({ update }) => { await update(); };
-                            }}>
-												<input type="hidden" name="location" value={loc.location} />
-												<button type="submit" class="text-muted-foreground hover:text-destructive">
-													<Trash2 class="h-4 w-4" />
-												</button>
-											</form>
-										</div>
-									{/each}
+									+
 								{/if}
-							</div>
+							</Button>
+						</form>
+
+						{#if form?.locationError}
+							<p class="mt-2 text-sm text-destructive">{form.locationError}</p>
+						{/if}
+						{#if form?.locationSuccess}
+							<p class="mt-2 text-sm text-green-600">{m.add_location_success()}</p>
+						{/if}
+
+						<div class="mt-4 space-y-2">
+							{#if data.pastLocations.length === 0}
+								<p class="text-sm text-muted-foreground">{m.no_locations_hint()}</p>
+							{:else}
+								{#each data.pastLocations as loc (loc.location)}
+									<div class="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+										<span class="text-sm">{loc.location}</span>
+										<form
+											method="POST"
+											action="?/deleteLocation"
+											use:enhance={() => {
+												return async ({ update }) => {
+													await update();
+												};
+											}}
+										>
+											<input type="hidden" name="location" value={loc.location} />
+											<button type="submit" class="text-muted-foreground hover:text-destructive">
+												<Trash2 class="h-4 w-4" />
+											</button>
+										</form>
+									</div>
+								{/each}
+							{/if}
 						</div>
-					</form>
+					</div>
 				</div>
 
 				<!-- Danger Zone -->
