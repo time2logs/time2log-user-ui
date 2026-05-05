@@ -39,7 +39,6 @@
 		organizationName: string | null;
 		professionLabel: string | null;
 		userLocations: string[];
-
 	};
 
 	let { data }: { data: DashboardPageData } = $props();
@@ -207,49 +206,47 @@
 						<LogOut class="h-4 w-4" />
 					</Button>
 				</div>
-<div class="flex items-center gap-1 sm:hidden">
-    <a
-        href="/absences"
-        aria-label={m.absences_title()}
-        class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-    >
-        <Calendar class="h-4 w-4" />
-    </a>
-    <a
-        href={resolve('/settings')}
-        data-sveltekit-reload
-        aria-label={m.settings_title()}
-        class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-    >
-        <Settings class="h-4 w-4" />
-    </a>
-    <Button
-        variant="outline"
-        onclick={() => (mobileMenuOpen = true)}
-        aria-label={m.open_menu()}
-        class="h-9 w-9 shrink-0 rounded-full p-0"
-    >
-        <Menu class="h-4 w-4" />
-    </Button>
-</div>
-
+				<div class="flex items-center gap-1 sm:hidden">
+					<a
+						href="/absences"
+						aria-label={m.absences_title()}
+						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+					>
+						<Calendar class="h-4 w-4" />
+					</a>
+					<a
+						href={resolve('/settings')}
+						data-sveltekit-reload
+						aria-label={m.settings_title()}
+						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+					>
+						<Settings class="h-4 w-4" />
+					</a>
+					<Button
+						variant="outline"
+						onclick={() => (mobileMenuOpen = true)}
+						aria-label={m.open_menu()}
+						class="h-9 w-9 shrink-0 rounded-full p-0"
+					>
+						<Menu class="h-4 w-4" />
+					</Button>
+				</div>
 			</div>
 
-<div
-    class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start xl:gap-6"
->
-<div class="order-2 flex justify-center lg:order-1 lg:justify-start">
-    <WorkdayCalendar
-        bind:value={selectedDate}
-        {isDateDisabled}
-        locale={dateLocale}
-        {activityDates}
-        isAbsenceDate={(dateStr) => absences.some((a) => isDateInAbsence(dateStr, a))}
-    />
-</div>
+			<div
+				class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start xl:gap-6"
+			>
+				<div class="order-2 flex justify-center lg:order-1 lg:justify-start">
+					<WorkdayCalendar
+						bind:value={selectedDate}
+						{isDateDisabled}
+						locale={dateLocale}
+						{activityDates}
+						isAbsenceDate={(dateStr) => absences.some((a) => isDateInAbsence(dateStr, a))}
+					/>
+				</div>
 
-
-<Card.Root class="order-1 flex-1 lg:order-2">
+				<Card.Root class="order-1 flex-1 lg:order-2">
 					<Card.Header
 						class="flex flex-col gap-1 pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:pt-6"
 					>
@@ -354,11 +351,15 @@
 		<!-- User Info Header -->
 		<div class="flex items-center gap-3 border-b border-border p-5">
 			{#if data.profile?.avatar_url}
-				<div class="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border-2 border-border shadow-sm">
+				<div
+					class="h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border-2 border-border shadow-sm"
+				>
 					<img src={data.profile.avatar_url} alt={fullName} class="h-full w-full object-cover" />
 				</div>
 			{:else}
-				<div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary ring-1 ring-primary/20">
+				<div
+					class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary ring-1 ring-primary/20"
+				>
 					{initials}
 				</div>
 			{/if}
@@ -395,7 +396,7 @@
 
 		<!-- Language Switcher -->
 		<div class="border-t border-border px-4 py-3">
-			<p class="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">Sprache</p>
+			<p class="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Sprache</p>
 			<LanguageSwitcher />
 		</div>
 
