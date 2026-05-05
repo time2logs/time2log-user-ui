@@ -362,7 +362,7 @@
 									{/if}
 								</span>
 							</button>
-							<div class="mt-4 flex items-center justify-between">
+							<div class="mt-4 flex flex-col gap-2">
 								<span class="text-muted-foreground">Farbschema</span>
 								<Select.Root
 										type="single"
@@ -370,10 +370,7 @@
 										onValueChange={(v) => palette.set(v as Palette)}
 								>
 									<Select.Trigger class="w-44">
-										{currentPalette === 'default' && 'Standard'}
-										{currentPalette === 'deuteranopia' && 'Deuteranopie'}
-										{currentPalette === 'protanopia' && 'Protanopie'}
-										{currentPalette === 'monochrome' && 'Monochrom'}
+										{{ default: 'Standard', deuteranopia: 'Deuteranopie', protanopia: 'Protanopie', monochrome: 'Monochrom' }[currentPalette]}
 									</Select.Trigger>
 									<Select.Content>
 										<Select.Item value="default" label="Standard">Standard</Select.Item>
