@@ -27,7 +27,6 @@
 	let lastName = $state(data.profile?.last_name ?? '');
 	let emailValue = $state(data.email ?? '');
 
-	// Keep form fields in sync when data refreshes after a successful save
 	$effect(() => {
 		firstName = data.profile?.first_name ?? '';
 		lastName = data.profile?.last_name ?? '';

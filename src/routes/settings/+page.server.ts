@@ -214,4 +214,21 @@ deleteLocation: async ({ request, locals}) => {
 			.eq('location', location);
 
 		return { locationDeleteSuccess: true };
-}};
+},
+	updateColorblindType: async ({ request, locals }) => {
+		const session = await locals.safeGetSession();
+		if (!session) throw redirect(302, '/login');
+
+		const formData = await request.formData();
+		const colorblindType = formData.get('colorblind_type')?.toString() ?? 'none';
+
+		const { error } = await locals.supabase
+			.from('profiles')
+			.update({ colorblind_type: colorblindType })
+			.eq('id', session.user.id);
+
+		if (error) return fail(500, { colorblindError: 'Fehler beim Speichern.' });
+
+		return { colorblindSuccess: true };
+	}
+};
