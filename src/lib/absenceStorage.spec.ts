@@ -105,7 +105,9 @@ describe('isDateInAbsence — recurring (rrule)', () => {
 
 describe('getAbsenceFractionForDate', () => {
 	it('returns 1 for a full-day absence', () => {
-		const absences = [makeAbsence({ day_fraction: 1, start_date: '2024-03-01', end_date: '2024-03-01' })];
+		const absences = [
+			makeAbsence({ day_fraction: 1, start_date: '2024-03-01', end_date: '2024-03-01' })
+		];
 		expect(getAbsenceFractionForDate('2024-03-01', absences)).toBe(1);
 	});
 
@@ -125,8 +127,18 @@ describe('getAbsenceFractionForDate', () => {
 
 	it('caps overlapping absences at 1', () => {
 		const absences = [
-			makeAbsence({ id: 'abs-1', day_fraction: 0.6, start_date: '2024-03-01', end_date: '2024-03-01' }),
-			makeAbsence({ id: 'abs-2', day_fraction: 0.7, start_date: '2024-03-01', end_date: '2024-03-01' })
+			makeAbsence({
+				id: 'abs-1',
+				day_fraction: 0.6,
+				start_date: '2024-03-01',
+				end_date: '2024-03-01'
+			}),
+			makeAbsence({
+				id: 'abs-2',
+				day_fraction: 0.7,
+				start_date: '2024-03-01',
+				end_date: '2024-03-01'
+			})
 		];
 		expect(getAbsenceFractionForDate('2024-03-01', absences)).toBe(1);
 	});
