@@ -7,19 +7,7 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { enhance } from '$app/forms';
-	import {
-		ArrowLeft,
-		User,
-		Globe,
-		LogOut,
-		Loader2,
-		Moon,
-		Sun,
-		Camera,
-		ShieldAlert,
-		MapPin,
-		Trash2
-	} from 'lucide-svelte';
+	import { ArrowLeft, User, Globe, LogOut, Loader2, Moon, Sun, Camera, ShieldAlert, MapPin, Trash2 } from 'lucide-svelte';
 	import { theme } from '$lib/themeStore';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 
@@ -196,20 +184,17 @@
 
 <div class="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
 	<AmbientGlow />
-	<main class="relative z-10 flex flex-1 flex-col items-center p-4 pt-6 sm:p-8 sm:pt-12">
-		<div class="w-full max-w-md">
-			<Button
-				variant="ghost"
-				href="/dashboard"
-				class="mb-4 gap-2 self-start text-muted-foreground sm:mb-6"
-			>
-				<ArrowLeft class="h-4 w-4" />
-				{m.back_to_dashboard()}
-			</Button>
+<main class="relative z-10 flex flex-1 flex-col items-center p-4 pt-6 sm:p-8 sm:pt-12">
+	<div class="w-full max-w-md">
 
-			<h1 class="mb-4 text-2xl font-bold text-foreground sm:mb-8 sm:text-3xl">
-				{m.settings_title()}
-			</h1>
+        <Button variant="ghost" href="/dashboard" class="mb-4 gap-2 self-start text-muted-foreground sm:mb-6">
+             <ArrowLeft class="h-4 w-4" />
+             {m.back_to_dashboard()}
+         </Button>
+
+         <h1 class="mb-4 text-2xl font-bold text-foreground sm:mb-8 sm:text-3xl">
+             {m.settings_title()}
+         </h1>
 
 			<div class="space-y-6">
 				<div class="rounded-xl border border-border bg-card shadow-sm">
@@ -387,77 +372,74 @@
 				</div>
 
 				<div class="rounded-xl border border-border bg-card shadow-sm">
-					<form
-						method="POST"
-						action="?/addLocation"
-						use:enhance={() => {
-							isSavingLocation = true;
-							return async ({ update }) => {
-								isSavingLocation = false;
-								newLocation = '';
-								await update();
-							};
-						}}
-					>
-						<div class="p-4">
-							<div class="mb-4 flex items-center gap-2 text-foreground">
-								<MapPin class="h-5 w-5" />
-								<h3 class="font-semibold">{m.locations_settings()}</h3>
-							</div>
-
-							<div class="flex gap-2">
-								<Input
-									name="location"
-									type="text"
-									bind:value={newLocation}
-									placeholder={m.add_location_placeholder()}
-									disabled={isSavingLocation}
-								/>
-								<Button type="submit" disabled={isSavingLocation || !newLocation.trim()}>
-									{#if isSavingLocation}
-										<Loader2 class="h-4 w-4 animate-spin" />
-									{:else}
-										+
-									{/if}
-								</Button>
-							</div>
-
-							{#if form?.locationError}
-								<p class="mt-2 text-sm text-destructive">{form.locationError}</p>
-							{/if}
-							{#if form?.locationSuccess}
-								<p class="mt-2 text-sm text-green-600">{m.add_location_success()}</p>
-							{/if}
-
-							<div class="mt-4 space-y-2">
-								{#if data.pastLocations.length === 0}
-									<p class="text-sm text-muted-foreground">{m.no_locations_hint()}</p>
-								{:else}
-									{#each data.pastLocations as loc (loc.location)}
-										<div
-											class="flex items-center justify-between rounded-lg border border-border px-3 py-2"
-										>
-											<span class="text-sm">{loc.location}</span>
-											<form
-												method="POST"
-												action="?/deleteLocation"
-												use:enhance={() => {
-													return async ({ update }) => {
-														await update();
-													};
-												}}
-											>
-												<input type="hidden" name="location" value={loc.location} />
-												<button type="submit" class="text-muted-foreground hover:text-destructive">
-													<Trash2 class="h-4 w-4" />
-												</button>
-											</form>
-										</div>
-									{/each}
-								{/if}
-							</div>
+					<div class="p-4">
+						<div class="mb-4 flex items-center gap-2 text-foreground">
+							<MapPin class="h-5 w-5" />
+							<h3 class="font-semibold">{m.locations_settings()}</h3>
 						</div>
-					</form>
+
+						<form
+							method="POST"
+							action="?/addLocation"
+							use:enhance={() => {
+								isSavingLocation = true;
+								return async ({ update }) => {
+									isSavingLocation = false;
+									newLocation = '';
+									await update();
+								};
+							}}
+							class="flex gap-2"
+						>
+							<Input
+								name="location"
+								type="text"
+								bind:value={newLocation}
+								placeholder={m.add_location_placeholder()}
+								disabled={isSavingLocation}
+							/>
+							<Button type="submit" disabled={isSavingLocation || !newLocation.trim()}>
+								{#if isSavingLocation}
+									<Loader2 class="h-4 w-4 animate-spin" />
+								{:else}
+									+
+								{/if}
+							</Button>
+						</form>
+
+						{#if form?.locationError}
+							<p class="mt-2 text-sm text-destructive">{form.locationError}</p>
+						{/if}
+						{#if form?.locationSuccess}
+							<p class="mt-2 text-sm text-green-600">{m.add_location_success()}</p>
+						{/if}
+
+						<div class="mt-4 space-y-2">
+							{#if data.pastLocations.length === 0}
+								<p class="text-sm text-muted-foreground">{m.no_locations_hint()}</p>
+							{:else}
+								{#each data.pastLocations as loc (loc.location)}
+									<div class="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+										<span class="text-sm">{loc.location}</span>
+										<form
+											method="POST"
+											action="?/deleteLocation"
+											use:enhance={() => {
+												return async ({ update }) => {
+													await update();
+												};
+											}}
+										>
+											<input type="hidden" name="location" value={loc.location} />
+											<button type="submit" class="text-muted-foreground hover:text-destructive">
+												<Trash2 class="h-4 w-4" />
+											</button>
+										</form>
+									</div>
+								{/each}
+							{/if}
+						</div>
+					</div>
 				</div>
 
 				<!-- Danger Zone -->
