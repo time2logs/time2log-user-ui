@@ -1,8 +1,6 @@
 <script lang="ts">
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import { resolve } from '$app/paths';
-	import ThemeToggle from '$lib/components/theme-toggle.svelte';
-
 </script>
 
 <header
@@ -14,7 +12,6 @@
 				>time2log</a
 			>
 		</div>
-		<ThemeToggle />
 		<LanguageSwitcher />
 	</div>
 </header>
