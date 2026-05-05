@@ -1,23 +1,14 @@
 import { redirect, isRedirect, isHttpError } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import type { CurriculumNode, CurriculumNodeSummary, Team } from '$lib/types';
+import { isPublicPath, isOnboardingAllowedPath } from '$lib/auth/paths';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	try {
 		const session = await locals.safeGetSession();
 
 		if (!session) {
-			const isPublicPath =
-				url.pathname === '/' ||
-				url.pathname === '/login' ||
-				url.pathname.startsWith('/login/') ||
-				url.pathname === '/impressum' ||
-				url.pathname.startsWith('/impressum/') ||
-				url.pathname === '/privacy' ||
-				url.pathname.startsWith('/privacy/') ||
-				url.pathname === '/onboarding' ||
-				url.pathname.startsWith('/onboarding/');
-			if (!isPublicPath) {
+			if (!isPublicPath(url.pathname)) {
 				throw redirect(303, '/login');
 			}
 			return {
@@ -39,12 +30,11 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 
 		const profile = profileResult.error ? null : profileResult.data;
 
-		const isAllowedPath =
-			url.pathname === '/onboarding' ||
-			url.pathname.startsWith('/onboarding/') ||
-			url.pathname === '/login' ||
-			url.pathname.startsWith('/login/');
-		if (profile && profile.onboarding_status !== 'completed' && !isAllowedPath) {
+		if (
+			profile &&
+			profile.onboarding_status !== 'completed' &&
+			!isOnboardingAllowedPath(url.pathname)
+		) {
 			throw redirect(303, '/onboarding');
 		}
 

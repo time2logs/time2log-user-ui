@@ -2,6 +2,7 @@ import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import * as m from '$lib/paraglide/messages.js';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
+import { validatePassword } from '$lib/validation/passwordRules';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const session = await locals.safeGetSession();
@@ -82,7 +83,7 @@ export const actions: Actions = {
 		if (profileError) {
 			console.error('[Settings] Failed to update profile:', profileError.message);
 			return fail(500, {
-				profileError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
+				profileError: m.error_server_generic()
 			});
 		}
 
@@ -129,7 +130,7 @@ export const actions: Actions = {
 		if (error) {
 			console.error('[Settings] Failed to update email:', error.message);
 			return fail(500, {
-				emailError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
+				emailError: m.error_server_generic()
 			});
 		}
 
@@ -148,27 +149,16 @@ export const actions: Actions = {
 			return fail(400, { passwordError: m.settings_error_password_mismatch() });
 		}
 
-		if (!password || password.length < 8) {
-			return fail(400, { passwordError: m.onboarding_error_password_length() });
-		}
-
-		if (!/[A-Z]/.test(password)) {
-			return fail(400, { passwordError: m.onboarding_error_password_uppercase() });
-		}
-
-		if (!/[0-9]/.test(password)) {
-			return fail(400, { passwordError: m.onboarding_error_password_number() });
-		}
-
-		if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password)) {
-			return fail(400, { passwordError: m.onboarding_error_password_special() });
+		const passwordError = validatePassword(password);
+		if (passwordError) {
+			return fail(400, { passwordError: passwordError() });
 		}
 
 		const { error } = await locals.supabase.auth.updateUser({ password });
 		if (error) {
 			console.error('[Settings] Failed to update password:', error.message);
 			return fail(500, {
-				passwordError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
+				passwordError: m.error_server_generic()
 			});
 		}
 
@@ -184,7 +174,7 @@ export const actions: Actions = {
 		const location = formData.get('location')?.toString().trim() ?? '';
 
 		if (!location) {
-			return fail(400, { locationError: 'Standort darf nicht leer sein.' });
+			return fail(400, { locationError: m.settings_error_location_empty() });
 		}
 
 		const { error } = await locals.supabase
@@ -195,7 +185,7 @@ export const actions: Actions = {
 			if (error.code === '23505') {
 				return fail(400, { locationError: m.location_already_exists() });
 			}
-			return fail(500, { locationError: 'Fehler beim Speichern.' });
+			return fail(500, { locationError: m.error_save_failed() });
 		}
 		return { locationSuccess: true };
 	},

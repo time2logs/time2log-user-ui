@@ -4,6 +4,7 @@ import type { InviteDetails } from '$lib/types';
 import * as m from '$lib/paraglide/messages.js';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
 import { sendSwisscomVerificationSms } from '$lib/server/swisscomSms';
+import { validatePassword } from '$lib/validation/passwordRules';
 import { createHash, randomInt } from 'node:crypto';
 
 type ResolvedInviteUser =
@@ -316,32 +317,10 @@ export const actions: Actions = {
 			});
 		}
 
-		if (!password || password.length < 8) {
+		const passwordError = validatePassword(password);
+		if (passwordError) {
 			return fail(400, {
-				error: m.onboarding_error_password_length(),
-				values: { firstName, lastName }
-			});
-		}
-
-		const hasUppercase = /[A-Z]/.test(password);
-		const hasNumber = /[0-9]/.test(password);
-		const hasSpecialChar = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password);
-
-		if (!hasUppercase) {
-			return fail(400, {
-				error: m.onboarding_error_password_uppercase(),
-				values: { firstName, lastName }
-			});
-		}
-		if (!hasNumber) {
-			return fail(400, {
-				error: m.onboarding_error_password_number(),
-				values: { firstName, lastName }
-			});
-		}
-		if (!hasSpecialChar) {
-			return fail(400, {
-				error: m.onboarding_error_password_special(),
+				error: passwordError(),
 				values: { firstName, lastName }
 			});
 		}

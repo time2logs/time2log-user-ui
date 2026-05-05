@@ -61,38 +61,38 @@
 		});
 	});
 
+	type PendingDelete = { kind: 'activity' | 'absence'; id: string };
+
 	let deleteDialogOpen = $state(false);
-	let activityToDeleteId = $state<string | null>(null);
+	let pendingDelete = $state<PendingDelete | null>(null);
 	let deleteError = $state('');
 
-	function requestDelete(id: string) {
-		activityToDeleteId = id;
+	function requestDelete(target: PendingDelete) {
+		pendingDelete = target;
 		deleteError = '';
 		deleteDialogOpen = true;
 	}
 
 	async function confirmDelete() {
-		if (!activityToDeleteId) return;
+		if (!pendingDelete) return;
 		try {
-			await activityStore.delete(activityToDeleteId);
+			if (pendingDelete.kind === 'activity') {
+				await activityStore.delete(pendingDelete.id);
+				onRefresh();
+			} else {
+				await absenceStore.delete(pendingDelete.id);
+				onAbsenceRefresh?.();
+			}
 			deleteDialogOpen = false;
-			activityToDeleteId = null;
-			onRefresh();
+			pendingDelete = null;
 		} catch (error) {
 			console.error('[ActivityList] Exception deleting:', error);
-			deleteError = error instanceof Error ? error.message : 'Failed to delete activity';
-		}
-	}
-
-	async function handleDeleteAbsence(id: string) {
-		if (confirm(m.delete_absence_confirm())) {
-			try {
-				await absenceStore.delete(id);
-				onAbsenceRefresh?.();
-			} catch (error) {
-				console.error('[ActivityList] Exception deleting:', error);
-				alert(error instanceof Error ? error.message : 'Failed to delete absence');
-			}
+			deleteError =
+				error instanceof Error
+					? error.message
+					: pendingDelete.kind === 'activity'
+						? 'Failed to delete activity'
+						: 'Failed to delete absence';
 		}
 	}
 
@@ -228,7 +228,7 @@
 								variant="ghost"
 								size="icon"
 								aria-label={m.delete_activity_confirm_button()}
-								onclick={() => requestDelete(activity.id)}
+								onclick={() => requestDelete({ kind: 'activity', id: activity.id })}
 								class="hidden h-7 w-7 text-muted-foreground transition-opacity hover:bg-destructive/10 hover:text-destructive sm:flex sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
 							>
 								<Trash2 class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -300,7 +300,7 @@
 							<Button
 								variant="ghost"
 								size="icon"
-								onclick={() => handleDeleteAbsence(absence.id)}
+								onclick={() => requestDelete({ kind: 'absence', id: absence.id })}
 								class="hidden h-7 w-7 text-stone-400 transition-opacity hover:bg-red-50 hover:text-red-500 sm:flex sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
 							>
 								<Trash2 class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -316,7 +316,11 @@
 <AlertDialog.Root bind:open={deleteDialogOpen}>
 	<AlertDialog.Content>
 		<AlertDialog.Header>
-			<AlertDialog.Title>{m.delete_activity_confirm()}</AlertDialog.Title>
+			<AlertDialog.Title>
+				{pendingDelete?.kind === 'absence'
+					? m.delete_absence_confirm()
+					: m.delete_activity_confirm()}
+			</AlertDialog.Title>
 			{#if deleteError}
 				<AlertDialog.Description class="text-red-500">{deleteError}</AlertDialog.Description>
 			{/if}

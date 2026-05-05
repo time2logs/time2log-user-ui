@@ -2,12 +2,9 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Home, ArrowLeft } from 'lucide-svelte';
 	import { page } from '$app/stores';
+	import * as m from '$lib/paraglide/messages.js';
 
 	const status = $derived($page.status);
-
-	function goBack() {
-		history.back();
-	}
 </script>
 
 <svelte:head>
@@ -27,34 +24,34 @@
 
 			<h1 class="mb-4 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
 				{#if status === 404}
-					Page Not Found
+					{m.error_404_title()}
 				{:else if status === 403}
-					Access Denied
+					{m.error_403_title()}
 				{:else if status === 500}
-					Server Error
+					{m.error_500_title()}
 				{:else}
-					Something Went Wrong
+					{m.error_generic_title()}
 				{/if}
 			</h1>
 
 			<p class="mx-auto mb-8 max-w-md text-muted-foreground">
 				{#if status === 404}
-					The page you're looking for doesn't exist or has been moved.
+					{m.error_404_message()}
 				{:else if status === 403}
-					You don't have permission to access this page.
+					{m.error_403_message()}
 				{:else}
-					An unexpected error occurred. Please try again later.
+					{m.error_generic_message()}
 				{/if}
 			</p>
 
 			<div class="flex flex-col items-center justify-center gap-3 sm:flex-row">
-				<Button onclick={goBack} variant="outline" size="lg" class="min-w-[160px]">
+				<Button onclick={() => history.back()} variant="outline" size="lg" class="min-w-[160px]">
 					<ArrowLeft class="mr-2 h-4 w-4" />
-					Go Back
+					{m.error_go_back()}
 				</Button>
 				<Button href="/" size="lg" class="min-w-[160px]">
 					<Home class="mr-2 h-4 w-4" />
-					Home
+					{m.error_home_button()}
 				</Button>
 			</div>
 		</div>

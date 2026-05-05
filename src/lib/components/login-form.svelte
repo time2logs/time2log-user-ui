@@ -78,7 +78,7 @@
 						<Input
 							id="email"
 							type="email"
-							placeholder="hans.muster@gmail.com"
+							placeholder={m.email_placeholder()}
 							bind:value={email}
 							required
 							disabled={isLoading}

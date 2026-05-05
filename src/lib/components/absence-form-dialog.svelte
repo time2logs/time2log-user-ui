@@ -13,6 +13,7 @@
 	import { getDateLocale } from '$lib/dateLocale';
 	import { rrulestr, Frequency } from 'rrule';
 	import { getFrequencyString, buildRruleString } from '$lib/rruleUtils';
+	import { formatHoursValue } from '$lib/utils';
 
 	const dateLocale = $derived(getDateLocale());
 
@@ -81,11 +82,6 @@
 		) {
 			showDayFractionInfo = false;
 		}
-	}
-
-	function formatHoursValue(value: number): string {
-		const rounded = Math.round(value * 10) / 10;
-		return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
 	}
 
 	function formatCalendarDate(date: string): string {

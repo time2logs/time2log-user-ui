@@ -35,16 +35,12 @@
 	} from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
+	import { formatHoursValue } from '$lib/utils';
 
 	import { SvelteSet } from 'svelte/reactivity';
 	import { buildTree } from '$lib/curriculumTree';
 
 	const dateLocale = $derived(getDateLocale());
-
-	function formatHoursValue(value: number): string {
-		const rounded = Math.round(value * 10) / 10;
-		return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
-	}
 
 	let {
 		open = $bindable(),
