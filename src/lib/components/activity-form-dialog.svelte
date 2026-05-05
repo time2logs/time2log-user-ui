@@ -106,7 +106,8 @@
 				rating = 0;
 				hours = 0;
 				const lastLoc = getLastLocation();
-				location = (lastLoc && userLocations?.includes(lastLoc)) ? lastLoc : (userLocations?.[0] ?? '');
+				location =
+					lastLoc && userLocations?.includes(lastLoc) ? lastLoc : (userLocations?.[0] ?? '');
 				notes = '';
 			}
 			// Auto-expand all categories to show activities
@@ -327,7 +328,9 @@
 				</div>
 			{/if}
 			{#if absenceFraction > 0}
-				<div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+				<div
+					class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+				>
 					{m.activity_hours_remaining_with_absence({
 						blocked: `${formatHoursValue(blockedHoursForDate)}h`,
 						available: `${formatHoursValue(maxHoursForDate)}h`
