@@ -3,7 +3,6 @@
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import * as Sheet from '$lib/components/ui/sheet';
 	import { Button } from '$lib/components/ui/button';
-	import { Separator } from '$lib/components/ui/separator';
 	import ActivityList from '$lib/components/activity-list.svelte';
 	import ActivityFormDialog from '$lib/components/activity-form-dialog.svelte';
 	import AbsenceFormDialog from '$lib/components/absence-form-dialog.svelte';
@@ -180,6 +179,7 @@
 				</div>
 				<div class="hidden items-center gap-2 sm:flex">
 					<LanguageSwitcher />
+
 					<a
 						href="/absences"
 						aria-label={m.absences_title()}

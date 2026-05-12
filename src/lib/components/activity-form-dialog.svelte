@@ -34,6 +34,7 @@
 		Trash2
 	} from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
+	import { getCurriculumLabel } from '$lib/curriculumLabel';
 	import { getDateLocale } from '$lib/dateLocale';
 
 	import { SvelteSet } from 'svelte/reactivity';
@@ -170,7 +171,7 @@
 					notes: notes || null,
 					rating: rating || null,
 					location,
-					activity_name: selectedActivity.label,
+					activity_name: getCurriculumLabel(selectedActivity),
 					activity_key: selectedActivity.key,
 					activity_label: ''
 				};
@@ -200,7 +201,7 @@
 					notes: notes || null,
 					rating: rating || null,
 					location,
-					activity_name: selectedActivity.label,
+					activity_name: getCurriculumLabel(selectedActivity),
 					activity_key: selectedActivity.key,
 					activity_label: ''
 				};
@@ -362,8 +363,7 @@
 										{/if}
 										<Folder class="pointer-events-none h-4 w-4 text-primary" />
 										<span class="font-mono text-sm text-muted-foreground">{node.key}</span>
-										<span class="text-sm font-medium text-foreground">{node.label}</span>
-									</button>
+										<span class="text-sm font-medium text-foreground">{getCurriculumLabel(node)}</span>									</button>
 
 									{#if expanded.has(node.id)}
 										{#each node.children as child (child.id)}
@@ -383,8 +383,7 @@
 										<span class="w-4"></span>
 										<FileText class="pointer-events-none h-4 w-4 text-muted-foreground" />
 										<span class="font-mono text-sm text-muted-foreground">{node.key}</span>
-										<span class="text-sm font-medium text-foreground">{node.label}</span>
-										{#if selectedActivityId === node.id}
+										<span class="text-sm font-medium text-foreground">{getCurriculumLabel(node)}</span>										{#if selectedActivityId === node.id}
 											<Check class="pointer-events-none ml-auto h-4 w-4 text-primary" />
 										{/if}
 									</button>
@@ -399,7 +398,7 @@
 				</div>
 				{#if selectedActivity}
 					<p class="text-sm text-muted-foreground">
-						{m.selected_activity({ name: `${selectedActivity.key} - ${selectedActivity.label}` })}
+						{m.selected_activity({ name: `${selectedActivity.key} - ${getCurriculumLabel(selectedActivity)}` })}
 					</p>
 				{/if}
 			</div>
