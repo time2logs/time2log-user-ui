@@ -214,7 +214,16 @@ function createActivityStore() {
 				);
 			}
 
-			const { error } = await supabase.from('activity_records').delete().eq('id', id);
+			const {
+				data: { user }
+			} = await supabase.auth.getUser();
+			if (!user) throw new Error('Not authenticated');
+
+			const { error } = await supabase
+				.from('activity_records')
+				.delete()
+				.eq('id', id)
+				.eq('user_id', user.id);
 
 			if (error) {
 				console.error('[ActivityStorage] Error deleting from Supabase:', error);
@@ -373,7 +382,16 @@ export async function addActivity(
 export async function deleteActivity(id: string): Promise<void> {
 	debugLog('Deleting activity', { id });
 
-	const { error } = await supabase.from('activity_records').delete().eq('id', id);
+	const {
+		data: { user }
+	} = await supabase.auth.getUser();
+	if (!user) throw new Error('Not authenticated');
+
+	const { error } = await supabase
+		.from('activity_records')
+		.delete()
+		.eq('id', id)
+		.eq('user_id', user.id);
 
 	if (error) {
 		console.error('[ActivityStorage] Error deleting from Supabase:', error);

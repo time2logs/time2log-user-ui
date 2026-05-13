@@ -52,9 +52,10 @@
 
 	const displayAvatarUrl = $derived(avatarPreviewUrl || data.profile?.avatar_url || null);
 
-	function handleLogout() {
+	async function handleLogout() {
 		isLoggingOut = true;
-		window.location.href = '/logout';
+		await fetch('/logout', { method: 'POST' });
+		window.location.href = '/login';
 	}
 
 	function toggleTheme() {

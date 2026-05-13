@@ -100,9 +100,10 @@
 		}).format(selectedDate.toDate(timeZone))
 	);
 
-	function handleLogout() {
+	async function handleLogout() {
 		isLoggingOut = true;
-		window.location.href = '/logout';
+		await fetch('/logout', { method: 'POST' });
+		window.location.href = '/login';
 	}
 
 	function handleActivityAdded() {

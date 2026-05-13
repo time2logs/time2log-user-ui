@@ -155,7 +155,12 @@ function createAbsenceStore() {
 		delete: async (id: string): Promise<boolean> => {
 			debugLog('Deleting absence via store', { id });
 
-			const { error } = await supabase.from('absences').delete().eq('id', id);
+			const {
+				data: { user }
+			} = await supabase.auth.getUser();
+			if (!user) throw new Error('Not authenticated');
+
+			const { error } = await supabase.from('absences').delete().eq('id', id).eq('user_id', user.id);
 
 			if (error) {
 				console.error('[AbsenceStorage] Error deleting from Supabase:', error);
@@ -265,7 +270,12 @@ export async function getAbsences(): Promise<AbsenceRecord[]> {
 export async function deleteAbsence(id: string): Promise<void> {
 	debugLog('Deleting absence', { id });
 
-	const { error } = await supabase.from('absences').delete().eq('id', id);
+	const {
+		data: { user }
+	} = await supabase.auth.getUser();
+	if (!user) throw new Error('Not authenticated');
+
+	const { error } = await supabase.from('absences').delete().eq('id', id).eq('user_id', user.id);
 
 	if (error) {
 		console.error('[AbsenceStorage] Error deleting from Supabase:', error);
@@ -317,6 +327,8 @@ export async function getAbsenceById(id: string): Promise<AbsenceRecord | undefi
  * Get all absences that apply to a specific date (includes recurring rules)
  */
 export async function getAbsencesForDate(userId: string, date: string): Promise<AbsenceRecord[]> {
+	if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('Invalid date format');
+
 	const { data, error } = await supabase
 		.from('absences')
 		.select('*, absence_types(id, label_key, is_recurring_allowed)')

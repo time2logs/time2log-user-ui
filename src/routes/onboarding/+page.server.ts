@@ -261,6 +261,15 @@ export const actions: Actions = {
 			return fail(400, { error: m.onboarding_phone_code_expired() });
 		}
 		if (hashOtp(code) !== profileData.phone_verification_code_hash) {
+			// Invalidate the code immediately on any wrong attempt to prevent brute-forcing
+			await locals.supabaseSecret
+				.schema('app')
+				.from('profiles')
+				.update({
+					phone_verification_code_hash: null,
+					phone_verification_code_expires_at: null
+				})
+				.eq('id', existingUser.id);
 			return fail(400, { error: m.onboarding_phone_code_invalid() });
 		}
 
