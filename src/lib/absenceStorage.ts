@@ -1,6 +1,7 @@
 import type { AbsenceRecord, AbsenceType } from './types';
 import { writable } from 'svelte/store';
 import { supabase } from './supabaseClient';
+import { getCurrentUser } from './clientAuth';
 import { rrulestr } from 'rrule';
 
 type AbsenceRow = {
@@ -155,10 +156,7 @@ function createAbsenceStore() {
 		delete: async (id: string): Promise<boolean> => {
 			debugLog('Deleting absence via store', { id });
 
-			const {
-				data: { user }
-			} = await supabase.auth.getUser();
-			if (!user) throw new Error('Not authenticated');
+			const user = await getCurrentUser();
 
 			const { error } = await supabase.from('absences').delete().eq('id', id).eq('user_id', user.id);
 
@@ -270,10 +268,7 @@ export async function getAbsences(): Promise<AbsenceRecord[]> {
 export async function deleteAbsence(id: string): Promise<void> {
 	debugLog('Deleting absence', { id });
 
-	const {
-		data: { user }
-	} = await supabase.auth.getUser();
-	if (!user) throw new Error('Not authenticated');
+	const user = await getCurrentUser();
 
 	const { error } = await supabase.from('absences').delete().eq('id', id).eq('user_id', user.id);
 
@@ -286,10 +281,12 @@ export async function deleteAbsence(id: string): Promise<void> {
 }
 
 export async function getAbsenceById(id: string): Promise<AbsenceRecord | undefined> {
-	const {
-		data: { user }
-	} = await supabase.auth.getUser();
-	if (!user) return undefined;
+	let user;
+	try {
+		user = await getCurrentUser();
+	} catch {
+		return undefined;
+	}
 
 	const { data, error } = await supabase
 		.from('absences')

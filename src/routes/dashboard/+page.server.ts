@@ -1,9 +1,9 @@
-import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { requireSession } from '$lib/server/authGuard';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const session = await locals.safeGetSession();
-	if (!session) throw redirect(303, '/login');
+	requireSession(session);
 
 	let userLocations: string[] = [];
 	try {

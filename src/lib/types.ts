@@ -74,6 +74,13 @@ export type AbsenceRecord = {
 	absence_type_label: string;
 };
 
+export type UserLocation = {
+	user_id: string;
+	location: string;
+	is_default: boolean;
+	created_at: string;
+};
+
 export type InviteDetails = {
 	organization_name: string;
 	email: string;

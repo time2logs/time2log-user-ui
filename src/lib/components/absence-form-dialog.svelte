@@ -11,6 +11,8 @@
 	import { AlertCircle, Calendar, Info, Trash2 } from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
+	import { toIsoDate } from '$lib/dateUtils';
+	import { getAvailableHours } from '$lib/hoursCalculation';
 	import { rrulestr, Frequency } from 'rrule';
 	import { getFrequencyString, buildRruleString } from '$lib/rruleUtils';
 
@@ -102,7 +104,7 @@
 		const endDateValue = new Date(`${end}T12:00:00`);
 
 		while (current <= endDateValue) {
-			dates.push(current.toISOString().split('T')[0]);
+			dates.push(toIsoDate(current));
 			current.setDate(current.getDate() + 1);
 		}
 
@@ -126,7 +128,7 @@
 						recurrenceFrequency = getFrequencyString(options.freq || Frequency.WEEKLY);
 						recurrenceUntil = options.until
 							? options.until instanceof Date
-								? options.until.toISOString().split('T')[0]
+								? toIsoDate(options.until)
 								: String(options.until)
 							: '';
 						const byweekdayRaw = options.byweekday;
@@ -236,13 +238,13 @@
 			const rruleStr = getRruleString();
 			if (!rruleStr) return [];
 			const rule = rrulestr(rruleStr, { dtstart: new Date(`${startDate}T00:00:00Z`) });
-			const today = new Date().toISOString().split('T')[0];
+			const today = toIsoDate(new Date());
 			// Cap at 50 to prevent infinite loops on rules without UNTIL/COUNT
 			const dates = rule
 				.all((_, i) => i < 50)
-				.filter((date) => date.toISOString().split('T')[0] > today)
+				.filter((date) => toIsoDate(date) > today)
 				.slice(0, 6);
-			return dates.map((d) => d.toISOString().split('T')[0]);
+			return dates.map((d) => toIsoDate(d));
 		} catch (e) {
 			console.error('Error generating preview:', e);
 			return [];
@@ -295,7 +297,7 @@
 				1,
 				getAbsenceFractionForDate(date, otherAbsences) + Number(dayFraction)
 			);
-			const availableHours = Math.max(0, MAX_HOURS_PER_DAY * (1 - blockedFraction));
+			const availableHours = getAvailableHours(MAX_HOURS_PER_DAY, blockedFraction);
 
 			if (activityHours > availableHours) {
 				submitError = m.error_absence_conflicts_with_activities({

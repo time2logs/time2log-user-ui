@@ -1,14 +1,15 @@
 import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
+import type { UserLocation } from '$lib/types';
 import * as m from '$lib/paraglide/messages.js';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
+import { validatePassword } from '$lib/server/passwordValidation';
+import { getFormString } from '$lib/server/formHelpers';
+import { requireSession } from '$lib/server/authGuard';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const session = await locals.safeGetSession();
-
-	if (!session) {
-		throw redirect(302, '/login');
-	}
+	requireSession(session);
 
 	const userId = session.user.id;
 	const email = session.user.email;
@@ -20,13 +21,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.single();
 
 	const profile = profileResult.error ? null : profileResult.data;
-
-	type UserLocation = {
-		user_id: string;
-		location: string;
-		is_default: boolean;
-		created_at: string;
-	};
 
 	let locations: UserLocation[] = [];
 	let defaultLocation: string | null = null;
@@ -52,11 +46,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
 	updateProfile: async ({ request, locals }) => {
 		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
+		requireSession(session);
 
 		const formData = await request.formData();
-		const firstName = formData.get('first_name')?.toString().trim() ?? '';
-		const lastName = formData.get('last_name')?.toString().trim() ?? '';
+		const firstName = getFormString(formData, 'first_name');
+		const lastName = getFormString(formData, 'last_name');
 		const avatarFile = formData.get('avatar') as File | null;
 
 		if (!firstName || !lastName) {
@@ -81,9 +75,7 @@ export const actions: Actions = {
 
 		if (profileError) {
 			console.error('[Settings] Failed to update profile:', profileError.message);
-			return fail(500, {
-				profileError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
-			});
+			return fail(500, { profileError: m.error_server_generic() });
 		}
 
 		if (avatarFile && avatarFile.size > 0 && avatarExt) {
@@ -112,10 +104,10 @@ export const actions: Actions = {
 
 	updateEmail: async ({ request, locals }) => {
 		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
+		requireSession(session);
 
 		const formData = await request.formData();
-		const email = formData.get('email')?.toString().trim() ?? '';
+		const email = getFormString(formData, 'email');
 
 		if (!email) {
 			return fail(400, { emailError: m.onboarding_error_email_missing() });
@@ -128,9 +120,7 @@ export const actions: Actions = {
 		const { error } = await locals.supabase.auth.updateUser({ email });
 		if (error) {
 			console.error('[Settings] Failed to update email:', error.message);
-			return fail(500, {
-				emailError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
-			});
+			return fail(500, { emailError: m.error_server_generic() });
 		}
 
 		return { emailSuccess: true };
@@ -138,7 +128,7 @@ export const actions: Actions = {
 
 	updatePassword: async ({ request, locals }) => {
 		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
+		requireSession(session);
 
 		const formData = await request.formData();
 		const password = formData.get('password')?.toString() ?? '';
@@ -148,28 +138,15 @@ export const actions: Actions = {
 			return fail(400, { passwordError: m.settings_error_password_mismatch() });
 		}
 
-		if (!password || password.length < 8) {
-			return fail(400, { passwordError: m.onboarding_error_password_length() });
-		}
-
-		if (!/[A-Z]/.test(password)) {
-			return fail(400, { passwordError: m.onboarding_error_password_uppercase() });
-		}
-
-		if (!/[0-9]/.test(password)) {
-			return fail(400, { passwordError: m.onboarding_error_password_number() });
-		}
-
-		if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password)) {
-			return fail(400, { passwordError: m.onboarding_error_password_special() });
+		const passwordError = validatePassword(password);
+		if (passwordError) {
+			return fail(400, { passwordError });
 		}
 
 		const { error } = await locals.supabase.auth.updateUser({ password });
 		if (error) {
 			console.error('[Settings] Failed to update password:', error.message);
-			return fail(500, {
-				passwordError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
-			});
+			return fail(500, { passwordError: m.error_server_generic() });
 		}
 
 		return { passwordSuccess: true };
@@ -177,14 +154,13 @@ export const actions: Actions = {
 
 	addLocation: async ({ request, locals }) => {
 		const session = await locals.safeGetSession();
-
-		if (!session) throw redirect(302, '/login');
+		requireSession(session);
 
 		const formData = await request.formData();
-		const location = formData.get('location')?.toString().trim() ?? '';
+		const location = getFormString(formData, 'location');
 
 		if (!location) {
-			return fail(400, { locationError: 'Standort darf nicht leer sein.' });
+			return fail(400, { locationError: m.error_location_empty() });
 		}
 
 		const { error } = await locals.supabase
@@ -195,13 +171,14 @@ export const actions: Actions = {
 			if (error.code === '23505') {
 				return fail(400, { locationError: m.location_already_exists() });
 			}
-			return fail(500, { locationError: 'Fehler beim Speichern.' });
+			return fail(500, { locationError: m.error_location_save() });
 		}
 		return { locationSuccess: true };
 	},
+
 	deleteLocation: async ({ request, locals }) => {
 		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
+		requireSession(session);
 
 		const formData = await request.formData();
 		const location = formData.get('location')?.toString() ?? '';

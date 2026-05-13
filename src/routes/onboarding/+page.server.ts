@@ -4,6 +4,8 @@ import type { InviteDetails } from '$lib/types';
 import * as m from '$lib/paraglide/messages.js';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
 import { sendSwisscomVerificationSms } from '$lib/server/swisscomSms';
+import { validatePassword } from '$lib/server/passwordValidation';
+import { getFormString } from '$lib/server/formHelpers';
 import { createHash, randomInt } from 'node:crypto';
 
 type ResolvedInviteUser =
@@ -62,7 +64,8 @@ export const load: PageServerLoad = async ({
 		? {
 				organization_name: inviteDetailsRaw.organization_name,
 				email: inviteDetailsRaw.email,
-				role: inviteDetailsRaw.role
+				role: inviteDetailsRaw.role,
+				current_semester: inviteDetailsRaw.current_semester ?? null
 			}
 		: null;
 
@@ -92,9 +95,9 @@ export const load: PageServerLoad = async ({
 export const actions: Actions = {
 	sendPhoneCode: async ({ request, locals }) => {
 		const formData = await request.formData();
-		const token = formData.get('invite_token')?.toString() ?? '';
-		const email = formData.get('email')?.toString().trim().toLowerCase() ?? '';
-		const phoneNumberRaw = formData.get('phone_number')?.toString().trim() ?? '';
+		const token = getFormString(formData, 'invite_token', { trim: false });
+		const email = getFormString(formData, 'email', { lowercase: true });
+		const phoneNumberRaw = getFormString(formData, 'phone_number');
 
 		if (!token || !email) {
 			return fail(400, {
@@ -217,9 +220,9 @@ export const actions: Actions = {
 	},
 	verifyPhoneCode: async ({ request, locals }) => {
 		const formData = await request.formData();
-		const token = formData.get('invite_token')?.toString() ?? '';
-		const email = formData.get('email')?.toString().trim().toLowerCase() ?? '';
-		const code = formData.get('phone_code')?.toString().trim() ?? '';
+		const token = getFormString(formData, 'invite_token', { trim: false });
+		const email = getFormString(formData, 'email', { lowercase: true });
+		const code = getFormString(formData, 'phone_code');
 
 		if (!token) {
 			return fail(400, { error: m.onboarding_error_token_missing() });
@@ -293,12 +296,12 @@ export const actions: Actions = {
 	},
 	complete: async ({ request, locals }) => {
 		const formData = await request.formData();
-		const firstName = formData.get('first_name')?.toString().trim() ?? '';
-		const lastName = formData.get('last_name')?.toString().trim() ?? '';
+		const firstName = getFormString(formData, 'first_name');
+		const lastName = getFormString(formData, 'last_name');
 		const password = formData.get('password')?.toString() ?? '';
-		const token = formData.get('invite_token')?.toString() ?? '';
-		const email = formData.get('email')?.toString().trim() ?? '';
-		const phoneNumber = formData.get('phone_number')?.toString().trim() ?? '';
+		const token = getFormString(formData, 'invite_token', { trim: false });
+		const email = getFormString(formData, 'email');
+		const phoneNumber = getFormString(formData, 'phone_number');
 		const avatarFile = formData.get('avatar') as File | null;
 
 		let avatarExt: string | null = null;
@@ -325,34 +328,9 @@ export const actions: Actions = {
 			});
 		}
 
-		if (!password || password.length < 8) {
-			return fail(400, {
-				error: m.onboarding_error_password_length(),
-				values: { firstName, lastName }
-			});
-		}
-
-		const hasUppercase = /[A-Z]/.test(password);
-		const hasNumber = /[0-9]/.test(password);
-		const hasSpecialChar = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password);
-
-		if (!hasUppercase) {
-			return fail(400, {
-				error: m.onboarding_error_password_uppercase(),
-				values: { firstName, lastName }
-			});
-		}
-		if (!hasNumber) {
-			return fail(400, {
-				error: m.onboarding_error_password_number(),
-				values: { firstName, lastName }
-			});
-		}
-		if (!hasSpecialChar) {
-			return fail(400, {
-				error: m.onboarding_error_password_special(),
-				values: { firstName, lastName }
-			});
+		const passwordError = validatePassword(password);
+		if (passwordError) {
+			return fail(400, { error: passwordError, values: { firstName, lastName } });
 		}
 
 		if (!token) {

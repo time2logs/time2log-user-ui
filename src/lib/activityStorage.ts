@@ -1,6 +1,7 @@
 import type { ActivityRecord, CurriculumNodeSummary } from './types';
 import { writable, get } from 'svelte/store';
 import { supabase } from './supabaseClient';
+import { getCurrentUser } from './clientAuth';
 import * as m from '$lib/paraglide/messages.js';
 import { isWithinEditWindow, EDIT_WINDOW_DAYS } from './utils';
 
@@ -214,10 +215,7 @@ function createActivityStore() {
 				);
 			}
 
-			const {
-				data: { user }
-			} = await supabase.auth.getUser();
-			if (!user) throw new Error('Not authenticated');
+			const user = await getCurrentUser();
 
 			const { error } = await supabase
 				.from('activity_records')
@@ -382,10 +380,7 @@ export async function addActivity(
 export async function deleteActivity(id: string): Promise<void> {
 	debugLog('Deleting activity', { id });
 
-	const {
-		data: { user }
-	} = await supabase.auth.getUser();
-	if (!user) throw new Error('Not authenticated');
+	const user = await getCurrentUser();
 
 	const { error } = await supabase
 		.from('activity_records')
@@ -418,10 +413,12 @@ export function getLastLocation(): string | null {
 }
 
 export async function getActivityById(id: string): Promise<ActivityRecord | undefined> {
-	const {
-		data: { user }
-	} = await supabase.auth.getUser();
-	if (!user) return undefined;
+	let user;
+	try {
+		user = await getCurrentUser();
+	} catch {
+		return undefined;
+	}
 
 	const { data, error } = await supabase
 		.from('activity_records')

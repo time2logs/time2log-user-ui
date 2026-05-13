@@ -35,6 +35,8 @@
 	} from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
+	import { getTodayIso } from '$lib/dateUtils';
+	import { getAvailableHours, getDayHours } from '$lib/hoursCalculation';
 
 	import { SvelteSet } from 'svelte/reactivity';
 	import { buildTree } from '$lib/curriculumTree';
@@ -195,7 +197,7 @@
 					user_id: teamMember.user_id || '',
 					team_id: teamMember.team_id || null,
 					curriculum_activity_id: selectedActivity.id,
-					entry_date: selectedDate || new Date().toISOString().split('T')[0],
+					entry_date: selectedDate || getTodayIso(),
 					hours,
 					notes: notes || null,
 					rating: rating || null,
@@ -257,19 +259,12 @@
 	}
 
 	const hoursExceedsMax = $derived(hours > MAX_HOURS_PER_ENTRY);
-	const entryDate = $derived(
-		selectedDate || activityToEdit?.entry_date || new Date().toISOString().split('T')[0]
-	);
+	const entryDate = $derived(selectedDate || activityToEdit?.entry_date || getTodayIso());
 	const absenceFraction = $derived(getAbsenceFractionForDate(entryDate, existingAbsences));
 	const blockedHoursForDate = $derived(MAX_HOURS_PER_DAY * absenceFraction);
-	const maxHoursForDate = $derived(Math.max(0, MAX_HOURS_PER_DAY * (1 - absenceFraction)));
+	const maxHoursForDate = $derived(getAvailableHours(MAX_HOURS_PER_DAY, absenceFraction));
 	const currentDayHours = $derived(
-		existingActivities
-			.filter((a) => a.entry_date === entryDate)
-			.reduce((sum, a) => {
-				if (activityToEdit && a.id === activityToEdit.id) return sum;
-				return sum + a.hours;
-			}, 0)
+		getDayHours(existingActivities, entryDate, activityToEdit?.id)
 	);
 	const wouldExceedDailyMax = $derived(currentDayHours + hours > maxHoursForDate);
 	const isValid = $derived(
