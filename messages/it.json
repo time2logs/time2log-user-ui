@@ -198,5 +198,8 @@
 	"home_seeitinaction_subtitle": "Un'interfaccia pulita e intuitiva progettata per te",
 	"home_cta_title": "Pronto per Iniziare?",
 	"home_cta_description": "Unisciti a chi sta già tracciando il suo percorso di apprendimento",
-	"home_cta_button": "Inizia Oggi"
+	"home_cta_button": "Inizia Oggi",
+	"add_another_activity": "Aggiungi un'altra",
+	"submit_all_button": "Salva tutto ({count})",
+	"queued_activities_label": "In coda ({count})"
 }

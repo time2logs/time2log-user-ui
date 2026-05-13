@@ -198,5 +198,8 @@
 	"home_seeitinaction_subtitle": "Eine saubere, intuitive Benutzeroberfläche, die für dich gestaltet wurde",
 	"home_cta_title": "Bereit zum Starten?",
 	"home_cta_description": "Tritt anderen bei, die bereits ihre Lernreise verfolgen",
-	"home_cta_button": "Jetzt starten"
+	"home_cta_button": "Jetzt starten",
+	"add_another_activity": "Weitere hinzufügen",
+	"submit_all_button": "Alle speichern ({count})",
+	"queued_activities_label": "Warteschlange ({count})"
 }

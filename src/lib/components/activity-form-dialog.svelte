@@ -22,7 +22,8 @@
 		FileText,
 		Check,
 		AlertCircle,
-		Trash2
+		Trash2,
+		X
 	} from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
@@ -55,6 +56,8 @@
 	// Get all activity nodes for pre-selection
 	const activityNodes = $derived(curriculumNodes.filter((node) => node.node_type === 'activity'));
 
+	type PendingActivity = Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>;
+
 	let expanded = new SvelteSet<string>();
 	let selectedActivityId = $state<string>('');
 	let rating = $state<number>(0);
@@ -64,6 +67,7 @@
 	let isSubmitting = $state(false);
 	let hasInitialized = $state(false);
 	let submitError = $state<string | null>(null);
+	let pendingActivities = $state<PendingActivity[]>([]);
 	let deleteDialogOpen = $state(false);
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
@@ -100,6 +104,7 @@
 			hasInitialized = true;
 		} else if (!open) {
 			hasInitialized = false;
+			pendingActivities = [];
 		}
 	});
 
@@ -115,6 +120,35 @@
 
 	function selectActivity(id: string) {
 		selectedActivityId = id;
+	}
+
+	function handleAddAnother() {
+		if (!selectedActivity || !teamMember || !isValid) return;
+
+		pendingActivities = [
+			...pendingActivities,
+			{
+				organization_id: teamMember.organization_id || '',
+				profession_id: teamMember.profession_id || '',
+				user_id: teamMember.user_id || '',
+				team_id: teamMember.team_id || null,
+				curriculum_activity_id: selectedActivity.id,
+				entry_date: selectedDate || new Date().toISOString().split('T')[0],
+				hours,
+				notes: notes || null,
+				rating: rating || null,
+				location,
+				activity_name: selectedActivity.label,
+				activity_key: selectedActivity.key,
+				activity_label: ''
+			}
+		];
+
+		hours = 0;
+		notes = '';
+		rating = 0;
+		if (activityNodes.length > 0) selectedActivityId = activityNodes[0].id;
+		submitError = null;
 	}
 
 	async function handleSubmit() {
@@ -206,7 +240,12 @@
 					throw new Error('Rating must be between 1 and 5');
 				}
 
-				await activityStore.add(activityData);
+				if (pendingActivities.length > 0) {
+					await activityStore.addMany([...pendingActivities, activityData]);
+					pendingActivities = [];
+				} else {
+					await activityStore.add(activityData);
+				}
 			}
 
 			open = false;
@@ -248,7 +287,10 @@
 			.reduce((sum, a) => {
 				if (activityToEdit && a.id === activityToEdit.id) return sum;
 				return sum + a.hours;
-			}, 0)
+			}, 0) +
+			pendingActivities
+				.filter((a) => a.entry_date === (selectedDate || new Date().toISOString().split('T')[0]))
+				.reduce((sum, a) => sum + a.hours, 0)
 	);
 	const wouldExceedDailyMax = $derived(currentDayHours + hours > MAX_HOURS_PER_DAY);
 	const isValid = $derived(
@@ -303,6 +345,31 @@
 					class="rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm text-muted-foreground"
 				>
 					{m.activity_saved_for_date({ date: selectedDateLabel })}
+				</div>
+			{/if}
+
+			<!-- Pending activities queue -->
+			{#if pendingActivities.length > 0}
+				<div class="space-y-2 rounded-lg border border-border bg-muted/50 p-3">
+					<p class="text-xs font-medium text-muted-foreground">
+						{m.queued_activities_label({ count: pendingActivities.length.toString() })}
+					</p>
+					{#each pendingActivities as entry, i (i)}
+						<div class="flex items-center gap-2 text-sm">
+							<span class="font-mono text-xs text-muted-foreground">{entry.activity_key}</span>
+							<span class="min-w-0 flex-1 truncate text-foreground">{entry.activity_name}</span>
+							<span class="shrink-0 text-muted-foreground">{entry.hours}h</span>
+							<Button
+								variant="ghost"
+								size="icon"
+								class="h-6 w-6 shrink-0"
+								onclick={() => (pendingActivities = pendingActivities.filter((_, j) => j !== i))}
+								aria-label="Remove"
+							>
+								<X class="h-3 w-3" />
+							</Button>
+						</div>
+					{/each}
 				</div>
 			{/if}
 
@@ -466,14 +533,23 @@
 				>
 					{m.cancel()}
 				</Button>
+				{#if !activityToEdit}
+					<Button variant="outline" onclick={handleAddAnother} disabled={!isValid || isSubmitting}>
+						{m.add_another_activity()}
+					</Button>
+				{/if}
 				<Button variant="default" onclick={handleSubmit} disabled={!isValid || isSubmitting}>
 					{#if isSubmitting}
 						<span class="flex items-center gap-2">
 							<span class="h-4 w-4 animate-spin">⟳</span>
 							Saving...
 						</span>
+					{:else if activityToEdit}
+						{m.save_changes_button()}
+					{:else if pendingActivities.length > 0}
+						{m.submit_all_button({ count: (pendingActivities.length + 1).toString() })}
 					{:else}
-						{activityToEdit ? m.save_changes_button() : m.log_activity_button()}
+						{m.log_activity_button()}
 					{/if}
 				</Button>
 			</div>

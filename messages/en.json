@@ -198,5 +198,8 @@
 	"home_seeitinaction_subtitle": "A clean, intuitive interface designed for you",
 	"home_cta_title": "Ready to Get Started?",
 	"home_cta_description": "Join others who are already tracking their learning journey",
-	"home_cta_button": "Get Started Today"
+	"home_cta_button": "Get Started Today",
+	"add_another_activity": "Add another",
+	"submit_all_button": "Save all ({count})",
+	"queued_activities_label": "Queue ({count})"
 }
