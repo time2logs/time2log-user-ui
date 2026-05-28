@@ -35,18 +35,30 @@
 		<Card.Description>{m.ach_section_sickness_desc()}</Card.Description>
 	</Card.Header>
 	<Card.Content class="pb-5">
-		<div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-			<div class="rounded-lg bg-muted/40 p-4 text-center">
-				<p class="text-3xl font-bold text-rose-500 tabular-nums">{fmt(sickThisYear)}</p>
-				<p class="mt-1 text-xs text-muted-foreground">{m.ach_sick_this_year()}</p>
+		<div class="grid grid-cols-3 gap-2 sm:gap-3">
+			<div class="rounded-lg bg-muted/40 p-2 text-center sm:p-4">
+				<p class="text-xl font-bold text-rose-500 tabular-nums sm:text-3xl">
+					{fmt(sickThisYear)}
+				</p>
+				<p class="mt-0.5 text-[10px] leading-tight text-muted-foreground sm:mt-1 sm:text-xs">
+					{m.ach_sick_this_year()}
+				</p>
 			</div>
-			<div class="rounded-lg bg-muted/40 p-4 text-center">
-				<p class="text-3xl font-bold text-rose-500 tabular-nums">{fmt(sickLast12Months)}</p>
-				<p class="mt-1 text-xs text-muted-foreground">{m.ach_sick_last_12mo()}</p>
+			<div class="rounded-lg bg-muted/40 p-2 text-center sm:p-4">
+				<p class="text-xl font-bold text-rose-500 tabular-nums sm:text-3xl">
+					{fmt(sickLast12Months)}
+				</p>
+				<p class="mt-0.5 text-[10px] leading-tight text-muted-foreground sm:mt-1 sm:text-xs">
+					{m.ach_sick_last_12mo()}
+				</p>
 			</div>
-			<div class="rounded-lg bg-muted/40 p-4 text-center">
-				<p class="text-3xl font-bold text-rose-500 tabular-nums">{fmt(sickAllTime)}</p>
-				<p class="mt-1 text-xs text-muted-foreground">{m.ach_sick_all_time()}</p>
+			<div class="rounded-lg bg-muted/40 p-2 text-center sm:p-4">
+				<p class="text-xl font-bold text-rose-500 tabular-nums sm:text-3xl">
+					{fmt(sickAllTime)}
+				</p>
+				<p class="mt-0.5 text-[10px] leading-tight text-muted-foreground sm:mt-1 sm:text-xs">
+					{m.ach_sick_all_time()}
+				</p>
 			</div>
 		</div>
 
