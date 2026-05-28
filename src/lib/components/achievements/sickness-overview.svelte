@@ -2,6 +2,9 @@
 	import * as Card from '$lib/components/ui/card';
 	import * as m from '$lib/paraglide/messages.js';
 	import { Thermometer } from 'lucide-svelte';
+	import { getDateLocale } from '$lib/dateLocale';
+	import type { SickMonthBucket } from '$lib/achievementsUtils';
+	import StatTile from './stat-tile.svelte';
 
 	let {
 		sickThisYear,
@@ -14,15 +17,22 @@
 		sickThisYear: number;
 		sickLast12Months: number;
 		sickAllTime: number;
-		byMonth: { month: string; monthIndex: number; days: number }[];
+		byMonth: SickMonthBucket[];
 		year: number;
 		workdaysAllTime: number;
 	} = $props();
 
-	const maxMonth = $derived(byMonth.length > 0 ? Math.max(1, ...byMonth.map((b) => b.days)) : 1);
+	const monthLabels = $derived.by(() => {
+		const formatter = new Intl.DateTimeFormat(getDateLocale(), { month: 'short' });
+		return byMonth.map((bucket) => formatter.format(new Date(year, bucket.monthIndex, 1)));
+	});
 
-	function fmt(n: number): string {
-		return (Math.round(n * 10) / 10).toString();
+	const maxMonth = $derived(
+		byMonth.length > 0 ? Math.max(1, ...byMonth.map((bucket) => bucket.days)) : 1
+	);
+
+	function formatDays(value: number): string {
+		return (Math.round(value * 10) / 10).toString();
 	}
 </script>
 
@@ -36,35 +46,26 @@
 	</Card.Header>
 	<Card.Content class="pb-5">
 		<div class="grid grid-cols-3 gap-2 sm:gap-3">
-			<div class="rounded-lg bg-muted/40 p-2 text-center sm:p-4">
-				<p class="text-xl font-bold text-rose-500 tabular-nums sm:text-3xl">
-					{fmt(sickThisYear)}
-				</p>
-				<p class="mt-0.5 text-[10px] leading-tight text-muted-foreground sm:mt-1 sm:text-xs">
-					{m.ach_sick_this_year()}
-				</p>
-			</div>
-			<div class="rounded-lg bg-muted/40 p-2 text-center sm:p-4">
-				<p class="text-xl font-bold text-rose-500 tabular-nums sm:text-3xl">
-					{fmt(sickLast12Months)}
-				</p>
-				<p class="mt-0.5 text-[10px] leading-tight text-muted-foreground sm:mt-1 sm:text-xs">
-					{m.ach_sick_last_12mo()}
-				</p>
-			</div>
-			<div class="rounded-lg bg-muted/40 p-2 text-center sm:p-4">
-				<p class="text-xl font-bold text-rose-500 tabular-nums sm:text-3xl">
-					{fmt(sickAllTime)}
-				</p>
-				<p class="mt-0.5 text-[10px] leading-tight text-muted-foreground sm:mt-1 sm:text-xs">
-					{m.ach_sick_all_time()}
-				</p>
-			</div>
+			<StatTile
+				value={formatDays(sickThisYear)}
+				label={m.ach_sick_this_year()}
+				valueClass="text-rose-500"
+			/>
+			<StatTile
+				value={formatDays(sickLast12Months)}
+				label={m.ach_sick_last_12mo()}
+				valueClass="text-rose-500"
+			/>
+			<StatTile
+				value={formatDays(sickAllTime)}
+				label={m.ach_sick_all_time()}
+				valueClass="text-rose-500"
+			/>
 		</div>
 
 		{#if workdaysAllTime > 0}
 			<p class="mt-3 text-center text-xs text-muted-foreground">
-				{m.ach_sick_rate({ sick: fmt(sickAllTime), work: workdaysAllTime })}
+				{m.ach_sick_rate({ sick: formatDays(sickAllTime), work: workdaysAllTime })}
 			</p>
 		{/if}
 
@@ -73,19 +74,19 @@
 				{m.ach_sick_by_month({ year })}
 			</p>
 			<div class="flex h-32 items-end gap-1 sm:gap-2">
-				{#each byMonth as bucket (bucket.monthIndex)}
+				{#each byMonth as bucket, index (bucket.monthIndex)}
 					{@const heightPct =
 						maxMonth > 0 ? Math.max(bucket.days > 0 ? 8 : 0, (bucket.days / maxMonth) * 100) : 0}
 					<div
 						class="flex-1 rounded-t bg-rose-400/70 transition-all"
 						style="height: {heightPct}%; min-height: {bucket.days > 0 ? '6px' : '0'}"
-						title="{bucket.month}: {fmt(bucket.days)}"
+						title="{monthLabels[index]}: {formatDays(bucket.days)}"
 					></div>
 				{/each}
 			</div>
 			<div class="mt-1 flex gap-1 sm:gap-2">
-				{#each byMonth as bucket (bucket.monthIndex)}
-					<span class="flex-1 text-center text-[10px] text-muted-foreground">{bucket.month}</span>
+				{#each monthLabels as label, index (index)}
+					<span class="flex-1 text-center text-[10px] text-muted-foreground">{label}</span>
 				{/each}
 			</div>
 		</div>
