@@ -19,7 +19,7 @@
 		TeamMember
 	} from '$lib/types';
 	import { resolve } from '$app/paths';
-	import { LogOut, Loader2, Plus, Menu, Settings, Calendar } from 'lucide-svelte';
+	import { LogOut, Loader2, Plus, Menu, Settings, Calendar, Trophy } from 'lucide-svelte';
 	import { DateFormatter, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
 	import { getDateLocale } from '$lib/dateLocale';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
@@ -189,6 +189,14 @@
 						<Calendar class="h-4 w-4" />
 					</a>
 					<a
+						href="/achievements"
+						aria-label={m.achievements_title()}
+						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						title={m.achievements_title()}
+					>
+						<Trophy class="h-4 w-4" />
+					</a>
+					<a
 						href={resolve('/settings')}
 						data-sveltekit-reload
 						aria-label={m.settings_title()}
@@ -213,6 +221,13 @@
 						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
 					>
 						<Calendar class="h-4 w-4" />
+					</a>
+					<a
+						href="/achievements"
+						aria-label={m.achievements_title()}
+						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+					>
+						<Trophy class="h-4 w-4" />
 					</a>
 					<a
 						href={resolve('/settings')}
@@ -280,6 +295,13 @@
 						/>
 					</Card.Content>
 				</Card.Root>
+			</div>
+
+			<div class="mt-6 flex items-center justify-end">
+				<Button variant="outline" size="sm" href="/achievements">
+					<Trophy class="mr-2 h-4 w-4" />
+					{m.achievements_view_full()}
+				</Button>
 			</div>
 
 			<StatsOverview {activities} />
@@ -380,6 +402,16 @@
 					<Calendar class="h-4 w-4" />
 				</div>
 				<span class="text-sm font-medium">{m.absences_title()}</span>
+			</a>
+			<a
+				href="/achievements"
+				onclick={() => (mobileMenuOpen = false)}
+				class="flex items-center gap-3 rounded-lg px-3 py-3 text-foreground transition-colors hover:bg-muted"
+			>
+				<div class="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+					<Trophy class="h-4 w-4" />
+				</div>
+				<span class="text-sm font-medium">{m.achievements_title()}</span>
 			</a>
 			<a
 				href={resolve('/settings')}
