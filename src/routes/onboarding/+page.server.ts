@@ -13,7 +13,7 @@ type ResolvedInviteUser =
 			reason: 'invite_invalid' | 'email_mismatch' | 'auth_misconfigured';
 	  };
 
-function isSupabaseAuthSecretError(message: string): boolean {
+export function isSupabaseAuthSecretError(message: string): boolean {
 	return /invalid jwt|unable to parse or verify signature|signing method hs256 is invalid/i.test(
 		message
 	);
@@ -513,11 +513,11 @@ export const actions: Actions = {
 	}
 };
 
-function hashOtp(value: string): string {
+export function hashOtp(value: string): string {
 	return createHash('sha256').update(value).digest('hex');
 }
 
-function normalizeSwissPhone(phoneNumberRaw: string): string | null {
+export function normalizeSwissPhone(phoneNumberRaw: string): string | null {
 	const compact = phoneNumberRaw.replace(/\s+/g, '').replace(/[()-]/g, '');
 	if (!compact) return null;
 	if (/^\+41\d{9}$/.test(compact)) return compact;
