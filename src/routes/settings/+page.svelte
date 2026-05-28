@@ -10,6 +10,11 @@
 	import { ArrowLeft, User, Globe, LogOut, Loader2, Moon, Sun, Camera, ShieldAlert, MapPin, Trash2 } from 'lucide-svelte';
 	import { theme } from '$lib/themeStore';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
+	import * as Select from '$lib/components/ui/select';
+	import { palette, type Palette } from '$lib/paletteStore';
+
+	let currentPalette = $state<Palette>('default');
+	palette.subscribe((p) => { currentPalette = p; });
 
 	let { data, form } = $props();
 
@@ -27,7 +32,6 @@
 	let lastName = $state(data.profile?.last_name ?? '');
 	let emailValue = $state(data.email ?? '');
 
-	// Keep form fields in sync when data refreshes after a successful save
 	$effect(() => {
 		firstName = data.profile?.first_name ?? '';
 		lastName = data.profile?.last_name ?? '';
@@ -60,6 +64,7 @@
 	function toggleTheme() {
 		theme.toggle();
 	}
+
 
 	async function compressImage(file: File): Promise<Blob> {
 		return new Promise((resolve, reject) => {
@@ -357,6 +362,24 @@
 									{/if}
 								</span>
 							</button>
+							<div class="mt-4 flex flex-col gap-2">
+								<span class="text-muted-foreground">Farbschema</span>
+								<Select.Root
+										type="single"
+										value={currentPalette}
+										onValueChange={(v) => palette.set(v as Palette)}
+								>
+									<Select.Trigger class="w-44">
+										{{ default: 'Standard', deuteranopia: 'Deuteranopie', protanopia: 'Protanopie', monochrome: 'Monochrom' }[currentPalette]}
+									</Select.Trigger>
+									<Select.Content>
+										<Select.Item value="default" label="Standard">Standard</Select.Item>
+										<Select.Item value="deuteranopia" label="Deuteranopie">Deuteranopie</Select.Item>
+										<Select.Item value="protanopia" label="Protanopie">Protanopie</Select.Item>
+										<Select.Item value="monochrome" label="Monochrom">Monochrom</Select.Item>
+									</Select.Content>
+								</Select.Root>
+							</div>
 						</div>
 					</div>
 				</div>

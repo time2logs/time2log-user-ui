@@ -91,7 +91,7 @@
 				<Card.Description>{m.stats_weekly_hours_desc()}</Card.Description>
 			</Card.Header>
 			<Card.Content class="pb-0">
-				<div class="h-64 w-full">
+				<div class="h-64 w-full [&_text]:fill-foreground">
 					<Chart
 						data={weeklyData}
 						x="label"
