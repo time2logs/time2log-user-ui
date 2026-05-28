@@ -25,192 +25,234 @@ export type LevelInfo = {
 	progress: number;
 };
 
-const MS_PER_DAY = 86_400_000;
+export type SickMonthBucket = { monthIndex: number; days: number };
+
+// JS Date.getDay(): 0 = Sunday, 6 = Saturday. Swiss/EU weeks start on Monday,
+// but Saturday and Sunday are still the weekend, so this is locale-agnostic.
+const SUNDAY = 0;
+const SATURDAY = 6;
 
 function parseIsoDate(iso: string): Date {
-	const [y, m, d] = iso.split('-').map(Number);
-	return new Date(y, m - 1, d);
+	const [year, month, day] = iso.split('-').map(Number);
+	return new Date(year, month - 1, day);
 }
 
 function isWeekend(date: Date): boolean {
-	const day = date.getDay();
-	return day === 0 || day === 6;
+	const dayOfWeek = date.getDay();
+	return dayOfWeek === SUNDAY || dayOfWeek === SATURDAY;
+}
+
+export function addDays(iso: string, dayDelta: number): string {
+	const date = parseIsoDate(iso);
+	date.setDate(date.getDate() + dayDelta);
+	return isoFromDate(date);
+}
+
+export function subtractYears(iso: string, yearDelta: number): string {
+	const date = parseIsoDate(iso);
+	date.setFullYear(date.getFullYear() - yearDelta);
+	return isoFromDate(date);
+}
+
+function* iterateDates(fromIso: string, toIso: string): Generator<string> {
+	if (toIso < fromIso) return;
+	let cursorIso = fromIso;
+	while (cursorIso <= toIso) {
+		yield cursorIso;
+		cursorIso = addDays(cursorIso, 1);
+	}
 }
 
 export function computeTopLocations(
 	activities: ActivityRecord[],
-	topN: number = 5,
-	otherLabel: string = 'Other'
+	topN: number,
+	otherLabel: string
 ): LocationStat[] {
-	const map = new Map<string, { hours: number; entries: number }>();
-	for (const a of activities) {
-		const loc = (a.location ?? '').trim();
-		if (!loc) continue;
-		const cur = map.get(loc) ?? { hours: 0, entries: 0 };
-		cur.hours += a.hours;
-		cur.entries += 1;
-		map.set(loc, cur);
+	const totalsByLocation = new Map<string, { hours: number; entries: number }>();
+	for (const activity of activities) {
+		const location = (activity.location ?? '').trim();
+		if (!location) continue;
+		const existing = totalsByLocation.get(location) ?? { hours: 0, entries: 0 };
+		existing.hours += activity.hours;
+		existing.entries += 1;
+		totalsByLocation.set(location, existing);
 	}
-	const sorted = [...map.entries()].sort((a, b) => b[1].hours - a[1].hours);
-	const top = sorted.slice(0, topN).map(([location, v]) => ({ location, ...v }));
-	const rest = sorted.slice(topN);
-	if (rest.length > 0) {
-		const totals = rest.reduce(
-			(acc, [, v]) => ({ hours: acc.hours + v.hours, entries: acc.entries + v.entries }),
+
+	const sorted = [...totalsByLocation.entries()].sort(
+		([, left], [, right]) => right.hours - left.hours
+	);
+	const ranked = sorted.slice(0, topN).map(([location, totals]) => ({ location, ...totals }));
+	const remainder = sorted.slice(topN);
+
+	if (remainder.length > 0) {
+		const aggregated = remainder.reduce(
+			(acc, [, totals]) => ({
+				hours: acc.hours + totals.hours,
+				entries: acc.entries + totals.entries
+			}),
 			{ hours: 0, entries: 0 }
 		);
-		top.push({ location: otherLabel, ...totals });
+		ranked.push({ location: otherLabel, ...aggregated });
 	}
-	return top;
+	return ranked;
 }
 
-function eachDayInRange(fromIso: string, toIso: string): string[] {
-	const from = parseIsoDate(fromIso);
-	const to = parseIsoDate(toIso);
-	if (to < from) return [];
-	const dates: string[] = [];
-	for (let t = from.getTime(); t <= to.getTime(); t += MS_PER_DAY) {
-		dates.push(isoFromDate(new Date(t)));
+/**
+ * Pre-compute the sick-day fraction per ISO date within [fromIso, toIso].
+ * Doing this once per range lets callers do O(1) Map lookups instead of
+ * re-running `isDateInAbsence` per (date × absence) pair.
+ */
+function buildSickFractionByDate(
+	absences: AbsenceRecord[],
+	fromIso: string,
+	toIso: string
+): Map<string, number> {
+	const fractionsByDate = new Map<string, number>();
+	const sickAbsences = absences.filter((absence) => absence.absence_type_id === 'sick');
+	if (sickAbsences.length === 0 || toIso < fromIso) return fractionsByDate;
+
+	for (const absence of sickAbsences) {
+		const fraction = Number(absence.day_fraction ?? 1);
+
+		if (absence.is_recurring && absence.rrule) {
+			// For recurring rules we still need to ask `isDateInAbsence` per day in range;
+			// rules can match arbitrary days so there's no shortcut without the rrule lib.
+			for (const dateIso of iterateDates(fromIso, toIso)) {
+				if (isWeekend(parseIsoDate(dateIso))) continue;
+				if (!isDateInAbsence(dateIso, absence)) continue;
+				const current = fractionsByDate.get(dateIso) ?? 0;
+				fractionsByDate.set(dateIso, Math.min(1, current + fraction));
+			}
+			continue;
+		}
+
+		// Non-recurring: iterate only the absence's own range, clipped to [fromIso, toIso].
+		const startIso = absence.start_date > fromIso ? absence.start_date : fromIso;
+		const endIso = absence.end_date < toIso ? absence.end_date : toIso;
+		for (const dateIso of iterateDates(startIso, endIso)) {
+			if (isWeekend(parseIsoDate(dateIso))) continue;
+			const current = fractionsByDate.get(dateIso) ?? 0;
+			fractionsByDate.set(dateIso, Math.min(1, current + fraction));
+		}
 	}
-	return dates;
+
+	return fractionsByDate;
 }
 
-function sumSickFractionForDate(date: string, sickAbsences: AbsenceRecord[]): number {
-	let sum = 0;
-	for (const a of sickAbsences) {
-		if (isDateInAbsence(date, a)) sum += Number(a.day_fraction ?? 1);
-	}
-	return Math.min(1, sum);
+function sumFractions(fractionsByDate: Map<string, number>): number {
+	let total = 0;
+	for (const fraction of fractionsByDate.values()) total += fraction;
+	return Math.round(total * 100) / 100;
 }
 
-function getEarliestSickDate(sickAbsences: AbsenceRecord[]): string | null {
+function getEarliestSickStartDate(absences: AbsenceRecord[]): string | null {
 	let earliest: string | null = null;
-	for (const a of sickAbsences) {
-		if (!earliest || a.start_date < earliest) earliest = a.start_date;
+	for (const absence of absences) {
+		if (absence.absence_type_id !== 'sick') continue;
+		if (!earliest || absence.start_date < earliest) earliest = absence.start_date;
 	}
 	return earliest;
 }
 
-export function computeSickDays(
-	absences: AbsenceRecord[],
-	range?: { from: string; to: string }
-): number {
-	const sick = absences.filter((a) => a.absence_type_id === 'sick');
-	if (sick.length === 0) return 0;
-
-	const fromIso = range?.from ?? getEarliestSickDate(sick);
-	const toIso = range?.to ?? isoFromDate(new Date());
-	if (!fromIso) return 0;
-
-	let total = 0;
-	for (const date of eachDayInRange(fromIso, toIso)) {
-		const d = parseIsoDate(date);
-		if (isWeekend(d)) continue;
-		total += sumSickFractionForDate(date, sick);
-	}
-	return Math.round(total * 100) / 100;
+export function computeSickDays(absences: AbsenceRecord[], fromIso: string, toIso: string): number {
+	return sumFractions(buildSickFractionByDate(absences, fromIso, toIso));
 }
 
-export function computeSickDaysByMonth(
-	absences: AbsenceRecord[],
-	year: number
-): { month: string; monthIndex: number; days: number }[] {
-	const sick = absences.filter((a) => a.absence_type_id === 'sick');
-	const buckets: { month: string; monthIndex: number; days: number }[] = [];
-	const monthLabels = [
-		'Jan',
-		'Feb',
-		'Mär',
-		'Apr',
-		'Mai',
-		'Jun',
-		'Jul',
-		'Aug',
-		'Sep',
-		'Okt',
-		'Nov',
-		'Dez'
-	];
+export function computeSickDaysAllTime(absences: AbsenceRecord[], todayIso: string): number {
+	const earliestStart = getEarliestSickStartDate(absences);
+	if (!earliestStart) return 0;
+	return computeSickDays(absences, earliestStart, todayIso);
+}
 
-	for (let m = 0; m < 12; m++) {
-		const firstDay = new Date(year, m, 1);
-		const lastDay = new Date(year, m + 1, 0);
-		const from = isoFromDate(firstDay);
-		const to = isoFromDate(lastDay);
-		let days = 0;
-		if (sick.length > 0) {
-			for (const date of eachDayInRange(from, to)) {
-				const d = parseIsoDate(date);
-				if (isWeekend(d)) continue;
-				days += sumSickFractionForDate(date, sick);
-			}
-		}
-		buckets.push({ month: monthLabels[m], monthIndex: m, days: Math.round(days * 100) / 100 });
+export function computeSickDaysByMonth(absences: AbsenceRecord[], year: number): SickMonthBucket[] {
+	const yearStart = `${year}-01-01`;
+	const yearEnd = `${year}-12-31`;
+	const fractionsByDate = buildSickFractionByDate(absences, yearStart, yearEnd);
+
+	const buckets: SickMonthBucket[] = Array.from({ length: 12 }, (_, monthIndex) => ({
+		monthIndex,
+		days: 0
+	}));
+	for (const [dateIso, fraction] of fractionsByDate) {
+		const monthIndex = parseIsoDate(dateIso).getMonth();
+		buckets[monthIndex].days += fraction;
 	}
+	for (const bucket of buckets) bucket.days = Math.round(bucket.days * 100) / 100;
 	return buckets;
 }
 
-function isSickOnDate(date: string, sickAbsences: AbsenceRecord[]): boolean {
-	for (const a of sickAbsences) {
-		if (isDateInAbsence(date, a)) return true;
+function buildAbsenceBlockedDates(
+	absences: AbsenceRecord[],
+	fromIso: string,
+	toIso: string
+): Set<string> {
+	const blocked = new Set<string>();
+	if (toIso < fromIso) return blocked;
+
+	for (const absence of absences) {
+		if (absence.is_recurring && absence.rrule) {
+			for (const dateIso of iterateDates(fromIso, toIso)) {
+				if (isDateInAbsence(dateIso, absence)) blocked.add(dateIso);
+			}
+			continue;
+		}
+		const startIso = absence.start_date > fromIso ? absence.start_date : fromIso;
+		const endIso = absence.end_date < toIso ? absence.end_date : toIso;
+		for (const dateIso of iterateDates(startIso, endIso)) blocked.add(dateIso);
 	}
-	return false;
+	return blocked;
 }
 
 export function computeCurrentStreak(
 	activities: ActivityRecord[],
 	absences: AbsenceRecord[],
-	today: Date
+	todayIso: string
 ): number {
-	const sick = absences.filter((a) => a.absence_type_id === 'sick');
-	const allAbsences = absences;
-	const activityDates = new Set(activities.map((a) => a.entry_date));
+	const activityDates = new Set(activities.map((activity) => activity.entry_date));
+	if (activityDates.size === 0) return 0;
+
+	// Look back at most ~10 years; the streak can only be as long as the user has data.
+	const lookbackStartIso = subtractYears(todayIso, 10);
+	const blockedDates = buildAbsenceBlockedDates(absences, lookbackStartIso, todayIso);
 
 	let streak = 0;
-	let cursor = new Date(today);
-	cursor.setHours(0, 0, 0, 0);
-	let safety = 0;
-
-	while (safety++ < 3650) {
-		if (isWeekend(cursor)) {
-			cursor = new Date(cursor.getTime() - MS_PER_DAY);
-			continue;
+	let cursorIso = todayIso;
+	while (cursorIso >= lookbackStartIso) {
+		const cursorDate = parseIsoDate(cursorIso);
+		const skip = isWeekend(cursorDate) || blockedDates.has(cursorIso);
+		if (!skip) {
+			if (activityDates.has(cursorIso)) {
+				streak += 1;
+			} else {
+				break;
+			}
 		}
-		const iso = isoFromDate(cursor);
-		if (isSickOnDate(iso, sick) || allAbsences.some((a) => isDateInAbsence(iso, a))) {
-			cursor = new Date(cursor.getTime() - MS_PER_DAY);
-			continue;
-		}
-		if (activityDates.has(iso)) {
-			streak++;
-			cursor = new Date(cursor.getTime() - MS_PER_DAY);
-		} else {
-			break;
-		}
+		cursorIso = addDays(cursorIso, -1);
 	}
 	return streak;
 }
 
 export function computeLongestStreak(
 	activities: ActivityRecord[],
-	absences: AbsenceRecord[]
+	absences: AbsenceRecord[],
+	todayIso: string
 ): number {
 	if (activities.length === 0) return 0;
-	const activityDates = new Set(activities.map((a) => a.entry_date));
-	const sortedDates = [...activityDates].sort();
-	const firstIso = sortedDates[0];
-	const today = new Date();
-	today.setHours(0, 0, 0, 0);
-	const todayIso = isoFromDate(today);
+
+	const activityDates = new Set(activities.map((activity) => activity.entry_date));
+	const firstDateIso = [...activityDates].reduce(
+		(earliest, dateIso) => (dateIso < earliest ? dateIso : earliest),
+		todayIso
+	);
+	const blockedDates = buildAbsenceBlockedDates(absences, firstDateIso, todayIso);
 
 	let longest = 0;
 	let current = 0;
-	for (const date of eachDayInRange(firstIso, todayIso)) {
-		const d = parseIsoDate(date);
-		if (isWeekend(d)) continue;
-		if (absences.some((a) => isDateInAbsence(date, a))) continue;
-		if (activityDates.has(date)) {
-			current++;
+	for (const dateIso of iterateDates(firstDateIso, todayIso)) {
+		if (isWeekend(parseIsoDate(dateIso))) continue;
+		if (blockedDates.has(dateIso)) continue;
+		if (activityDates.has(dateIso)) {
+			current += 1;
 			if (current > longest) longest = current;
 		} else {
 			current = 0;
@@ -220,49 +262,54 @@ export function computeLongestStreak(
 }
 
 export function computeLevel(totalHours: number): LevelInfo {
-	const safe = Math.max(0, totalHours);
-	const level = Math.floor(Math.sqrt(safe / 10)) + 1;
-	const currentLevelStart = 10 * Math.pow(level - 1, 2);
-	const nextLevelStart = 10 * Math.pow(level, 2);
-	const xpInLevel = Math.round((safe - currentLevelStart) * 100) / 100;
+	const safeHours = Math.max(0, totalHours);
+	const level = Math.floor(Math.sqrt(safeHours / 10)) + 1;
+	const currentLevelStart = 10 * (level - 1) ** 2;
+	const nextLevelStart = 10 * level ** 2;
+	const xpInLevel = Math.round((safeHours - currentLevelStart) * 100) / 100;
 	const xpForNext = Math.round((nextLevelStart - currentLevelStart) * 100) / 100;
 	const progress = xpForNext > 0 ? Math.min(1, xpInLevel / xpForNext) : 0;
 	return { level, xpInLevel, xpForNext, progress };
 }
 
-export function computeWorkdaysSince(startDate: string, today: Date): number {
-	const todayIso = isoFromDate(today);
-	let count = 0;
-	for (const date of eachDayInRange(startDate, todayIso)) {
-		const d = parseIsoDate(date);
-		if (!isWeekend(d)) count++;
+export function computeWorkdaysSince(startIso: string, todayIso: string): number {
+	let workdayCount = 0;
+	for (const dateIso of iterateDates(startIso, todayIso)) {
+		if (!isWeekend(parseIsoDate(dateIso))) workdayCount += 1;
 	}
-	return count;
+	return workdayCount;
 }
 
 function computeMaxHoursInSingleDay(activities: ActivityRecord[]): number {
-	const perDay = new Map<string, number>();
-	for (const a of activities) {
-		perDay.set(a.entry_date, (perDay.get(a.entry_date) ?? 0) + a.hours);
+	const hoursByDate = new Map<string, number>();
+	for (const activity of activities) {
+		hoursByDate.set(
+			activity.entry_date,
+			(hoursByDate.get(activity.entry_date) ?? 0) + activity.hours
+		);
 	}
 	let max = 0;
-	for (const h of perDay.values()) if (h > max) max = h;
+	for (const hours of hoursByDate.values()) if (hours > max) max = hours;
 	return max;
 }
 
-function computeDaysSinceLastSick(absences: AbsenceRecord[], today: Date): number {
-	const sick = absences.filter((a) => a.absence_type_id === 'sick');
-	if (sick.length === 0) return Number.POSITIVE_INFINITY;
+function computeDaysSinceLastSick(absences: AbsenceRecord[], todayIso: string): number {
+	const earliestStart = getEarliestSickStartDate(absences);
+	if (!earliestStart) return Number.POSITIVE_INFINITY;
 
-	let cursor = new Date(today);
-	cursor.setHours(0, 0, 0, 0);
+	// Find the most recent sick date by walking backwards through the
+	// pre-computed fraction map — much cheaper than per-day `isDateInAbsence`.
+	const fractionsByDate = buildSickFractionByDate(absences, earliestStart, todayIso);
+	if (fractionsByDate.size === 0) return Number.POSITIVE_INFINITY;
+
+	const sickDates = [...fractionsByDate.keys()].sort();
+	const lastSickIso = sickDates[sickDates.length - 1];
+
 	let days = 0;
-	let safety = 0;
-	while (safety++ < 3650) {
-		const iso = isoFromDate(cursor);
-		if (isSickOnDate(iso, sick)) break;
-		days++;
-		cursor = new Date(cursor.getTime() - MS_PER_DAY);
+	let cursorIso = todayIso;
+	while (cursorIso > lastSickIso) {
+		days += 1;
+		cursorIso = addDays(cursorIso, -1);
 	}
 	return days;
 }
@@ -270,20 +317,20 @@ function computeDaysSinceLastSick(absences: AbsenceRecord[], today: Date): numbe
 export function computeAchievements(
 	activities: ActivityRecord[],
 	absences: AbsenceRecord[],
-	today: Date
+	todayIso: string
 ): AchievementStatus[] {
-	const totalHours = activities.reduce((s, a) => s + a.hours, 0);
-	const longestStreak = computeLongestStreak(activities, absences);
-	const distinctActivities = new Set(activities.map((a) => a.activity_name)).size;
+	const totalHours = activities.reduce((sum, activity) => sum + activity.hours, 0);
+	const longestStreak = computeLongestStreak(activities, absences, todayIso);
+	const distinctActivities = new Set(activities.map((activity) => activity.activity_name)).size;
 	const distinctLocations = new Set(
-		activities.map((a) => (a.location ?? '').trim()).filter((l) => l.length > 0)
+		activities
+			.map((activity) => (activity.location ?? '').trim())
+			.filter((location) => location.length > 0)
 	).size;
-	const maxDayHours = computeMaxHoursInSingleDay(activities);
-	const daysSinceSick = computeDaysSinceLastSick(absences, today);
+	const maxHoursInSingleDay = computeMaxHoursInSingleDay(activities);
+	const daysSinceSick = computeDaysSinceLastSick(absences, todayIso);
 
-	const defs: Array<
-		Omit<AchievementStatus, 'current' | 'unlocked' | 'progress'> & { current: number }
-	> = [
+	const definitions: Array<Omit<AchievementStatus, 'unlocked' | 'progress'>> = [
 		{
 			id: 'first_log',
 			labelKey: 'ach_first_log',
@@ -371,7 +418,7 @@ export function computeAchievements(
 			descriptionKey: 'ach_marathon_day_desc',
 			icon: 'Zap',
 			threshold: 8,
-			current: maxDayHours,
+			current: maxHoursInSingleDay,
 			unit: 'hours'
 		},
 		{
@@ -385,9 +432,9 @@ export function computeAchievements(
 		}
 	];
 
-	return defs.map((d) => {
-		const unlocked = d.current >= d.threshold;
-		const progress = Math.min(1, d.current / d.threshold);
-		return { ...d, unlocked, progress };
-	});
+	return definitions.map((definition) => ({
+		...definition,
+		unlocked: definition.current >= definition.threshold,
+		progress: Math.min(1, definition.current / definition.threshold)
+	}));
 }

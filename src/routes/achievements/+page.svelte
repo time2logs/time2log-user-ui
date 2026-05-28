@@ -12,16 +12,19 @@
 
 	import { activityStore } from '$lib/activityStorage';
 	import { absenceStore } from '$lib/absenceStorage';
-	import { computeActivityBreakdown, computeTotalHours, isoFromDate } from '$lib/statsUtils';
+	import { computeActivityBreakdown, computeTotalHours } from '$lib/statsUtils';
 	import {
 		computeAchievements,
 		computeCurrentStreak,
 		computeLevel,
 		computeSickDays,
+		computeSickDaysAllTime,
 		computeSickDaysByMonth,
 		computeTopLocations,
-		computeWorkdaysSince
+		computeWorkdaysSince,
+		subtractYears
 	} from '$lib/achievementsUtils';
+	import { today as getLocalToday, getLocalTimeZone } from '@internationalized/date';
 	import type { CurriculumNodeSummary } from '$lib/types';
 
 	type PageData = {
@@ -42,48 +45,39 @@
 		void absenceStore.load();
 	});
 
-	const today = $derived(new Date());
-	const currentYear = $derived(today.getFullYear());
+	const todayIso = getLocalToday(getLocalTimeZone()).toString();
+	const currentYear = Number(todayIso.slice(0, 4));
+	const yearStartIso = `${currentYear}-01-01`;
+	const yearEndIso = `${currentYear}-12-31`;
+	const last12MonthsStartIso = subtractYears(todayIso, 1);
 
 	const totalHours = $derived(computeTotalHours(activities));
 	const level = $derived(computeLevel(totalHours));
-	const currentStreak = $derived(computeCurrentStreak(activities, absences, today));
+	const currentStreak = $derived(computeCurrentStreak(activities, absences, todayIso));
 
 	const topLocations = $derived(computeTopLocations(activities, 5, m.ach_other()));
 	const topActivities = $derived(
 		computeActivityBreakdown(activities, 10, m.ach_other()).filter((s) => s.name !== m.ach_other())
 	);
 
-	const sickThisYear = $derived(
-		computeSickDays(absences, {
-			from: `${currentYear}-01-01`,
-			to: `${currentYear}-12-31`
-		})
-	);
-	const sickLast12Months = $derived(
-		(() => {
-			// eslint-disable-next-line svelte/prefer-svelte-reactivity
-			const from = new Date(today);
-			from.setFullYear(from.getFullYear() - 1);
-			return computeSickDays(absences, { from: isoFromDate(from), to: isoFromDate(today) });
-		})()
-	);
-	const sickAllTime = $derived(computeSickDays(absences));
+	const sickThisYear = $derived(computeSickDays(absences, yearStartIso, yearEndIso));
+	const sickLast12Months = $derived(computeSickDays(absences, last12MonthsStartIso, todayIso));
+	const sickAllTime = $derived(computeSickDaysAllTime(absences, todayIso));
 	const sickByMonth = $derived(computeSickDaysByMonth(absences, currentYear));
 
-	const earliestActivityDate = $derived(
+	const earliestActivityIso = $derived(
 		activities.length > 0
 			? activities.reduce(
-					(min, a) => (a.entry_date < min ? a.entry_date : min),
+					(earliest, activity) => (activity.entry_date < earliest ? activity.entry_date : earliest),
 					activities[0].entry_date
 				)
 			: null
 	);
 	const workdaysAllTime = $derived(
-		earliestActivityDate ? computeWorkdaysSince(earliestActivityDate, today) : 0
+		earliestActivityIso ? computeWorkdaysSince(earliestActivityIso, todayIso) : 0
 	);
 
-	const achievements = $derived(computeAchievements(activities, absences, today));
+	const achievements = $derived(computeAchievements(activities, absences, todayIso));
 </script>
 
 <div class="relative flex min-h-screen flex-col bg-background text-foreground">
