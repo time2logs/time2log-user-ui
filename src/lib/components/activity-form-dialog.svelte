@@ -5,6 +5,7 @@
 	import * as Select from '$lib/components/ui/select';
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
+	import { formatHoursMinutes } from '$lib/utils';
 	type Depth = number;
 	import { Textarea } from '$lib/components/ui/textarea';
 	import {
@@ -80,7 +81,9 @@
 	let expanded = new SvelteSet<string>();
 	let selectedActivityId = $state<string>('');
 	let rating = $state<number>(0);
-	let hours = $state<number>(0);
+	let inputHours = $state<number>(0);
+	let inputMinutes = $state<number>(0);
+	const hours = $derived(inputHours + inputMinutes / 60);
 	let location = $state<string>('');
 	let notes = $state<string>('');
 	let isSubmitting = $state(false);
@@ -97,7 +100,8 @@
 			if (activityToEdit) {
 				selectedActivityId = activityToEdit.curriculum_activity_id;
 				rating = activityToEdit.rating || 0;
-				hours = activityToEdit.hours;
+				inputHours = Math.floor(activityToEdit.hours);
+				inputMinutes = Math.round((activityToEdit.hours % 1) * 60);
 				location = activityToEdit.location || '';
 				notes = activityToEdit.notes || '';
 			} else {
@@ -108,7 +112,8 @@
 					selectedActivityId = activityNodes[0].id;
 				}
 				rating = 0;
-				hours = 0;
+				inputHours = 0;
+				inputMinutes = 0;
 				const lastLoc = getLastLocation();
 				location =
 					lastLoc && userLocations?.includes(lastLoc) ? lastLoc : (userLocations?.[0] ?? '');
@@ -160,7 +165,8 @@
 			}
 		];
 
-		hours = 0;
+		inputHours = 0;
+		inputMinutes = 0;
 		notes = '';
 		rating = 0;
 		if (activityNodes.length > 0) selectedActivityId = activityNodes[0].id;
@@ -395,7 +401,7 @@
 						<div class="flex items-center gap-2 text-sm">
 							<span class="font-mono text-xs text-muted-foreground">{entry.activity_key}</span>
 							<span class="min-w-0 flex-1 truncate text-foreground">{entry.activity_name}</span>
-							<span class="shrink-0 text-muted-foreground">{entry.hours}h</span>
+							<span class="font-medium">{formatHoursMinutes(entry.hours)}</span>
 							<Button
 								variant="ghost"
 								size="icon"
@@ -506,34 +512,49 @@
 
 			<!-- Time Input -->
 			<div class="grid gap-2">
-				<Label for="hours">{m.hours_label()}</Label>
-				<Input
-					id="hours"
-					type="number"
-					min={MIN_HOURS}
-					max={MAX_HOURS_PER_ENTRY}
-					step="1"
-					bind:value={hours}
-					placeholder={m.hours_placeholder()}
-					aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
-				/>
-				{#if hoursExceedsMax}
-					<p class="text-sm text-red-600">
-						{m.error_hours_max_entry({ max: MAX_HOURS_PER_ENTRY.toString() })}
-					</p>
-				{:else if wouldExceedDailyMax && hours > 0}
-					<p class="text-sm text-red-600">
-						{m.error_hours_max_day({
-							max: maxHoursForDate.toString(),
-							remaining: Math.max(0, maxHoursForDate - currentDayHours).toString()
-						})}
-					</p>
-				{:else if hours > 0 && hours < MIN_HOURS}
-					<p class="text-sm text-amber-600">
-						{m.error_hours_min({ min: MIN_HOURS.toString() })}
-					</p>
-				{/if}
+				<Label>{m.hours_label()}</Label>
+				<div class="flex gap-2">
+					<div class="flex flex-1 items-center gap-1">
+						<Input
+								type="number"
+								min="0"
+								max="10"
+								step="1"
+								bind:value={inputHours}
+								aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
+						/>
+						<span class="text-sm text-muted-foreground">h</span>
+					</div>
+					<div class="flex flex-1 items-center gap-1">
+						<Input
+								type="number"
+								min="0"
+								max="55"
+								step="5"
+								bind:value={inputMinutes}
+								aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
+						/>
+						<span class="text-sm text-muted-foreground">min</span>
+					</div>
+				</div>
 			</div>
+			{#if hoursExceedsMax}
+				<p class="text-sm text-red-600">
+					{m.error_hours_max_entry({ max: MAX_HOURS_PER_ENTRY.toString() })}
+				</p>
+			{:else if wouldExceedDailyMax && hours > 0}
+				<p class="text-sm text-red-600">
+					{m.error_hours_max_day({
+						max: maxHoursForDate.toString(),
+						remaining: Math.max(0, maxHoursForDate - currentDayHours).toString()
+					})}
+				</p>
+			{:else if hours > 0 && hours < MIN_HOURS}
+				<p class="text-sm text-amber-600">
+					{m.error_hours_min({ min: MIN_HOURS.toString() })}
+				</p>
+			{/if}
+		</div>
 
 			<!-- Location -->
 			<div class="grid gap-2">
@@ -561,7 +582,6 @@
 				<Label for="notes">{m.notes_optional()}</Label>
 				<Textarea id="notes" bind:value={notes} placeholder={m.notes_placeholder()} />
 			</div>
-		</div>
 
 		<Dialog.Footer class={activityToEdit ? 'flex gap-2' : ''}>
 			{#if activityToEdit}
