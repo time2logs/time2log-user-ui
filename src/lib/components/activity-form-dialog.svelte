@@ -333,6 +333,11 @@
 				}).format(new Date(`${selectedDate}T12:00:00`))
 			: null
 	);
+
+	function openDeleteDialog() {
+		deleteDialogOpen = true;
+		open = false;
+	}
 </script>
 
 <Dialog.Root bind:open>
@@ -430,7 +435,10 @@
 										{/if}
 										<Folder class="pointer-events-none h-4 w-4 text-primary" />
 										<span class="font-mono text-sm text-muted-foreground">{node.key}</span>
-										<span class="text-sm font-medium text-foreground">{getCurriculumLabel(node)}</span>									</button>
+										<span class="text-sm font-medium text-foreground"
+											>{getCurriculumLabel(node)}</span
+										>
+									</button>
 
 									{#if expanded.has(node.id)}
 										{#each node.children as child (child.id)}
@@ -450,7 +458,10 @@
 										<span class="w-4"></span>
 										<FileText class="pointer-events-none h-4 w-4 text-muted-foreground" />
 										<span class="font-mono text-sm text-muted-foreground">{node.key}</span>
-										<span class="text-sm font-medium text-foreground">{getCurriculumLabel(node)}</span>										{#if selectedActivityId === node.id}
+										<span class="text-sm font-medium text-foreground"
+											>{getCurriculumLabel(node)}</span
+										>
+										{#if selectedActivityId === node.id}
 											<Check class="pointer-events-none ml-auto h-4 w-4 text-primary" />
 										{/if}
 									</button>
@@ -465,7 +476,9 @@
 				</div>
 				{#if selectedActivity}
 					<p class="text-sm text-muted-foreground">
-						{m.selected_activity({ name: `${selectedActivity.key} - ${getCurriculumLabel(selectedActivity)}` })}
+						{m.selected_activity({
+							name: `${selectedActivity.key} - ${getCurriculumLabel(selectedActivity)}`
+						})}
 					</p>
 				{/if}
 			</div>
@@ -554,7 +567,7 @@
 			{#if activityToEdit}
 				<Button
 					variant="destructive"
-					onclick={() => (deleteDialogOpen = true)}
+					onclick={() => openDeleteDialog()}
 					disabled={isSubmitting || isDeleting}
 					class="flex-1"
 				>
