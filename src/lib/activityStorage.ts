@@ -204,6 +204,51 @@ function createActivityStore() {
 			updateStore((activities) => [newActivity, ...activities]);
 			return newActivity;
 		},
+		addMany: async (
+			activities: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>[]
+		): Promise<ActivityRecord[]> => {
+			if (activities.length === 0) return [];
+
+			debugLog('Adding multiple activities via store', { count: activities.length });
+
+			const rows = activities.map((a) => ({
+				organization_id: a.organization_id,
+				profession_id: a.profession_id,
+				user_id: a.user_id,
+				team_id: a.team_id,
+				curriculum_activity_id: a.curriculum_activity_id,
+				entry_date: a.entry_date,
+				hours: a.hours,
+				notes: a.notes,
+				rating: a.rating,
+				location: a.location
+			}));
+
+			const { data, error } = await supabase.from('activity_records').insert(rows).select();
+
+			if (error) {
+				console.error('[ActivityStorage] Error bulk inserting to Supabase:', error);
+				throw new Error(error.message || 'Failed to save activities');
+			}
+
+			debugLog('Activities saved to Supabase:', data);
+
+			const last = activities[activities.length - 1];
+			if (typeof window !== 'undefined') {
+				localStorage.setItem(LAST_ACTIVITY_KEY, last.curriculum_activity_id);
+				if (last.location) localStorage.setItem(LAST_LOCATION_KEY, last.location);
+			}
+
+			const newActivities: ActivityRecord[] = data.map((row, i) => ({
+				...row,
+				activity_name: activities[i].activity_name || '',
+				activity_key: activities[i].activity_key || '',
+				activity_label: activities[i].activity_label || ''
+			}));
+
+			updateStore((existing) => [...newActivities, ...existing]);
+			return newActivities;
+		},
 		delete: async (id: string): Promise<boolean> => {
 			debugLog('Deleting activity via store', { id });
 

@@ -230,5 +230,8 @@
 	"home_seeitinaction_subtitle": "Une interface propre et intuitive conçue pour vous",
 	"home_cta_title": "Prêt à Commencer?",
 	"home_cta_description": "Rejoignez les autres qui suivent déjà leur parcours d'apprentissage",
-	"home_cta_button": "Commencer Maintenant"
+	"home_cta_button": "Commencer Maintenant",
+	"add_another_activity": "Ajouter une autre",
+	"submit_all_button": "Tout enregistrer ({count})",
+	"queued_activities_label": "File d'attente ({count})"
 }
