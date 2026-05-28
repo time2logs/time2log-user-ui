@@ -219,7 +219,7 @@
 						<!-- Action Buttons -->
 						{#if isWithinEditWindow(activity.entry_date)}
 							<div
-								class="absolute top-2 right-2 flex flex-col items-center gap-0.5 sm:static sm:flex-row sm:gap-1"
+								class="absolute top-2 right-2 flex flex-row items-center gap-0.5 sm:static sm:gap-1"
 							>
 								<Button
 									variant="ghost"
@@ -235,7 +235,7 @@
 									size="icon"
 									aria-label={m.delete_activity_confirm_button()}
 									onclick={() => requestDelete(activity.id)}
-									class="hidden h-7 w-7 text-muted-foreground transition-opacity hover:bg-destructive/10 hover:text-destructive sm:flex sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
+									class="flex h-7 w-7 text-muted-foreground transition-opacity hover:bg-destructive/10 hover:text-destructive sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
 								>
 									<Trash2 class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
 								</Button>
@@ -294,7 +294,7 @@
 							{/if}
 						</div>
 						<div
-							class="absolute top-2 right-2 flex flex-col items-center gap-0.5 sm:static sm:flex-row sm:gap-1"
+							class="absolute top-2 right-2 flex flex-row items-center gap-0.5 sm:static sm:gap-1"
 						>
 							<Button
 								variant="ghost"
