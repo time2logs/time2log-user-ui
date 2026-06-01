@@ -20,3 +20,11 @@ export function isWithinEditWindow(entryDate: string, now: Date = new Date()): b
 	const diffDays = Math.floor((today.getTime() - entry.getTime()) / (1000 * 60 * 60 * 24));
 	return diffDays <= EDIT_WINDOW_DAYS;
 }
+
+export function formatHoursMinutes(hours: number): string {
+	const wholeHours = Math.floor(hours);
+	const minutes = Math.round((hours - wholeHours) * 60);
+	if (minutes === 0) return `${wholeHours}h`;
+	if (wholeHours === 0) return `${minutes}min`;
+	return `${wholeHours}h ${minutes}min`;
+}

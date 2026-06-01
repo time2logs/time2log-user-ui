@@ -7,7 +7,7 @@
 	import type { ActivityRecord, AbsenceRecord } from '$lib/types';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
-	import { isWithinEditWindow } from '$lib/utils';
+	import { formatHoursMinutes, isWithinEditWindow } from '$lib/utils';
 
 	const dateLocale = $derived(getDateLocale());
 
@@ -106,13 +106,6 @@
 		});
 	}
 
-	function formatTime(hours: number): string {
-		if (hours > 0) {
-			return `${hours}h`;
-		}
-		return '0h';
-	}
-
 	function formatBlockedHours(dayFraction: number): string {
 		const blockedHours = Math.round(dayFraction * 10 * 10) / 10;
 		return Number.isInteger(blockedHours) ? `${blockedHours}h` : `${blockedHours.toFixed(1)}h`;
@@ -190,7 +183,7 @@
 								</div>
 								<div class="flex items-center gap-1">
 									<Clock class="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-									<span class="font-medium">{formatTime(activity.hours)}</span>
+									<span class="font-medium">{formatHoursMinutes(activity.hours)}</span>
 								</div>
 								{#if activity.location}
 									<div class="flex items-center gap-1">
