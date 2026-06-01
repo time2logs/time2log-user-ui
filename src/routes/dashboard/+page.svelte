@@ -24,6 +24,7 @@
 	import { getDateLocale } from '$lib/dateLocale';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import StatsOverview from '$lib/components/stats-overview.svelte';
+	import DailyHoursProgress from '$lib/components/daily-hours-progress.svelte';
 
 	const dateLocale = $derived(getDateLocale());
 	type DashboardPageData = {
@@ -31,6 +32,7 @@
 			first_name: string;
 			last_name: string;
 			avatar_url: string | null;
+			target_hours?: number | null;
 		} | null;
 		teamMember: TeamMember | null;
 		curriculumNodes: CurriculumNode[];
@@ -90,6 +92,11 @@
 
 	const selectedDateIso = $derived(selectedDate.toString());
 	const activityDates = $derived(new Set(activities.map((a) => a.entry_date)));
+
+	const selectedDateLoggedHours = $derived(
+		activities.filter((a) => a.entry_date === selectedDateIso).reduce((sum, a) => sum + a.hours, 0)
+	);
+	const targetHours = $derived(data.profile?.target_hours ?? 8);
 	const selectedDateLabel = $derived(
 		new DateFormatter(dateLocale, {
 			weekday: 'long',
@@ -246,7 +253,7 @@
 					/>
 				</div>
 
-				<Card.Root class="order-1 flex-1 lg:order-2">
+				<Card.Root class="order-1 flex-1 gap-0 lg:order-2">
 					<Card.Header
 						class="flex flex-col gap-1 pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:pt-6"
 					>
@@ -269,6 +276,7 @@
 							</Button>
 						</div>
 					</Card.Header>
+					<DailyHoursProgress loggedHours={selectedDateLoggedHours} {targetHours} />
 					<Card.Content class="flex flex-1 flex-col p-0">
 						<ActivityList
 							onRefresh={handleActivityAdded}

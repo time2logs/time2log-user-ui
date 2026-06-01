@@ -516,27 +516,43 @@
 				<div class="flex gap-2">
 					<div class="flex flex-1 items-center gap-1">
 						<Input
-								type="number"
-								min="0"
-								max="10"
-								step="1"
-								bind:value={inputHours}
-								aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
+							type="number"
+							min="0"
+							max="10"
+							step="1"
+							bind:value={inputHours}
+							aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
 						/>
 						<span class="text-sm text-muted-foreground">h</span>
 					</div>
 					<div class="flex flex-1 items-center gap-1">
 						<Input
-								type="number"
-								min="0"
-								max="55"
-								step="5"
-								bind:value={inputMinutes}
-								aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
+							type="number"
+							min="0"
+							max="55"
+							step="5"
+							bind:value={inputMinutes}
+							aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
 						/>
 						<span class="text-sm text-muted-foreground">min</span>
 					</div>
 				</div>
+				{#if hoursExceedsMax}
+					<p class="text-sm text-red-600">
+						{m.error_hours_max_entry({ max: MAX_HOURS_PER_ENTRY.toString() })}
+					</p>
+				{:else if wouldExceedDailyMax && hours > 0}
+					<p class="text-sm text-red-600">
+						{m.error_hours_max_day({
+							max: maxHoursForDate.toString(),
+							remaining: Math.max(0, maxHoursForDate - currentDayHours).toString()
+						})}
+					</p>
+				{:else if hours > 0 && hours < MIN_HOURS}
+					<p class="text-sm text-amber-600">
+						{m.error_hours_min({ min: MIN_HOURS.toString() })}
+					</p>
+				{/if}
 			</div>
 			{#if hoursExceedsMax}
 				<p class="text-sm text-red-600">

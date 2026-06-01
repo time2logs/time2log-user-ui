@@ -98,12 +98,11 @@
 
 	function getDatesInRange(start: string, end: string): string[] {
 		const dates: string[] = [];
-		const current = new Date(`${start}T12:00:00`);
-		const endDateValue = new Date(`${end}T12:00:00`);
+		const startTime = Date.parse(`${start}T12:00:00`);
+		const endTime = Date.parse(`${end}T12:00:00`);
 
-		while (current <= endDateValue) {
-			dates.push(current.toISOString().split('T')[0]);
-			current.setDate(current.getDate() + 1);
+		for (let time = startTime; time <= endTime; time += 24 * 60 * 60 * 1000) {
+			dates.push(new Date(time).toISOString().split('T')[0]);
 		}
 
 		return dates;

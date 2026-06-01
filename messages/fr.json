@@ -233,5 +233,12 @@
 	"home_cta_button": "Commencer Maintenant",
 	"add_another_activity": "Ajouter une autre",
 	"submit_all_button": "Tout enregistrer ({count})",
-	"queued_activities_label": "File d'attente ({count})"
+	"queued_activities_label": "File d'attente ({count})",
+	"settings_target_hours_label": "Heures cibles",
+	"settings_target_hours_hint": "Nombre d'heures à rapporter par jour de travail (par défaut : 8h)",
+	"settings_target_hours_saved": "Heures cibles enregistrées avec succès.",
+	"settings_target_hours_error": "Valeur invalide. Veuillez entrer un nombre entre 1 et 24.",
+	"daily_hours_logged": "{logged}h / {target}h",
+	"daily_hours_goal_label": "Heures cibles",
+	"settings_target_hours_unit": "h / jour"
 }

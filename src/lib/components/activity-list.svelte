@@ -7,12 +7,9 @@
 	import type { ActivityRecord, AbsenceRecord } from '$lib/types';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
-	import { isWithinEditWindow } from '$lib/utils';
-	import { formatHoursMinutes } from '$lib/utils';
-
+	import { formatHoursMinutes, isWithinEditWindow } from '$lib/utils';
 
 	const dateLocale = $derived(getDateLocale());
-
 
 	let {
 		onRefresh,
@@ -108,7 +105,6 @@
 			year: 'numeric'
 		});
 	}
-
 
 	function formatBlockedHours(dayFraction: number): string {
 		const blockedHours = Math.round(dayFraction * 10 * 10) / 10;

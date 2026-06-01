@@ -7,16 +7,48 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { enhance } from '$app/forms';
-	import { ArrowLeft, User, Globe, LogOut, Loader2, Moon, Sun, Camera, ShieldAlert, MapPin, Trash2 } from 'lucide-svelte';
+	import {
+		ArrowLeft,
+		User,
+		Globe,
+		LogOut,
+		Loader2,
+		Moon,
+		Sun,
+		Camera,
+		ShieldAlert,
+		MapPin,
+		Trash2,
+		Clock
+	} from 'lucide-svelte';
 	import { theme } from '$lib/themeStore';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import * as Select from '$lib/components/ui/select';
 	import { palette, type Palette } from '$lib/paletteStore';
 
 	let currentPalette = $state<Palette>('default');
-	palette.subscribe((p) => { currentPalette = p; });
+	palette.subscribe((p) => {
+		currentPalette = p;
+	});
 
-	let { data, form } = $props();
+	type SettingsForm = {
+		profileError?: string;
+		profileSuccess?: boolean;
+		emailError?: string;
+		emailSuccess?: boolean;
+		passwordError?: string;
+		passwordSuccess?: boolean;
+		locationError?: string;
+		locationSuccess?: boolean;
+		locationDeleteSuccess?: boolean;
+		colorblindError?: string;
+		colorblindSuccess?: boolean;
+		targetHoursError?: string;
+		targetHoursSuccess?: boolean;
+	} | null;
+
+	let { data, form: rawForm } = $props();
+	const form = $derived(rawForm as SettingsForm);
 
 	let isLoggingOut = $state(false);
 	let logoutDialogOpen = $state(false);
@@ -27,6 +59,8 @@
 	let currentTheme = $state<'light' | 'dark'>('light');
 	let newLocation = $state('');
 	let isSavingLocation = $state(false);
+	let targetHoursValue = $state(data.profile?.target_hours ?? 8);
+	let isSavingTargetHours = $state(false);
 
 	let firstName = $state(data.profile?.first_name ?? '');
 	let lastName = $state(data.profile?.last_name ?? '');
@@ -36,6 +70,7 @@
 		firstName = data.profile?.first_name ?? '';
 		lastName = data.profile?.last_name ?? '';
 		emailValue = data.email ?? '';
+		targetHoursValue = data.profile?.target_hours ?? 8;
 	});
 
 	let avatarFile: File | null = $state(null);
@@ -64,7 +99,6 @@
 	function toggleTheme() {
 		theme.toggle();
 	}
-
 
 	async function compressImage(file: File): Promise<Blob> {
 		return new Promise((resolve, reject) => {
@@ -189,17 +223,20 @@
 
 <div class="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
 	<AmbientGlow />
-<main class="relative z-10 flex flex-1 flex-col items-center p-4 pt-6 sm:p-8 sm:pt-12">
-	<div class="w-full max-w-md">
+	<main class="relative z-10 flex flex-1 flex-col items-center p-4 pt-6 sm:p-8 sm:pt-12">
+		<div class="w-full max-w-md">
+			<Button
+				variant="ghost"
+				href="/dashboard"
+				class="mb-4 gap-2 self-start text-muted-foreground sm:mb-6"
+			>
+				<ArrowLeft class="h-4 w-4" />
+				{m.back_to_dashboard()}
+			</Button>
 
-        <Button variant="ghost" href="/dashboard" class="mb-4 gap-2 self-start text-muted-foreground sm:mb-6">
-             <ArrowLeft class="h-4 w-4" />
-             {m.back_to_dashboard()}
-         </Button>
-
-         <h1 class="mb-4 text-2xl font-bold text-foreground sm:mb-8 sm:text-3xl">
-             {m.settings_title()}
-         </h1>
+			<h1 class="mb-4 text-2xl font-bold text-foreground sm:mb-8 sm:text-3xl">
+				{m.settings_title()}
+			</h1>
 
 			<div class="space-y-6">
 				<div class="rounded-xl border border-border bg-card shadow-sm">
@@ -365,16 +402,22 @@
 							<div class="mt-4 flex flex-col gap-2">
 								<span class="text-muted-foreground">Farbschema</span>
 								<Select.Root
-										type="single"
-										value={currentPalette}
-										onValueChange={(v) => palette.set(v as Palette)}
+									type="single"
+									value={currentPalette}
+									onValueChange={(v) => palette.set(v as Palette)}
 								>
 									<Select.Trigger class="w-44">
-										{{ default: 'Standard', deuteranopia: 'Deuteranopie', protanopia: 'Protanopie', monochrome: 'Monochrom' }[currentPalette]}
+										{{
+											default: 'Standard',
+											deuteranopia: 'Deuteranopie',
+											protanopia: 'Protanopie',
+											monochrome: 'Monochrom'
+										}[currentPalette]}
 									</Select.Trigger>
 									<Select.Content>
 										<Select.Item value="default" label="Standard">Standard</Select.Item>
-										<Select.Item value="deuteranopia" label="Deuteranopie">Deuteranopie</Select.Item>
+										<Select.Item value="deuteranopia" label="Deuteranopie">Deuteranopie</Select.Item
+										>
 										<Select.Item value="protanopia" label="Protanopie">Protanopie</Select.Item>
 										<Select.Item value="monochrome" label="Monochrom">Monochrom</Select.Item>
 									</Select.Content>
@@ -442,7 +485,9 @@
 								<p class="text-sm text-muted-foreground">{m.no_locations_hint()}</p>
 							{:else}
 								{#each data.pastLocations as loc (loc.location)}
-									<div class="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+									<div
+										class="flex items-center justify-between rounded-lg border border-border px-3 py-2"
+									>
 										<span class="text-sm">{loc.location}</span>
 										<form
 											method="POST"
@@ -463,6 +508,64 @@
 							{/if}
 						</div>
 					</div>
+				</div>
+
+				<!-- Target Hours -->
+				<div class="rounded-xl border border-border bg-card shadow-sm">
+					<form
+						method="POST"
+						action="?/updateTargetHours"
+						use:enhance={() => {
+							isSavingTargetHours = true;
+							return async ({ update }) => {
+								isSavingTargetHours = false;
+								await update();
+							};
+						}}
+					>
+						<div class="p-4">
+							<div class="mb-4 flex items-center gap-2 text-foreground">
+								<Clock class="h-5 w-5" />
+								<h3 class="font-semibold">{m.settings_target_hours_label()}</h3>
+							</div>
+							<p class="mb-3 text-sm text-muted-foreground">{m.settings_target_hours_hint()}</p>
+							<div class="flex items-center gap-3">
+								<Input
+									id="target_hours"
+									name="target_hours"
+									type="number"
+									min="1"
+									max="24"
+									bind:value={targetHoursValue}
+									disabled={isSavingTargetHours}
+									class="w-24"
+								/>
+								<span class="text-sm text-muted-foreground">{m.settings_target_hours_unit()}</span>
+							</div>
+							{#if form?.targetHoursError}
+								<div
+									class="mt-3 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
+								>
+									{form.targetHoursError}
+								</div>
+							{/if}
+							{#if form?.targetHoursSuccess}
+								<div
+									class="mt-3 rounded-md border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-600"
+								>
+									{m.settings_target_hours_saved()}
+								</div>
+							{/if}
+							<Button type="submit" class="mt-4 w-full" disabled={isSavingTargetHours}>
+								{#if isSavingTargetHours}
+									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+									{m.saving()}
+								{:else}
+									{m.save()}
+								{/if}
+							</Button>
+						</div>
+					</form>
 				</div>
 
 				<!-- Danger Zone -->
