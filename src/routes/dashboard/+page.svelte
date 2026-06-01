@@ -240,10 +240,8 @@
 				</div>
 			</div>
 
-			<div
-				class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start xl:gap-6"
-			>
-				<div class="order-2 flex justify-center lg:order-1 lg:justify-start">
+			<div class="mt-4 grid gap-4 lg:grid-cols-2 lg:items-stretch xl:gap-6">
+				<div class="order-2 flex h-full w-full lg:order-1">
 					<WorkdayCalendar
 						bind:value={selectedDate}
 						{isDateDisabled}
@@ -253,7 +251,7 @@
 					/>
 				</div>
 
-				<Card.Root class="order-1 flex-1 gap-0 lg:order-2">
+				<Card.Root class="order-1 h-full flex-1 gap-0 lg:order-2">
 					<Card.Header
 						class="flex flex-col gap-1 pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:pt-6"
 					>
