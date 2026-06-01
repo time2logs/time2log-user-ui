@@ -3,8 +3,9 @@ import type { PageServerLoad, Actions } from './$types';
 import type { InviteDetails } from '$lib/types';
 import * as m from '$lib/paraglide/messages.js';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
+import { hashOtp, isSupabaseAuthSecretError, normalizeSwissPhone } from '$lib/server/onboarding';
 import { sendSwisscomVerificationSms } from '$lib/server/swisscomSms';
-import { createHash, randomInt } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 
 type ResolvedInviteUser =
 	| { ok: true; user: { id: string; email?: string } }
@@ -12,12 +13,6 @@ type ResolvedInviteUser =
 			ok: false;
 			reason: 'invite_invalid' | 'email_mismatch' | 'auth_misconfigured';
 	  };
-
-export function isSupabaseAuthSecretError(message: string): boolean {
-	return /invalid jwt|unable to parse or verify signature|signing method hs256 is invalid/i.test(
-		message
-	);
-}
 
 export const load: PageServerLoad = async ({
 	url,
@@ -512,19 +507,6 @@ export const actions: Actions = {
 		throw redirect(303, '/dashboard');
 	}
 };
-
-export function hashOtp(value: string): string {
-	return createHash('sha256').update(value).digest('hex');
-}
-
-export function normalizeSwissPhone(phoneNumberRaw: string): string | null {
-	const compact = phoneNumberRaw.replace(/\s+/g, '').replace(/[()-]/g, '');
-	if (!compact) return null;
-	if (/^\+41\d{9}$/.test(compact)) return compact;
-	if (/^0041\d{9}$/.test(compact)) return `+${compact.slice(2)}`;
-	if (/^0\d{9}$/.test(compact)) return `+41${compact.slice(1)}`;
-	return null;
-}
 
 type FindUserByEmailResult =
 	| { ok: true; user: { id: string; email?: string } }

@@ -233,5 +233,12 @@
 	"home_cta_button": "Jetzt starten",
 	"add_another_activity": "Weitere hinzufügen",
 	"submit_all_button": "Alle speichern ({count})",
-	"queued_activities_label": "Warteschlange ({count})"
+	"queued_activities_label": "Warteschlange ({count})",
+	"settings_target_hours_label": "Sollstunden",
+	"settings_target_hours_hint": "Anzahl Stunden, die du pro Arbeitstag rapportieren möchtest (Standard: 8h)",
+	"settings_target_hours_saved": "Sollstunden erfolgreich gespeichert.",
+	"settings_target_hours_error": "Ungültiger Wert. Bitte eine Zahl zwischen 1 und 24 eingeben.",
+	"daily_hours_logged": "{logged}h / {target}h",
+	"daily_hours_goal_label": "Sollstunden",
+	"settings_target_hours_unit": "h / Tag"
 }

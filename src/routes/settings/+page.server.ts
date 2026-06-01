@@ -213,7 +213,7 @@ export const actions: Actions = {
 			.eq('location', location);
 
 		return { locationDeleteSuccess: true };
-},
+	},
 	updateColorblindType: async ({ request, locals }) => {
 		const session = await locals.safeGetSession();
 		if (!session) throw redirect(302, '/login');
@@ -229,5 +229,27 @@ export const actions: Actions = {
 		if (error) return fail(500, { colorblindError: 'Fehler beim Speichern.' });
 
 		return { colorblindSuccess: true };
+	},
+
+	updateTargetHours: async ({ request, locals }) => {
+		const session = await locals.safeGetSession();
+		if (!session) throw redirect(302, '/login');
+
+		const formData = await request.formData();
+		const raw = formData.get('target_hours')?.toString() ?? '';
+		const targetHours = parseInt(raw, 10);
+
+		if (isNaN(targetHours) || targetHours < 1 || targetHours > 24) {
+			return fail(400, { targetHoursError: m.settings_target_hours_error() });
+		}
+
+		const { error } = await locals.supabase
+			.from('profiles')
+			.update({ target_hours: targetHours })
+			.eq('id', session.user.id);
+
+		if (error) return fail(500, { targetHoursError: 'Fehler beim Speichern.' });
+
+		return { targetHoursSuccess: true };
 	}
 };

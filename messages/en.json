@@ -233,5 +233,12 @@
 	"home_cta_button": "Get Started Today",
 	"add_another_activity": "Add another",
 	"submit_all_button": "Save all ({count})",
-	"queued_activities_label": "Queue ({count})"
+	"queued_activities_label": "Queue ({count})",
+	"settings_target_hours_label": "Target hours",
+	"settings_target_hours_hint": "Number of hours you want to report per working day (default: 8h)",
+	"settings_target_hours_saved": "Target hours saved successfully.",
+	"settings_target_hours_error": "Invalid value. Please enter a number between 1 and 24.",
+	"daily_hours_logged": "{logged}h / {target}h",
+	"daily_hours_goal_label": "Target hours",
+	"settings_target_hours_unit": "h / day"
 }

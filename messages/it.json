@@ -233,5 +233,12 @@
 	"home_cta_button": "Inizia Oggi",
 	"add_another_activity": "Aggiungi un'altra",
 	"submit_all_button": "Salva tutto ({count})",
-	"queued_activities_label": "In coda ({count})"
+	"queued_activities_label": "In coda ({count})",
+	"settings_target_hours_label": "Ore obiettivo",
+	"settings_target_hours_hint": "Numero di ore da registrare per giorno lavorativo (predefinito: 8h)",
+	"settings_target_hours_saved": "Ore obiettivo salvate con successo.",
+	"settings_target_hours_error": "Valore non valido. Inserire un numero tra 1 e 24.",
+	"daily_hours_logged": "{logged}h / {target}h",
+	"daily_hours_goal_label": "Ore obiettivo",
+	"settings_target_hours_unit": "h / giorno"
 }
