@@ -213,7 +213,7 @@ export const actions: Actions = {
 			.eq('location', location);
 
 		return { locationDeleteSuccess: true };
-},
+	},
 	updateColorblindType: async ({ request, locals }) => {
 		const session = await locals.safeGetSession();
 		if (!session) throw redirect(302, '/login');

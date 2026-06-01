@@ -7,14 +7,28 @@
 	import { Separator } from '$lib/components/ui/separator';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { enhance } from '$app/forms';
-	import { ArrowLeft, User, Globe, LogOut, Loader2, Moon, Sun, Camera, ShieldAlert, MapPin, Trash2 } from 'lucide-svelte';
+	import {
+		ArrowLeft,
+		User,
+		Globe,
+		LogOut,
+		Loader2,
+		Moon,
+		Sun,
+		Camera,
+		ShieldAlert,
+		MapPin,
+		Trash2
+	} from 'lucide-svelte';
 	import { theme } from '$lib/themeStore';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import * as Select from '$lib/components/ui/select';
 	import { palette, type Palette } from '$lib/paletteStore';
 
 	let currentPalette = $state<Palette>('default');
-	palette.subscribe((p) => { currentPalette = p; });
+	palette.subscribe((p) => {
+		currentPalette = p;
+	});
 
 	let { data, form } = $props();
 
@@ -64,7 +78,6 @@
 	function toggleTheme() {
 		theme.toggle();
 	}
-
 
 	async function compressImage(file: File): Promise<Blob> {
 		return new Promise((resolve, reject) => {
@@ -189,17 +202,20 @@
 
 <div class="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
 	<AmbientGlow />
-<main class="relative z-10 flex flex-1 flex-col items-center p-4 pt-6 sm:p-8 sm:pt-12">
-	<div class="w-full max-w-md">
+	<main class="relative z-10 flex flex-1 flex-col items-center p-4 pt-6 sm:p-8 sm:pt-12">
+		<div class="w-full max-w-md">
+			<Button
+				variant="ghost"
+				href="/dashboard"
+				class="mb-4 gap-2 self-start text-muted-foreground sm:mb-6"
+			>
+				<ArrowLeft class="h-4 w-4" />
+				{m.back_to_dashboard()}
+			</Button>
 
-        <Button variant="ghost" href="/dashboard" class="mb-4 gap-2 self-start text-muted-foreground sm:mb-6">
-             <ArrowLeft class="h-4 w-4" />
-             {m.back_to_dashboard()}
-         </Button>
-
-         <h1 class="mb-4 text-2xl font-bold text-foreground sm:mb-8 sm:text-3xl">
-             {m.settings_title()}
-         </h1>
+			<h1 class="mb-4 text-2xl font-bold text-foreground sm:mb-8 sm:text-3xl">
+				{m.settings_title()}
+			</h1>
 
 			<div class="space-y-6">
 				<div class="rounded-xl border border-border bg-card shadow-sm">
@@ -365,16 +381,22 @@
 							<div class="mt-4 flex flex-col gap-2">
 								<span class="text-muted-foreground">Farbschema</span>
 								<Select.Root
-										type="single"
-										value={currentPalette}
-										onValueChange={(v) => palette.set(v as Palette)}
+									type="single"
+									value={currentPalette}
+									onValueChange={(v) => palette.set(v as Palette)}
 								>
 									<Select.Trigger class="w-44">
-										{{ default: 'Standard', deuteranopia: 'Deuteranopie', protanopia: 'Protanopie', monochrome: 'Monochrom' }[currentPalette]}
+										{{
+											default: 'Standard',
+											deuteranopia: 'Deuteranopie',
+											protanopia: 'Protanopie',
+											monochrome: 'Monochrom'
+										}[currentPalette]}
 									</Select.Trigger>
 									<Select.Content>
 										<Select.Item value="default" label="Standard">Standard</Select.Item>
-										<Select.Item value="deuteranopia" label="Deuteranopie">Deuteranopie</Select.Item>
+										<Select.Item value="deuteranopia" label="Deuteranopie">Deuteranopie</Select.Item
+										>
 										<Select.Item value="protanopia" label="Protanopie">Protanopie</Select.Item>
 										<Select.Item value="monochrome" label="Monochrom">Monochrom</Select.Item>
 									</Select.Content>
@@ -442,7 +464,9 @@
 								<p class="text-sm text-muted-foreground">{m.no_locations_hint()}</p>
 							{:else}
 								{#each data.pastLocations as loc (loc.location)}
-									<div class="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+									<div
+										class="flex items-center justify-between rounded-lg border border-border px-3 py-2"
+									>
 										<span class="text-sm">{loc.location}</span>
 										<form
 											method="POST"
