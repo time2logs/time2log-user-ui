@@ -554,6 +554,23 @@
 					</p>
 				{/if}
 			</div>
+			{#if hoursExceedsMax}
+				<p class="text-sm text-red-600">
+					{m.error_hours_max_entry({ max: MAX_HOURS_PER_ENTRY.toString() })}
+				</p>
+			{:else if wouldExceedDailyMax && hours > 0}
+				<p class="text-sm text-red-600">
+					{m.error_hours_max_day({
+						max: maxHoursForDate.toString(),
+						remaining: Math.max(0, maxHoursForDate - currentDayHours).toString()
+					})}
+				</p>
+			{:else if hours > 0 && hours < MIN_HOURS}
+				<p class="text-sm text-amber-600">
+					{m.error_hours_min({ min: MIN_HOURS.toString() })}
+				</p>
+			{/if}
+		</div>
 
 			<!-- Location -->
 			<div class="grid gap-2">
@@ -581,7 +598,6 @@
 				<Label for="notes">{m.notes_optional()}</Label>
 				<Textarea id="notes" bind:value={notes} placeholder={m.notes_placeholder()} />
 			</div>
-		</div>
 
 		<Dialog.Footer class={activityToEdit ? 'flex gap-2' : ''}>
 			{#if activityToEdit}
