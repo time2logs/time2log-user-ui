@@ -15,7 +15,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		if (!error && data) {
 			userLocations = data.map((l: { location: string }) => l.location);
 		}
-	} catch {}
+	} catch {
+		userLocations = [];
+	}
 
 	return { userLocations };
 };

@@ -22,23 +22,25 @@ vi.mock('$lib/paraglide/messages.js', () => ({
 	onboarding_error_signin_failed: () => 'signin_failed',
 	onboarding_phone_code_missing: () => 'code_missing',
 	onboarding_phone_code_expired: () => 'code_expired',
-	onboarding_phone_verify_failed: () => 'verify_failed',
+	onboarding_phone_verify_failed: () => 'verify_failed'
 }));
 
 vi.mock('$lib/server/swisscomSms', () => ({
-	sendSwisscomVerificationSms: vi.fn().mockResolvedValue({ messageId: 'msg-123' }),
+	sendSwisscomVerificationSms: vi.fn().mockResolvedValue({ messageId: 'msg-123' })
 }));
 
 vi.mock('$lib/server/avatarValidation', () => ({
-	validateImageMagicBytes: vi.fn().mockResolvedValue('jpg'),
+	validateImageMagicBytes: vi.fn().mockResolvedValue('jpg')
 }));
 
 import {
 	actions,
-	normalizeSwissPhone,
-	hashOtp,
-	isSupabaseAuthSecretError,
+	_normalizeSwissPhone as normalizeSwissPhone,
+	_hashOtp as hashOtp,
+	_isSupabaseAuthSecretError as isSupabaseAuthSecretError
 } from './+page.server';
+
+type ActionEvent = Parameters<NonNullable<(typeof actions)[keyof typeof actions]>>[0];
 
 function makeRequest(data: Record<string, string>): Request {
 	const fd = new FormData();
@@ -106,18 +108,20 @@ describe('hashOtp', () => {
 // ── isSupabaseAuthSecretError ─────────────────────────────────────────────
 
 describe('isSupabaseAuthSecretError', () => {
-	it.each(['invalid jwt', 'INVALID JWT', 'unable to parse or verify signature', 'signing method hs256 is invalid'])(
-		'matches "%s"',
-		(message) => {
-			expect(isSupabaseAuthSecretError(message)).toBe(true);
-		},
-	);
+	it.each([
+		'invalid jwt',
+		'INVALID JWT',
+		'unable to parse or verify signature',
+		'signing method hs256 is invalid'
+	])('matches "%s"', (message) => {
+		expect(isSupabaseAuthSecretError(message)).toBe(true);
+	});
 
 	it.each(['connection refused', 'database error', 'rate limit exceeded'])(
 		'does not match "%s"',
 		(message) => {
 			expect(isSupabaseAuthSecretError(message)).toBe(false);
-		},
+		}
 	);
 });
 
@@ -127,24 +131,28 @@ describe('sendPhoneCode action — early validation', () => {
 	it('fails 400 when invite_token is missing', async () => {
 		const result = await actions.sendPhoneCode({
 			request: makeRequest({ email: 'user@example.com', phone_number: '0791234567' }),
-			locals: emptyLocals,
-		} as any);
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 	});
 
 	it('fails 400 when email is missing', async () => {
 		const result = await actions.sendPhoneCode({
 			request: makeRequest({ invite_token: 'tok', phone_number: '0791234567' }),
-			locals: emptyLocals,
-		} as any);
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 	});
 
 	it('fails 400 for an invalid phone number', async () => {
 		const result = await actions.sendPhoneCode({
-			request: makeRequest({ invite_token: 'tok', email: 'user@example.com', phone_number: '1234' }),
-			locals: emptyLocals,
-		} as any);
+			request: makeRequest({
+				invite_token: 'tok',
+				email: 'user@example.com',
+				phone_number: '1234'
+			}),
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.error).toBe('phone_invalid');
 	});
@@ -156,33 +164,37 @@ describe('verifyPhoneCode action — early validation', () => {
 	it('fails 400 when invite_token is missing', async () => {
 		const result = await actions.verifyPhoneCode({
 			request: makeRequest({ email: 'user@example.com', phone_code: '123456' }),
-			locals: emptyLocals,
-		} as any);
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 	});
 
 	it('fails 400 when email is missing', async () => {
 		const result = await actions.verifyPhoneCode({
 			request: makeRequest({ invite_token: 'tok', phone_code: '123456' }),
-			locals: emptyLocals,
-		} as any);
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 	});
 
 	it('fails 400 when code is fewer than 6 digits', async () => {
 		const result = await actions.verifyPhoneCode({
 			request: makeRequest({ invite_token: 'tok', email: 'user@example.com', phone_code: '12345' }),
-			locals: emptyLocals,
-		} as any);
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.error).toBe('code_invalid');
 	});
 
 	it('fails 400 when code contains non-digit characters', async () => {
 		const result = await actions.verifyPhoneCode({
-			request: makeRequest({ invite_token: 'tok', email: 'user@example.com', phone_code: '12345a' }),
-			locals: emptyLocals,
-		} as any);
+			request: makeRequest({
+				invite_token: 'tok',
+				email: 'user@example.com',
+				phone_code: '12345a'
+			}),
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.error).toBe('code_invalid');
 	});
@@ -198,7 +210,7 @@ describe('complete action — early validation', () => {
 		phone_number: '0791234567',
 		first_name: 'Anna',
 		last_name: 'Meier',
-		password: 'Secret1!',
+		password: 'Secret1!'
 	};
 
 	it('fails 400 when avatar file exceeds 512 KB', async () => {
@@ -208,16 +220,16 @@ describe('complete action — early validation', () => {
 		fd.append('avatar', largeFile);
 		const result = await actions.complete({
 			request: { formData: () => Promise.resolve(fd) } as unknown as Request,
-			locals: emptyLocals,
-		} as any);
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 	});
 
 	it('fails 400 when first_name is missing', async () => {
 		const result = await actions.complete({
 			request: makeRequest({ ...validBase, first_name: '' }),
-			locals: emptyLocals,
-		} as any);
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.error).toBe('name_required');
 	});
@@ -225,8 +237,8 @@ describe('complete action — early validation', () => {
 	it('fails 400 when last_name is missing', async () => {
 		const result = await actions.complete({
 			request: makeRequest({ ...validBase, last_name: '' }),
-			locals: emptyLocals,
-		} as any);
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.error).toBe('name_required');
 	});
@@ -234,8 +246,8 @@ describe('complete action — early validation', () => {
 	it('fails 400 when password is shorter than 8 characters', async () => {
 		const result = await actions.complete({
 			request: makeRequest({ ...validBase, password: 'S1!' }),
-			locals: emptyLocals,
-		} as any);
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.error).toBe('password_length');
 	});
@@ -243,8 +255,8 @@ describe('complete action — early validation', () => {
 	it('fails 400 when password has no uppercase letter', async () => {
 		const result = await actions.complete({
 			request: makeRequest({ ...validBase, password: 'secret1!' }),
-			locals: emptyLocals,
-		} as any);
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.error).toBe('password_uppercase');
 	});
@@ -252,8 +264,8 @@ describe('complete action — early validation', () => {
 	it('fails 400 when password has no digit', async () => {
 		const result = await actions.complete({
 			request: makeRequest({ ...validBase, password: 'SecretA!' }),
-			locals: emptyLocals,
-		} as any);
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.error).toBe('password_number');
 	});
@@ -261,8 +273,8 @@ describe('complete action — early validation', () => {
 	it('fails 400 when password has no special character', async () => {
 		const result = await actions.complete({
 			request: makeRequest({ ...validBase, password: 'Secret123' }),
-			locals: emptyLocals,
-		} as any);
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.error).toBe('password_special');
 	});
@@ -270,8 +282,8 @@ describe('complete action — early validation', () => {
 	it('fails 400 when phone_number is empty', async () => {
 		const result = await actions.complete({
 			request: makeRequest({ ...validBase, phone_number: '' }),
-			locals: emptyLocals,
-		} as any);
+			locals: emptyLocals
+		} as ActionEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.error).toBe('phone_required');
 	});

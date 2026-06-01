@@ -4,12 +4,12 @@
 	import favicon from '$lib/assets/favicon.svg';
 	import { theme } from '$lib/themeStore';
 	import { onMount } from 'svelte';
-    import { palette } from '$lib/paletteStore';
+	import { palette } from '$lib/paletteStore';
 
-    onMount(() => {
-        theme.initialize();
-        palette.initialize();
-    });
+	onMount(() => {
+		theme.initialize();
+		palette.initialize();
+	});
 
 	let { children } = $props();
 </script>
