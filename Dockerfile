@@ -21,7 +21,7 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 
 # Stage 3: Node runtime (adapter-node outputs a Node.js HTTP server)
-FROM FROM node:22-slim
+FROM node:22-slim
 WORKDIR /app
 ENV NODE_ENV=production
 
