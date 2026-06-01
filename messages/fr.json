@@ -201,5 +201,8 @@
 	"home_cta_button": "Commencer Maintenant",
 	"add_another_activity": "Ajouter une autre",
 	"submit_all_button": "Tout enregistrer ({count})",
-	"queued_activities_label": "File d'attente ({count})"
+	"queued_activities_label": "File d'attente ({count})",
+	"unreported_days_banner_zero": "Tous les jours de ce mois sont rapportés – bravo !",
+	"unreported_days_banner_one": "Tu as encore {count} jour non rapporté ce mois.",
+	"unreported_days_banner_many": "Tu as encore {count} jours non rapportés ce mois."
 }

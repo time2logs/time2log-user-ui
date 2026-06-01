@@ -201,5 +201,8 @@
 	"home_cta_button": "Jetzt starten",
 	"add_another_activity": "Weitere hinzufügen",
 	"submit_all_button": "Alle speichern ({count})",
-	"queued_activities_label": "Warteschlange ({count})"
+	"queued_activities_label": "Warteschlange ({count})",
+	"unreported_days_banner_zero": "Alle Tage diesen Monat sind rapportiert – gut gemacht!",
+	"unreported_days_banner_one": "Du hast noch {count} Tag diesen Monat nicht rapportiert.",
+	"unreported_days_banner_many": "Du hast noch {count} Tage diesen Monat nicht rapportiert."
 }

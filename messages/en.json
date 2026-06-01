@@ -201,5 +201,8 @@
 	"home_cta_button": "Get Started Today",
 	"add_another_activity": "Add another",
 	"submit_all_button": "Save all ({count})",
-	"queued_activities_label": "Queue ({count})"
+	"queued_activities_label": "Queue ({count})",
+	"unreported_days_banner_zero": "All days this month are reported – well done!",
+	"unreported_days_banner_one": "You have {count} unreported day this month.",
+	"unreported_days_banner_many": "You have {count} unreported days this month."
 }

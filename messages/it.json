@@ -201,5 +201,8 @@
 	"home_cta_button": "Inizia Oggi",
 	"add_another_activity": "Aggiungi un'altra",
 	"submit_all_button": "Salva tutto ({count})",
-	"queued_activities_label": "In coda ({count})"
+	"queued_activities_label": "In coda ({count})",
+	"unreported_days_banner_zero": "Tutti i giorni di questo mese sono rendicontati – ottimo lavoro!",
+	"unreported_days_banner_one": "Hai ancora {count} giorno non rendicontato questo mese.",
+	"unreported_days_banner_many": "Hai ancora {count} giorni non rendicontati questo mese."
 }
