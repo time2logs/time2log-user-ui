@@ -10,6 +10,7 @@
 	import { resolve } from '$app/paths';
 	import { getDateLocale } from '$lib/dateLocale';
 	import { rrulestr } from 'rrule';
+	import AbsenceChart from '$lib/components/absence-chart.svelte';
 
 	const dateLocale = getDateLocale();
 
@@ -241,6 +242,10 @@
 					<Plus class="mr-2 h-5 w-5" />
 					{m.absence_new_button()}
 				</Button>
+			</div>
+
+			<div class="mb-4 sm:mb-6">
+				<AbsenceChart {absences} />
 			</div>
 
 			<!-- Absences List -->

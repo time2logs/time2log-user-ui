@@ -117,6 +117,8 @@
 	"recurring_frequency_monthly": "Mensuel",
 	"recurring_days_of_week": "Jours de la semaine",
 	"recurring_until": "Jusqu'à la date (Optionnel)",
+	"absence_chart_title": "Absences par semestre",
+	"absence_chart_desc": "Aperçu des jours d'absence par type et semestre",
 	"recurring_preview": "Aperçu ({count} occurrences)",
 	"absence_saved_for_date": "Cette absence sera enregistrée pour le {date}.",
 	"no_absences_found": "Aucune absence trouvée",
