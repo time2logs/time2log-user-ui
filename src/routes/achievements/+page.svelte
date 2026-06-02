@@ -25,8 +25,8 @@
 	type PageData = { curriculumNodeSummaries: CurriculumNodeSummary[] };
 	let { data }: { data: PageData } = $props();
 
-	const activities = $derived($activityStore);
-	const absences = $derived($absenceStore);
+	const activityRecords = $derived($activityStore);
+	const absenceRecords = $derived($absenceStore);
 
 	$effect(() => {
 		activityStore.setCurriculumNodeSummaries(data.curriculumNodeSummaries);
@@ -36,22 +36,32 @@
 		void absenceStore.load();
 	});
 
-	const todayIso = getLocalToday(getLocalTimeZone()).toString();
-	const yearStart = `${todayIso.slice(0, 4)}-01-01`;
+	const todayIsoDate = getLocalToday(getLocalTimeZone()).toString();
+	const currentYearStartIsoDate = `${todayIsoDate.slice(0, 4)}-01-01`;
 
-	const totalHours = $derived(computeTotalHours(activities));
-	const level = $derived(computeLevel(totalHours));
-	const currentStreak = $derived(computeCurrentStreak(activities, absences, todayIso));
-	const topLocations = $derived(computeTopLocations(activities, 5));
-	const topActivities = $derived(
-		computeActivityBreakdown(activities, 10, m.ach_other()).filter((s) => s.name !== m.ach_other())
+	const totalLoggedHours = $derived(computeTotalHours(activityRecords));
+	const levelInfo = $derived(computeLevel(totalLoggedHours));
+	const currentStreakDays = $derived(
+		computeCurrentStreak(activityRecords, absenceRecords, todayIsoDate)
 	);
-	const sickThisYear = $derived(computeSickDays(absences, yearStart, todayIso));
-	const sickAllTime = $derived(computeSickDays(absences, '2000-01-01', todayIso));
-	const workdays = $derived(
-		activities.length > 0 ? new Set(activities.map((a) => a.entry_date)).size : 0
+	const topLocationStats = $derived(computeTopLocations(activityRecords, 5));
+	const topActivityStats = $derived(
+		computeActivityBreakdown(activityRecords, 10, m.achievement_other()).filter(
+			(activityStat) => activityStat.name !== m.achievement_other()
+		)
 	);
-	const achievements = $derived(computeAchievements(activities, absences, todayIso));
+	const sickDaysThisYear = $derived(
+		computeSickDays(absenceRecords, currentYearStartIsoDate, todayIsoDate)
+	);
+	const sickDaysAllTime = $derived(computeSickDays(absenceRecords, '2000-01-01', todayIsoDate));
+	const loggedWorkdayCount = $derived(
+		activityRecords.length > 0
+			? new Set(activityRecords.map((activity) => activity.entry_date)).size
+			: 0
+	);
+	const achievementStatuses = $derived(
+		computeAchievements(activityRecords, absenceRecords, todayIsoDate)
+	);
 </script>
 
 <div class="relative flex min-h-screen flex-col bg-background text-foreground">
@@ -66,20 +76,28 @@
 				class="mb-4 gap-2 self-start text-muted-foreground sm:mb-6"
 			>
 				<ArrowLeft class="h-4 w-4" />
-				{m.ach_back_to_dashboard()}
+				{m.achievement_back_to_dashboard()}
 			</Button>
 			<h1 class="mb-4 text-2xl font-bold text-foreground sm:mb-8 sm:text-3xl">
 				{m.achievements_title()}
 			</h1>
 
 			<div class="flex flex-col gap-4">
-				<LevelHero {totalHours} {currentStreak} {level} />
+				<LevelHero
+					totalHours={totalLoggedHours}
+					currentStreak={currentStreakDays}
+					level={levelInfo}
+				/>
 				<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-					<TopLocations locations={topLocations} />
-					<TopActivitiesPodium items={topActivities} />
+					<TopLocations locations={topLocationStats} />
+					<TopActivitiesPodium items={topActivityStats} />
 				</div>
-				<SicknessOverview {sickThisYear} {sickAllTime} {workdays} />
-				<AchievementGrid {achievements} />
+				<SicknessOverview
+					sickThisYear={sickDaysThisYear}
+					sickAllTime={sickDaysAllTime}
+					workdays={loggedWorkdayCount}
+				/>
+				<AchievementGrid achievements={achievementStatuses} />
 			</div>
 		</div>
 	</main>

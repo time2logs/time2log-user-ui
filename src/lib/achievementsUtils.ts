@@ -5,8 +5,8 @@ import { isoFromDate } from './statsUtils';
 export type AchievementUnit = 'hours' | 'days' | 'count' | 'streak';
 export type AchievementStatus = {
 	id: string;
-	labelKey: string;
-	descriptionKey: string;
+	labelMessageKey: string;
+	descriptionMessageKey: string;
 	icon: string;
 	threshold: number;
 	current: number;
@@ -18,98 +18,112 @@ export type LevelInfo = { level: number; xpInLevel: number; xpForNext: number; p
 
 const SUNDAY = 0;
 const SATURDAY = 6;
-function parseIsoDate(iso: string): Date {
-	const [y, m, d] = iso.split('-').map(Number);
-	return new Date(y, m - 1, d);
+
+function parseIsoDate(isoDate: string): Date {
+	const [year, month, day] = isoDate.split('-').map(Number);
+	return new Date(year, month - 1, day);
 }
+
 function isWeekend(date: Date): boolean {
-	const d = date.getDay();
-	return d === SUNDAY || d === SATURDAY;
+	const dayOfWeek = date.getDay();
+	return dayOfWeek === SUNDAY || dayOfWeek === SATURDAY;
 }
-export function addDays(iso: string, delta: number): string {
-	const d = parseIsoDate(iso);
-	d.setDate(d.getDate() + delta);
-	return isoFromDate(d);
+
+export function addDays(isoDate: string, dayDelta: number): string {
+	const date = parseIsoDate(isoDate);
+	date.setDate(date.getDate() + dayDelta);
+	return isoFromDate(date);
 }
-export function subtractYears(iso: string, delta: number): string {
-	const d = parseIsoDate(iso);
-	d.setFullYear(d.getFullYear() - delta);
-	return isoFromDate(d);
+
+export function subtractYears(isoDate: string, yearDelta: number): string {
+	const date = parseIsoDate(isoDate);
+	date.setFullYear(date.getFullYear() - yearDelta);
+	return isoFromDate(date);
 }
-function* iterateDates(fromIso: string, toIso: string): Generator<string> {
-	if (toIso < fromIso) return;
-	let c = fromIso;
-	while (c <= toIso) {
-		yield c;
-		c = addDays(c, 1);
+
+function* iterateDates(fromIsoDate: string, toIsoDate: string): Generator<string> {
+	if (toIsoDate < fromIsoDate) return;
+	let currentIsoDate = fromIsoDate;
+	while (currentIsoDate <= toIsoDate) {
+		yield currentIsoDate;
+		currentIsoDate = addDays(currentIsoDate, 1);
 	}
 }
 
-function blockedDates(absences: AbsenceRecord[], fromIso: string, toIso: string): Set<string> {
-	const blocked = new Set<string>();
-	for (const a of absences) {
-		if (a.is_recurring && a.rrule) {
-			for (const d of iterateDates(fromIso, toIso)) {
-				if (isDateInAbsence(d, a)) blocked.add(d);
+function getAbsenceBlockedDates(
+	absences: AbsenceRecord[],
+	fromIsoDate: string,
+	toIsoDate: string
+): Set<string> {
+	const absenceBlockedDates = new Set<string>();
+	for (const absence of absences) {
+		if (absence.is_recurring && absence.rrule) {
+			for (const isoDate of iterateDates(fromIsoDate, toIsoDate)) {
+				if (isDateInAbsence(isoDate, absence)) absenceBlockedDates.add(isoDate);
 			}
 			continue;
 		}
-		const s = a.start_date > fromIso ? a.start_date : fromIso;
-		const e = a.end_date < toIso ? a.end_date : toIso;
-		for (const d of iterateDates(s, e)) blocked.add(d);
+		const absenceStartIsoDate = absence.start_date > fromIsoDate ? absence.start_date : fromIsoDate;
+		const absenceEndIsoDate = absence.end_date < toIsoDate ? absence.end_date : toIsoDate;
+		for (const isoDate of iterateDates(absenceStartIsoDate, absenceEndIsoDate)) {
+			absenceBlockedDates.add(isoDate);
+		}
 	}
-	return blocked;
+	return absenceBlockedDates;
 }
 
 export function computeCurrentStreak(
 	activities: ActivityRecord[],
 	absences: AbsenceRecord[],
-	todayIso: string
+	todayIsoDate: string
 ): number {
-	const dates = new Set(activities.map((a) => a.entry_date));
-	if (dates.size === 0) return 0;
-	const lookback = subtractYears(todayIso, 10);
-	const blocked = blockedDates(absences, lookback, todayIso);
-	let streak = 0,
-		cursor = todayIso;
-	while (cursor >= lookback) {
-		if (!isWeekend(parseIsoDate(cursor)) && !blocked.has(cursor)) {
-			if (dates.has(cursor)) streak++;
+	const loggedActivityDates = new Set(activities.map((activity) => activity.entry_date));
+	if (loggedActivityDates.size === 0) return 0;
+	const lookbackStartIsoDate = subtractYears(todayIsoDate, 10);
+	const absenceBlockedDates = getAbsenceBlockedDates(absences, lookbackStartIsoDate, todayIsoDate);
+	let currentStreakDays = 0;
+	let cursorIsoDate = todayIsoDate;
+	while (cursorIsoDate >= lookbackStartIsoDate) {
+		if (!isWeekend(parseIsoDate(cursorIsoDate)) && !absenceBlockedDates.has(cursorIsoDate)) {
+			if (loggedActivityDates.has(cursorIsoDate)) currentStreakDays++;
 			else break;
 		}
-		cursor = addDays(cursor, -1);
+		cursorIsoDate = addDays(cursorIsoDate, -1);
 	}
-	return streak;
+	return currentStreakDays;
 }
 
 export function computeLongestStreak(
 	activities: ActivityRecord[],
 	absences: AbsenceRecord[],
-	todayIso: string
+	todayIsoDate: string
 ): number {
 	if (activities.length === 0) return 0;
-	const dates = new Set(activities.map((a) => a.entry_date));
-	const first = [...dates].reduce((min, d) => (d < min ? d : min), todayIso);
-	const blocked = blockedDates(absences, first, todayIso);
-	let longest = 0,
-		current = 0;
-	for (const d of iterateDates(first, todayIso)) {
-		if (isWeekend(parseIsoDate(d)) || blocked.has(d)) continue;
-		if (dates.has(d)) {
-			current++;
-			if (current > longest) longest = current;
-		} else current = 0;
+	const loggedActivityDates = new Set(activities.map((activity) => activity.entry_date));
+	const firstActivityIsoDate = [...loggedActivityDates].reduce(
+		(earliestIsoDate, isoDate) => (isoDate < earliestIsoDate ? isoDate : earliestIsoDate),
+		todayIsoDate
+	);
+	const absenceBlockedDates = getAbsenceBlockedDates(absences, firstActivityIsoDate, todayIsoDate);
+	let longestStreakDays = 0;
+	let currentStreakDays = 0;
+	for (const isoDate of iterateDates(firstActivityIsoDate, todayIsoDate)) {
+		if (isWeekend(parseIsoDate(isoDate)) || absenceBlockedDates.has(isoDate)) continue;
+		if (loggedActivityDates.has(isoDate)) {
+			currentStreakDays++;
+			if (currentStreakDays > longestStreakDays) longestStreakDays = currentStreakDays;
+		} else currentStreakDays = 0;
 	}
-	return longest;
+	return longestStreakDays;
 }
 
 export function computeLevel(totalHours: number): LevelInfo {
-	const h = Math.max(0, totalHours);
-	const level = Math.floor(Math.sqrt(h / 10)) + 1;
-	const curStart = 10 * (level - 1) ** 2;
-	const nextStart = 10 * level ** 2;
-	const xpInLevel = Math.round((h - curStart) * 100) / 100;
-	const xpForNext = Math.round((nextStart - curStart) * 100) / 100;
+	const normalizedTotalHours = Math.max(0, totalHours);
+	const level = Math.floor(Math.sqrt(normalizedTotalHours / 10)) + 1;
+	const currentLevelStartHours = 10 * (level - 1) ** 2;
+	const nextLevelStartHours = 10 * level ** 2;
+	const xpInLevel = Math.round((normalizedTotalHours - currentLevelStartHours) * 100) / 100;
+	const xpForNext = Math.round((nextLevelStartHours - currentLevelStartHours) * 100) / 100;
 	return {
 		level,
 		xpInLevel,
@@ -119,49 +133,62 @@ export function computeLevel(totalHours: number): LevelInfo {
 }
 
 export type LocationStat = { location: string; hours: number };
-export function computeTopLocations(activities: ActivityRecord[], topN: number): LocationStat[] {
-	const map = new Map<string, number>();
-	for (const a of activities) {
-		const loc = (a.location ?? '').trim();
-		if (loc) map.set(loc, (map.get(loc) ?? 0) + a.hours);
+
+export function computeTopLocations(
+	activities: ActivityRecord[],
+	topCount: number
+): LocationStat[] {
+	const hoursByLocation = new Map<string, number>();
+	for (const activity of activities) {
+		const location = (activity.location ?? '').trim();
+		if (location)
+			hoursByLocation.set(location, (hoursByLocation.get(location) ?? 0) + activity.hours);
 	}
-	return [...map.entries()]
-		.sort(([, a], [, b]) => b - a)
-		.slice(0, topN)
+	return [...hoursByLocation.entries()]
+		.sort(([, leftHours], [, rightHours]) => rightHours - leftHours)
+		.slice(0, topCount)
 		.map(([location, hours]) => ({ location, hours: Math.round(hours * 10) / 10 }));
 }
 
-export function computeSickDays(absences: AbsenceRecord[], fromIso: string, toIso: string): number {
-	let total = 0;
-	for (const a of absences.filter((a) => a.absence_type_id === 'sick')) {
-		const frac = Number(a.day_fraction ?? 1);
-		const s = a.start_date > fromIso ? a.start_date : fromIso;
-		const e = a.end_date < toIso ? a.end_date : toIso;
-		if (a.is_recurring && a.rrule) {
-			for (const d of iterateDates(fromIso, toIso)) {
-				if (!isWeekend(parseIsoDate(d)) && isDateInAbsence(d, a)) total = Math.min(1, total + frac);
+export function computeSickDays(
+	absences: AbsenceRecord[],
+	fromIsoDate: string,
+	toIsoDate: string
+): number {
+	let sickDayTotal = 0;
+	for (const absence of absences.filter((absence) => absence.absence_type_id === 'sick')) {
+		const dayFraction = Number(absence.day_fraction ?? 1);
+		const absenceStartIsoDate = absence.start_date > fromIsoDate ? absence.start_date : fromIsoDate;
+		const absenceEndIsoDate = absence.end_date < toIsoDate ? absence.end_date : toIsoDate;
+		if (absence.is_recurring && absence.rrule) {
+			for (const isoDate of iterateDates(fromIsoDate, toIsoDate)) {
+				if (!isWeekend(parseIsoDate(isoDate)) && isDateInAbsence(isoDate, absence)) {
+					sickDayTotal = Math.min(1, sickDayTotal + dayFraction);
+				}
 			}
 			continue;
 		}
-		for (const d of iterateDates(s, e)) {
-			if (!isWeekend(parseIsoDate(d))) total = Math.min(1, total + frac);
+		for (const isoDate of iterateDates(absenceStartIsoDate, absenceEndIsoDate)) {
+			if (!isWeekend(parseIsoDate(isoDate))) {
+				sickDayTotal = Math.min(1, sickDayTotal + dayFraction);
+			}
 		}
 	}
-	return Math.round(total * 100) / 100;
+	return Math.round(sickDayTotal * 100) / 100;
 }
 
 export function computeAchievements(
 	activities: ActivityRecord[],
 	absences: AbsenceRecord[],
-	todayIso: string
+	todayIsoDate: string
 ): AchievementStatus[] {
-	const totalHours = activities.reduce((s, a) => s + a.hours, 0);
-	const longestStreak = computeLongestStreak(activities, absences, todayIso);
-	const defs: Array<Omit<AchievementStatus, 'unlocked' | 'progress'>> = [
+	const totalHours = activities.reduce((sum, activity) => sum + activity.hours, 0);
+	const longestStreak = computeLongestStreak(activities, absences, todayIsoDate);
+	const achievementDefinitions: Array<Omit<AchievementStatus, 'unlocked' | 'progress'>> = [
 		{
 			id: 'first_log',
-			labelKey: 'ach_first_log',
-			descriptionKey: 'ach_first_log_desc',
+			labelMessageKey: 'achievement_first_log',
+			descriptionMessageKey: 'achievement_first_log_desc',
 			icon: 'Sparkles',
 			threshold: 1,
 			current: activities.length,
@@ -169,8 +196,8 @@ export function computeAchievements(
 		},
 		{
 			id: '250_hours',
-			labelKey: 'ach_250_hours',
-			descriptionKey: 'ach_250_hours_desc',
+			labelMessageKey: 'achievement_250_hours',
+			descriptionMessageKey: 'achievement_250_hours_desc',
 			icon: 'Clock',
 			threshold: 250,
 			current: totalHours,
@@ -178,8 +205,8 @@ export function computeAchievements(
 		},
 		{
 			id: 'streak_15',
-			labelKey: 'ach_streak_15',
-			descriptionKey: 'ach_streak_15_desc',
+			labelMessageKey: 'achievement_streak_15',
+			descriptionMessageKey: 'achievement_streak_15_desc',
 			icon: 'Flame',
 			threshold: 15,
 			current: longestStreak,
@@ -187,17 +214,17 @@ export function computeAchievements(
 		},
 		{
 			id: 'thousand_hours',
-			labelKey: 'ach_thousand_hours',
-			descriptionKey: 'ach_thousand_hours_desc',
+			labelMessageKey: 'achievement_thousand_hours',
+			descriptionMessageKey: 'achievement_thousand_hours_desc',
 			icon: 'Crown',
 			threshold: 1000,
 			current: totalHours,
 			unit: 'hours'
 		}
 	];
-	return defs.map((d) => ({
-		...d,
-		unlocked: d.current >= d.threshold,
-		progress: Math.min(1, d.current / d.threshold)
+	return achievementDefinitions.map((achievementDefinition) => ({
+		...achievementDefinition,
+		unlocked: achievementDefinition.current >= achievementDefinition.threshold,
+		progress: Math.min(1, achievementDefinition.current / achievementDefinition.threshold)
 	}));
 }
