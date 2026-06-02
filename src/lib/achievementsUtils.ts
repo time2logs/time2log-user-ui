@@ -16,17 +16,21 @@ export type AchievementStatus = {
 };
 export type LevelInfo = { level: number; xpInLevel: number; xpForNext: number; progress: number };
 
-const SUNDAY = 0;
-const SATURDAY = 6;
+const JAVASCRIPT_SUNDAY_DAY_INDEX = 0;
+const JAVASCRIPT_SATURDAY_DAY_INDEX = 6;
+const SWISS_WEEKEND_DAY_INDICES = new Set([
+	JAVASCRIPT_SUNDAY_DAY_INDEX,
+	JAVASCRIPT_SATURDAY_DAY_INDEX
+]);
 
 function parseIsoDate(isoDate: string): Date {
 	const [year, month, day] = isoDate.split('-').map(Number);
 	return new Date(year, month - 1, day);
 }
 
-function isWeekend(date: Date): boolean {
-	const dayOfWeek = date.getDay();
-	return dayOfWeek === SUNDAY || dayOfWeek === SATURDAY;
+function isSwissWeekend(date: Date): boolean {
+	const javascriptDayOfWeekIndex = date.getDay();
+	return SWISS_WEEKEND_DAY_INDICES.has(javascriptDayOfWeekIndex);
 }
 
 export function addDays(isoDate: string, dayDelta: number): string {
@@ -84,7 +88,7 @@ export function computeCurrentStreak(
 	let currentStreakDays = 0;
 	let cursorIsoDate = todayIsoDate;
 	while (cursorIsoDate >= lookbackStartIsoDate) {
-		if (!isWeekend(parseIsoDate(cursorIsoDate)) && !absenceBlockedDates.has(cursorIsoDate)) {
+		if (!isSwissWeekend(parseIsoDate(cursorIsoDate)) && !absenceBlockedDates.has(cursorIsoDate)) {
 			if (loggedActivityDates.has(cursorIsoDate)) currentStreakDays++;
 			else break;
 		}
@@ -108,7 +112,7 @@ export function computeLongestStreak(
 	let longestStreakDays = 0;
 	let currentStreakDays = 0;
 	for (const isoDate of iterateDates(firstActivityIsoDate, todayIsoDate)) {
-		if (isWeekend(parseIsoDate(isoDate)) || absenceBlockedDates.has(isoDate)) continue;
+		if (isSwissWeekend(parseIsoDate(isoDate)) || absenceBlockedDates.has(isoDate)) continue;
 		if (loggedActivityDates.has(isoDate)) {
 			currentStreakDays++;
 			if (currentStreakDays > longestStreakDays) longestStreakDays = currentStreakDays;
@@ -162,14 +166,14 @@ export function computeSickDays(
 		const absenceEndIsoDate = absence.end_date < toIsoDate ? absence.end_date : toIsoDate;
 		if (absence.is_recurring && absence.rrule) {
 			for (const isoDate of iterateDates(fromIsoDate, toIsoDate)) {
-				if (!isWeekend(parseIsoDate(isoDate)) && isDateInAbsence(isoDate, absence)) {
+				if (!isSwissWeekend(parseIsoDate(isoDate)) && isDateInAbsence(isoDate, absence)) {
 					sickDayTotal = Math.min(1, sickDayTotal + dayFraction);
 				}
 			}
 			continue;
 		}
 		for (const isoDate of iterateDates(absenceStartIsoDate, absenceEndIsoDate)) {
-			if (!isWeekend(parseIsoDate(isoDate))) {
+			if (!isSwissWeekend(parseIsoDate(isoDate))) {
 				sickDayTotal = Math.min(1, sickDayTotal + dayFraction);
 			}
 		}

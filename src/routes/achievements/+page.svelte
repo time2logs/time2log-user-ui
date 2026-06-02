@@ -19,8 +19,10 @@
 		computeTopLocations,
 		computeSickDays
 	} from '$lib/achievementsUtils';
-	import { today as getLocalToday, getLocalTimeZone } from '@internationalized/date';
+	import { today as getTodayInTimeZone } from '@internationalized/date';
 	import type { CurriculumNodeSummary } from '$lib/types';
+
+	const SWISS_TIME_ZONE = 'Europe/Zurich';
 
 	type PageData = { curriculumNodeSummaries: CurriculumNodeSummary[] };
 	let { data }: { data: PageData } = $props();
@@ -36,7 +38,7 @@
 		void absenceStore.load();
 	});
 
-	const todayIsoDate = getLocalToday(getLocalTimeZone()).toString();
+	const todayIsoDate = getTodayInTimeZone(SWISS_TIME_ZONE).toString();
 	const currentYearStartIsoDate = `${todayIsoDate.slice(0, 4)}-01-01`;
 
 	const totalLoggedHours = $derived(computeTotalHours(activityRecords));
