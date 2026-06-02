@@ -79,3 +79,32 @@ export function computeWeeklyData(
 	}
 	return weeks;
 }
+
+export function computeAbsencesBySemester(
+	absences: import('./types').AbsenceRecord[]
+): { semester: string; type: string; days: number }[] {
+	const map = new Map<string, Map<string, number>>();
+
+	for (const a of absences) {
+		const start = new Date(`${a.start_date}T12:00:00`);
+		const year = start.getFullYear();
+		const month = start.getMonth() + 1; // 1–12
+
+		const semesterNum = month >= 8 ? 1 : 2;
+		const semesterYear = month >= 8 ? year : year - 1;
+		const semesterKey = `${semesterYear}/S${semesterNum}`;
+
+		if (!map.has(semesterKey)) map.set(semesterKey, new Map());
+		const typeMap = map.get(semesterKey)!;
+		const current = typeMap.get(a.absence_type_id) ?? 0;
+		typeMap.set(a.absence_type_id, current + Number(a.day_fraction));
+	}
+
+	const result: { semester: string; type: string; days: number }[] = [];
+	for (const [semester, typeMap] of [...map.entries()].sort()) {
+		for (const [type, days] of typeMap.entries()) {
+			result.push({ semester, type, days: Math.round(days * 10) / 10 });
+		}
+	}
+	return result;
+}

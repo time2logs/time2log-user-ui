@@ -111,6 +111,8 @@
 	"absence_day_fraction_short": "Tage",
 	"absence_hours_consumed": "Zählt als {hours} vom täglichen Limit von {max}.",
 	"recurring_label": "Wiederkehrend",
+	"absence_chart_title": "Absenzen pro Semester",
+	"absence_chart_desc": "Übersicht der Abwesenheitstage nach Typ und Semester",
 	"recurring_description": "Diese Abwesenheit tritt regelmäßig auf (z.B. Berufsschule)",
 	"recurring_frequency_weekly": "Wöchentlich",
 	"recurring_frequency_biweekly": "Zweiwöchentlich",

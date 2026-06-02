@@ -118,6 +118,8 @@
 	"recurring_days_of_week": "Giorni della settimana",
 	"recurring_until": "Fino alla data (Opzionale)",
 	"recurring_preview": "Anteprima ({count} occorrenze)",
+	"absence_chart_title": "Assenze per semestre",
+	"absence_chart_desc": "Panoramica dei giorni di assenza per tipo e semestre",
 	"absence_saved_for_date": "Questa assenza verrà salvata per il {date}.",
 	"no_absences_found": "Nessuna assenza trovata",
 	"delete_absence_confirm": "Sei sicuro di voler eliminare questa assenza?",
