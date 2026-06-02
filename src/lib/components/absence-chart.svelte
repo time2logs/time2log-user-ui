@@ -2,20 +2,17 @@
     import * as Card from '$lib/components/ui/card';
     import * as m from '$lib/paraglide/messages.js';
     import type { AbsenceRecord } from '$lib/types';
-    import { browser } from '$app/environment';
     import { computeAbsencesBySemester } from '$lib/statsUtils';
-    import { Chart, Bars, Svg, Axis, Tooltip } from 'layerchart';
-    import { scaleBand } from 'd3';
 
     let { absences }: { absences: AbsenceRecord[] } = $props();
 
     const TYPE_COLORS: Record<string, string> = {
-        sick: 'var(--chart-1)',
-        vacation: 'var(--chart-2)',
-        military: 'var(--chart-3)',
-        uk: 'var(--chart-4)',
-        berufsschule: 'var(--chart-5)',
-        custom: '#a3a3a3'
+        sick: '#ef4444',
+        vacation: '#3b82f6',
+        military: '#10b981',
+        uk: '#f59e0b',
+        berufsschule: '#8b5cf6',
+        custom: '#6b7280'
     };
 
     const TYPE_LABELS: Record<string, string> = {
@@ -28,73 +25,116 @@
     };
 
     const rawData = $derived(computeAbsencesBySemester(absences));
+    const types = $derived([...new Set(rawData.map((d) => d.type))].sort());
+    const semesters = $derived([...new Set(rawData.map((d) => d.semester))].sort());
+    const maxDays = $derived(Math.max(...rawData.map((d) => d.days), 5));
 
+    const svgWidth = 1000;
+    const svgHeight = 500;
+    const marginLeft = 60;
+    const marginRight = 30;
+    const marginTop = 30;
+    const marginBottom = 80;
 
-    const semesters = $derived([...new Set(rawData.map((d) => d.semester))]);
+    const chartWidth = svgWidth - marginLeft - marginRight;
+    const chartHeight = svgHeight - marginTop - marginBottom;
 
-    const types = $derived([...new Set(rawData.map((d) => d.type))]);
+    function getBarX(semesterIndex: number, typeIndex: number): number {
+        const semesterSpacing = chartWidth / semesters.length;
+        const typeSpacing = semesterSpacing / (types.length + 1);
+        return marginLeft + semesterIndex * semesterSpacing + (typeIndex + 1) * typeSpacing;
+    }
 
-    const chartData = $derived(
-        semesters.map((sem) => {
-            const entry: Record<string, number | string> = { semester: sem };
-            for (const t of types) {
-                const found = rawData.find((d) => d.semester === sem && d.type === t);
-                entry[t] = found ? found.days : 0;
-            }
-            return entry;
-        })
-    );
+    function getBarHeight(days: number): number {
+        if (maxDays === 0) return 0;
+        return (days / maxDays) * chartHeight;
+    }
+
+    function getBarY(days: number): number {
+        return marginTop + chartHeight - getBarHeight(days);
+    }
+
+    function getDaysForSemesterAndType(semester: string, type: string): number {
+        return rawData.find((d) => d.semester === semester && d.type === type)?.days ?? 0;
+    }
 </script>
 
-{#if browser && absences.length > 0}
+{#if absences.length > 0}
     <Card.Root class="gap-1">
         <Card.Header class="pt-5 pb-0">
             <Card.Title>{m.absence_chart_title()}</Card.Title>
             <Card.Description>{m.absence_chart_desc()}</Card.Description>
         </Card.Header>
         <Card.Content class="pb-4">
-            <div class="h-96 w-full [&_text]:fill-foreground">
-                <Chart
-                        data={chartData}
-                        x="semester"
-                        xScale={scaleBand().padding(0.3)}
-                        yDomain={[0, null]}
-                        yNice
-                        padding={{ top: 8, right: 8, bottom: 28, left: 40 }}
-                >
-                    <Svg>
-                        <Axis placement="bottom" />
-                        <Axis placement="left" grid />
-                        {#each types as type (type)}
-                            <Bars
-                                    y={type}
-                                    fill={TYPE_COLORS[type] ?? '#a3a3a3'}
-                                    radius={4}
-                                    rounded="top"
-                            />
-                        {/each}
-                    </Svg>
-                    <Tooltip.Root let:data>
-                        {#each types as type (type)}
-                            {#if data[type]}
-                                <Tooltip.Item label={TYPE_LABELS[type] ?? type} value={`${data[type]} Tage`} />
-                            {/if}
-                        {/each}
-                    </Tooltip.Root>
-                </Chart>
-            </div>
+            {#if types.length === 0}
+                <p class="text-sm text-muted-foreground text-center py-8">
+                    {m.no_absences_found()}
+                </p>
+            {:else}
+                <div class="overflow-x-auto">
+                    <svg width={svgWidth} height={svgHeight} class="mx-auto border">
+                        <line x1={marginLeft} y1={marginTop} x2={marginLeft} y2={marginTop + chartHeight} stroke="currentColor" stroke-width="2" />
+                        <line x1={marginLeft} y1={marginTop + chartHeight} x2={svgWidth - marginRight} y2={marginTop + chartHeight} stroke="currentColor" stroke-width="2" />
 
-            <ul class="mt-3 flex flex-wrap justify-center gap-x-4 gap-y-1 text-sm">
-                {#each types as type (type)}
-                    <li class="flex items-center gap-1.5">
-						<span
-                                class="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                                style="background:{TYPE_COLORS[type] ?? '#a3a3a3'}"
-                        ></span>
-                        {TYPE_LABELS[type] ?? type}
-                    </li>
-                {/each}
-            </ul>
+                        {#each [0, 1, 2, 3, 4, 5] as tick}
+                            {@const value = (tick / 5) * maxDays}
+                            {@const y = marginTop + chartHeight - (tick / 5) * chartHeight}
+                            <line x1={marginLeft - 5} y1={y} x2={marginLeft} y2={y} stroke="currentColor" stroke-width="1" />
+                            <text x={marginLeft - 10} y={y} text-anchor="end" dominant-baseline="middle" class="text-xs fill-muted-foreground">
+                                {Math.round(value)}
+                            </text>
+                        {/each}
+
+                        {#each [0, 1, 2, 3, 4, 5] as tick}
+                            {@const y = marginTop + chartHeight - (tick / 5) * chartHeight}
+                            <line x1={marginLeft} y1={y} x2={svgWidth - marginRight} y2={y} stroke="currentColor" stroke-width="0.5" opacity="0.2" />
+                        {/each}
+
+                        {#each semesters as semester, semesterIndex}
+                            {#each types as type, typeIndex}
+                                {@const days = getDaysForSemesterAndType(semester, type)}
+                                {@const barHeight = getBarHeight(days)}
+                                {@const barY = getBarY(days)}
+                                {@const barWidth = chartWidth / (semesters.length * (types.length + 1))}
+                                <g>
+                                    <rect
+                                            x={getBarX(semesterIndex, typeIndex) - barWidth / 2}
+                                            y={barY}
+                                            width={barWidth - 2}
+                                            height={barHeight}
+                                            fill={TYPE_COLORS[type]}
+                                            opacity="0.85"
+                                            stroke="black"
+                                            stroke-width="1"
+                                    />
+                                    {#if days > 0}
+                                        <text
+                                                x={getBarX(semesterIndex, typeIndex)}
+                                                y={barY - 5}
+                                                text-anchor="middle"
+                                                class="text-xs fill-foreground font-semibold"
+                                        >
+                                            {days}
+                                        </text>
+                                    {/if}
+                                </g>
+                            {/each}
+                        {/each}
+                    </svg>
+                </div>
+
+                <ul class="flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm border-t pt-4 mt-4">
+                    {#each types as type}
+                        <li class="flex items-center gap-1.5">
+							<span
+                                    class="inline-block h-3 w-3 shrink-0 rounded"
+                                    style="background:{TYPE_COLORS[type] ?? '#a3a3a3'}"
+                            ></span>
+                            {TYPE_LABELS[type] ?? type}
+                        </li>
+                    {/each}
+                </ul>
+            {/if}
         </Card.Content>
     </Card.Root>
 {/if}
