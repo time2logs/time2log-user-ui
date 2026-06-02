@@ -33,7 +33,7 @@
     const semesters = $derived([...new Set(rawData.map((d) => d.semester))]);
 
     const types = $derived([...new Set(rawData.map((d) => d.type))]);
-    
+
     const chartData = $derived(
         semesters.map((sem) => {
             const entry: Record<string, number | string> = { semester: sem };
@@ -53,7 +53,7 @@
             <Card.Description>{m.absence_chart_desc()}</Card.Description>
         </Card.Header>
         <Card.Content class="pb-4">
-            <div class="h-64 w-full [&_text]:fill-foreground">
+            <div class="h-96 w-full [&_text]:fill-foreground">
                 <Chart
                         data={chartData}
                         x="semester"
