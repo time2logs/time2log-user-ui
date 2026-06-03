@@ -24,6 +24,7 @@
 	import { getDateLocale } from '$lib/dateLocale';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import StatsOverview from '$lib/components/stats-overview.svelte';
+	import UnreportedDaysBanner from '$lib/components/unreported-days-banner.svelte';
 	import DailyHoursProgress from '$lib/components/daily-hours-progress.svelte';
 
 	const dateLocale = $derived(getDateLocale());
@@ -254,6 +255,8 @@
 					</Button>
 				</div>
 			</div>
+
+			<UnreportedDaysBanner {activities} {absences} />
 
 			<div class="mt-4 grid gap-4 lg:grid-cols-2 lg:items-stretch xl:gap-6">
 				<div class="order-2 flex h-full w-full lg:order-1">

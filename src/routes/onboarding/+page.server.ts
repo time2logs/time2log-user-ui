@@ -97,7 +97,7 @@ export const actions: Actions = {
 			});
 		}
 
-		const phoneNumber = normalizeSwissPhone(phoneNumberRaw);
+		const phoneNumber = _normalizeSwissPhone(phoneNumberRaw);
 		if (!phoneNumber) {
 			return fail(400, {
 				error: m.onboarding_phone_invalid()
@@ -161,7 +161,7 @@ export const actions: Actions = {
 		}
 
 		const code = randomInt(100000, 1000000).toString();
-		const codeHash = hashOtp(code);
+		const codeHash = _hashOtp(code);
 		const expiresAt = new Date(now + 10 * 60 * 1000).toISOString();
 		try {
 			const smsResult = await sendSwisscomVerificationSms({ to: phoneNumber, code });
@@ -255,7 +255,7 @@ export const actions: Actions = {
 		if (new Date(profileData.phone_verification_code_expires_at).getTime() < Date.now()) {
 			return fail(400, { error: m.onboarding_phone_code_expired() });
 		}
-		if (hashOtp(code) !== profileData.phone_verification_code_hash) {
+		if (_hashOtp(code) !== profileData.phone_verification_code_hash) {
 			return fail(400, { error: m.onboarding_phone_code_invalid() });
 		}
 
@@ -377,7 +377,7 @@ export const actions: Actions = {
 		}
 		const existingUser = resolved.user;
 
-		const normalizedPhoneNumber = normalizeSwissPhone(phoneNumber);
+		const normalizedPhoneNumber = _normalizeSwissPhone(phoneNumber);
 		if (!normalizedPhoneNumber) {
 			return fail(400, {
 				error: m.onboarding_phone_invalid(),
@@ -536,7 +536,7 @@ async function findUserByEmail(locals: App.Locals, email: string): Promise<FindU
 	} = await locals.supabaseSecret.auth.admin.listUsers();
 	if (listUsersError) {
 		console.error('[Onboarding] Failed to list users:', listUsersError.message);
-		if (isSupabaseAuthSecretError(listUsersError.message)) {
+		if (_isSupabaseAuthSecretError(listUsersError.message)) {
 			return { ok: false, reason: 'auth_misconfigured' };
 		}
 		return { ok: false, reason: 'not_found' };
@@ -591,7 +591,7 @@ async function resolveInvitedUser(
 	if (createUserError || !createdUserData.user?.id) {
 		if (createUserError) {
 			console.error('[Onboarding] Failed to provision invited auth user:', createUserError.message);
-			if (isSupabaseAuthSecretError(createUserError.message)) {
+			if (_isSupabaseAuthSecretError(createUserError.message)) {
 				return { ok: false, reason: 'auth_misconfigured' };
 			}
 			if (/already registered|already been registered/i.test(createUserError.message)) {
