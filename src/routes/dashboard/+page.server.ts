@@ -15,8 +15,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 		if (!error && data) {
 			userLocations = data.map((l: { location: string }) => l.location);
 		}
-	} catch {
-		userLocations = [];
+	} catch (error) {
+		console.warn('[Dashboard] Failed to load user locations:', error);
 	}
 
 	return { userLocations };
