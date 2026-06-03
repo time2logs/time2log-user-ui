@@ -2,8 +2,10 @@
 	import * as Dialog from '$lib/components/ui/dialog';
 	import * as AlertDialog from '$lib/components/ui/alert-dialog';
 	import { Button } from '$lib/components/ui/button';
+	import * as Select from '$lib/components/ui/select';
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
+	type Depth = number;
 	import { Textarea } from '$lib/components/ui/textarea';
 	import {
 		activityStore,
@@ -13,7 +15,14 @@
 		MAX_HOURS_PER_DAY,
 		MIN_HOURS
 	} from '$lib/activityStorage';
-	import type { ActivityRecord, CurriculumNode, CurriculumTreeNode, TeamMember } from '$lib/types';
+	import { getAbsenceFractionForDate } from '$lib/absenceStorage';
+	import type {
+		ActivityRecord,
+		AbsenceRecord,
+		CurriculumNode,
+		CurriculumTreeNode,
+		TeamMember
+	} from '$lib/types';
 	import {
 		Star,
 		ChevronRight,
@@ -26,12 +35,18 @@
 		X
 	} from 'lucide-svelte';
 	import * as m from '$lib/paraglide/messages.js';
+	import { getCurriculumLabel } from '$lib/curriculumLabel';
 	import { getDateLocale } from '$lib/dateLocale';
 
 	import { SvelteSet } from 'svelte/reactivity';
 	import { buildTree } from '$lib/curriculumTree';
 
 	const dateLocale = $derived(getDateLocale());
+
+	function formatHoursValue(value: number): string {
+		const rounded = Math.round(value * 10) / 10;
+		return Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
+	}
 
 	let {
 		open = $bindable(),
@@ -40,7 +55,9 @@
 		onActivityAdded,
 		selectedDate,
 		activityToEdit = null,
-		existingActivities = []
+		existingActivities = [],
+		userLocations = [],
+		existingAbsences = []
 	}: {
 		open: boolean;
 		curriculumNodes: CurriculumNode[];
@@ -49,6 +66,8 @@
 		selectedDate?: string;
 		activityToEdit?: ActivityRecord | null;
 		existingActivities?: ActivityRecord[];
+		userLocations?: string[];
+		existingAbsences?: AbsenceRecord[];
 	} = $props();
 
 	const tree = $derived(buildTree(curriculumNodes));
@@ -90,16 +109,13 @@
 				}
 				rating = 0;
 				hours = 0;
-				location = getLastLocation() || '';
+				const lastLoc = getLastLocation();
+				location =
+					lastLoc && userLocations?.includes(lastLoc) ? lastLoc : (userLocations?.[0] ?? '');
 				notes = '';
 			}
 			// Auto-expand all categories to show activities
 			expanded.clear();
-			curriculumNodes.forEach((node) => {
-				if (node.node_type === 'category') {
-					expanded.add(node.id);
-				}
-			});
 			submitError = null;
 			hasInitialized = true;
 		} else if (!open) {
@@ -169,9 +185,9 @@
 		}
 
 		if (wouldExceedDailyMax) {
-			const remaining = MAX_HOURS_PER_DAY - currentDayHours;
+			const remaining = maxHoursForDate - currentDayHours;
 			submitError = m.error_hours_max_day({
-				max: MAX_HOURS_PER_DAY.toString(),
+				max: maxHoursForDate.toString(),
 				remaining: remaining > 0 ? remaining.toString() : '0'
 			});
 			return;
@@ -189,7 +205,7 @@
 					notes: notes || null,
 					rating: rating || null,
 					location,
-					activity_name: selectedActivity.label,
+					activity_name: getCurriculumLabel(selectedActivity),
 					activity_key: selectedActivity.key,
 					activity_label: ''
 				};
@@ -219,7 +235,7 @@
 					notes: notes || null,
 					rating: rating || null,
 					location,
-					activity_name: selectedActivity.label,
+					activity_name: getCurriculumLabel(selectedActivity),
 					activity_key: selectedActivity.key,
 					activity_label: ''
 				};
@@ -281,9 +297,15 @@
 	}
 
 	const hoursExceedsMax = $derived(hours > MAX_HOURS_PER_ENTRY);
+	const entryDate = $derived(
+		selectedDate || activityToEdit?.entry_date || new Date().toISOString().split('T')[0]
+	);
+	const absenceFraction = $derived(getAbsenceFractionForDate(entryDate, existingAbsences));
+	const blockedHoursForDate = $derived(MAX_HOURS_PER_DAY * absenceFraction);
+	const maxHoursForDate = $derived(Math.max(0, MAX_HOURS_PER_DAY * (1 - absenceFraction)));
 	const currentDayHours = $derived(
 		existingActivities
-			.filter((a) => a.entry_date === (selectedDate || new Date().toISOString().split('T')[0]))
+			.filter((a) => a.entry_date === entryDate)
 			.reduce((sum, a) => {
 				if (activityToEdit && a.id === activityToEdit.id) return sum;
 				return sum + a.hours;
@@ -292,7 +314,7 @@
 				.filter((a) => a.entry_date === (selectedDate || new Date().toISOString().split('T')[0]))
 				.reduce((sum, a) => sum + a.hours, 0)
 	);
-	const wouldExceedDailyMax = $derived(currentDayHours + hours > MAX_HOURS_PER_DAY);
+	const wouldExceedDailyMax = $derived(currentDayHours + hours > maxHoursForDate);
 	const isValid = $derived(
 		selectedActivityId &&
 			hours >= MIN_HOURS &&
@@ -347,6 +369,16 @@
 					{m.activity_saved_for_date({ date: selectedDateLabel })}
 				</div>
 			{/if}
+			{#if absenceFraction > 0}
+				<div
+					class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+				>
+					{m.activity_hours_remaining_with_absence({
+						blocked: `${formatHoursValue(blockedHoursForDate)}h`,
+						available: `${formatHoursValue(maxHoursForDate)}h`
+					})}
+				</div>
+			{/if}
 
 			<!-- Pending activities queue -->
 			{#if pendingActivities.length > 0}
@@ -383,7 +415,7 @@
 						</div>
 					{:else}
 						<div class="max-h-64 divide-y divide-border overflow-y-auto">
-							{#snippet treeNode(node: CurriculumTreeNode, depth: number)}
+							{#snippet treeNode(node: CurriculumTreeNode, depth: Depth = 0)}
 								{#if node.node_type === 'category'}
 									<button
 										type="button"
@@ -398,7 +430,9 @@
 										{/if}
 										<Folder class="pointer-events-none h-4 w-4 text-primary" />
 										<span class="font-mono text-sm text-muted-foreground">{node.key}</span>
-										<span class="text-sm font-medium text-foreground">{node.label}</span>
+										<span class="text-sm font-medium text-foreground"
+											>{getCurriculumLabel(node)}</span
+										>
 									</button>
 
 									{#if expanded.has(node.id)}
@@ -419,7 +453,9 @@
 										<span class="w-4"></span>
 										<FileText class="pointer-events-none h-4 w-4 text-muted-foreground" />
 										<span class="font-mono text-sm text-muted-foreground">{node.key}</span>
-										<span class="text-sm font-medium text-foreground">{node.label}</span>
+										<span class="text-sm font-medium text-foreground"
+											>{getCurriculumLabel(node)}</span
+										>
 										{#if selectedActivityId === node.id}
 											<Check class="pointer-events-none ml-auto h-4 w-4 text-primary" />
 										{/if}
@@ -435,7 +471,9 @@
 				</div>
 				{#if selectedActivity}
 					<p class="text-sm text-muted-foreground">
-						{m.selected_activity({ name: `${selectedActivity.key} - ${selectedActivity.label}` })}
+						{m.selected_activity({
+							name: `${selectedActivity.key} - ${getCurriculumLabel(selectedActivity)}`
+						})}
 					</p>
 				{/if}
 			</div>
@@ -481,8 +519,8 @@
 				{:else if wouldExceedDailyMax && hours > 0}
 					<p class="text-sm text-red-600">
 						{m.error_hours_max_day({
-							max: MAX_HOURS_PER_DAY.toString(),
-							remaining: Math.max(0, MAX_HOURS_PER_DAY - currentDayHours).toString()
+							max: maxHoursForDate.toString(),
+							remaining: Math.max(0, maxHoursForDate - currentDayHours).toString()
 						})}
 					</p>
 				{:else if hours > 0 && hours < MIN_HOURS}
@@ -494,13 +532,23 @@
 
 			<!-- Location -->
 			<div class="grid gap-2">
-				<Label for="location">{m.location_label()}</Label>
-				<Input
-					id="location"
-					type="text"
-					bind:value={location}
-					placeholder={m.location_placeholder()}
-				/>
+				<Label>{m.location_label()}</Label>
+				{#if userLocations.length === 0}
+					<p class="text-sm text-muted-foreground">
+						{m.no_locations_for_activity()}
+					</p>
+				{:else}
+					<Select.Root bind:value={location} type="single">
+						<Select.Trigger>
+							{location || m.location_placeholder()}
+						</Select.Trigger>
+						<Select.Content>
+							{#each userLocations as loc (loc)}
+								<Select.Item value={loc} label={loc}>{loc}</Select.Item>
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				{/if}
 			</div>
 
 			<!-- Notes (Optional) -->

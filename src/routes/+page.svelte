@@ -37,8 +37,7 @@
 	<!-- Subtle background glow -->
 	<AmbientGlow />
 
-	<!-- Header -->
-	<SiteHeader />
+	<SiteHeader loggedIn={isLoggedIn} />
 
 	<!-- Hero Section -->
 	<section class="relative z-10 flex flex-grow items-center justify-center px-4 py-20">
@@ -187,6 +186,6 @@
 	</section>
 
 	<div class="relative z-10">
-		<SiteFooter />
+		<SiteFooter loggedIn={isLoggedIn} />
 	</div>
 </div>

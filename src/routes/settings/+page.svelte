@@ -16,10 +16,19 @@
 		Moon,
 		Sun,
 		Camera,
-		ShieldAlert
+		ShieldAlert,
+		MapPin,
+		Trash2
 	} from 'lucide-svelte';
 	import { theme } from '$lib/themeStore';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
+	import * as Select from '$lib/components/ui/select';
+	import { palette, type Palette } from '$lib/paletteStore';
+
+	let currentPalette = $state<Palette>('default');
+	palette.subscribe((p) => {
+		currentPalette = p;
+	});
 
 	let { data, form } = $props();
 
@@ -30,12 +39,13 @@
 	let isSavingPassword = $state(false);
 	let isCompressing = $state(false);
 	let currentTheme = $state<'light' | 'dark'>('light');
+	let newLocation = $state('');
+	let isSavingLocation = $state(false);
 
 	let firstName = $state(data.profile?.first_name ?? '');
 	let lastName = $state(data.profile?.last_name ?? '');
 	let emailValue = $state(data.email ?? '');
 
-	// Keep form fields in sync when data refreshes after a successful save
 	$effect(() => {
 		firstName = data.profile?.first_name ?? '';
 		lastName = data.profile?.last_name ?? '';
@@ -192,14 +202,18 @@
 
 <div class="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
 	<AmbientGlow />
-	<main class="relative z-10 flex flex-1 flex-col items-center justify-center p-4 sm:p-8">
+	<main class="relative z-10 flex flex-1 flex-col items-center p-4 pt-6 sm:p-8 sm:pt-12">
 		<div class="w-full max-w-md">
-			<Button variant="ghost" href="/dashboard" class="mb-6 gap-2 self-start text-muted-foreground">
+			<Button
+				variant="ghost"
+				href="/dashboard"
+				class="mb-4 gap-2 self-start text-muted-foreground sm:mb-6"
+			>
 				<ArrowLeft class="h-4 w-4" />
 				{m.back_to_dashboard()}
 			</Button>
 
-			<h1 class="mb-8 text-3xl font-bold text-foreground">
+			<h1 class="mb-4 text-2xl font-bold text-foreground sm:mb-8 sm:text-3xl">
 				{m.settings_title()}
 			</h1>
 
@@ -364,6 +378,30 @@
 									{/if}
 								</span>
 							</button>
+							<div class="mt-4 flex flex-col gap-2">
+								<span class="text-muted-foreground">Farbschema</span>
+								<Select.Root
+									type="single"
+									value={currentPalette}
+									onValueChange={(v) => palette.set(v as Palette)}
+								>
+									<Select.Trigger class="w-44">
+										{{
+											default: 'Standard',
+											deuteranopia: 'Deuteranopie',
+											protanopia: 'Protanopie',
+											monochrome: 'Monochrom'
+										}[currentPalette]}
+									</Select.Trigger>
+									<Select.Content>
+										<Select.Item value="default" label="Standard">Standard</Select.Item>
+										<Select.Item value="deuteranopia" label="Deuteranopie">Deuteranopie</Select.Item
+										>
+										<Select.Item value="protanopia" label="Protanopie">Protanopie</Select.Item>
+										<Select.Item value="monochrome" label="Monochrom">Monochrom</Select.Item>
+									</Select.Content>
+								</Select.Root>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -375,6 +413,79 @@
 							<h3 class="font-semibold">{m.language_settings()}</h3>
 						</div>
 						<LanguageSwitcher />
+					</div>
+				</div>
+
+				<div class="rounded-xl border border-border bg-card shadow-sm">
+					<div class="p-4">
+						<div class="mb-4 flex items-center gap-2 text-foreground">
+							<MapPin class="h-5 w-5" />
+							<h3 class="font-semibold">{m.locations_settings()}</h3>
+						</div>
+
+						<form
+							method="POST"
+							action="?/addLocation"
+							use:enhance={() => {
+								isSavingLocation = true;
+								return async ({ update }) => {
+									isSavingLocation = false;
+									newLocation = '';
+									await update();
+								};
+							}}
+							class="flex gap-2"
+						>
+							<Input
+								name="location"
+								type="text"
+								bind:value={newLocation}
+								placeholder={m.add_location_placeholder()}
+								disabled={isSavingLocation}
+							/>
+							<Button type="submit" disabled={isSavingLocation || !newLocation.trim()}>
+								{#if isSavingLocation}
+									<Loader2 class="h-4 w-4 animate-spin" />
+								{:else}
+									+
+								{/if}
+							</Button>
+						</form>
+
+						{#if form?.locationError}
+							<p class="mt-2 text-sm text-destructive">{form.locationError}</p>
+						{/if}
+						{#if form?.locationSuccess}
+							<p class="mt-2 text-sm text-green-600">{m.add_location_success()}</p>
+						{/if}
+
+						<div class="mt-4 space-y-2">
+							{#if data.pastLocations.length === 0}
+								<p class="text-sm text-muted-foreground">{m.no_locations_hint()}</p>
+							{:else}
+								{#each data.pastLocations as loc (loc.location)}
+									<div
+										class="flex items-center justify-between rounded-lg border border-border px-3 py-2"
+									>
+										<span class="text-sm">{loc.location}</span>
+										<form
+											method="POST"
+											action="?/deleteLocation"
+											use:enhance={() => {
+												return async ({ update }) => {
+													await update();
+												};
+											}}
+										>
+											<input type="hidden" name="location" value={loc.location} />
+											<button type="submit" class="text-muted-foreground hover:text-destructive">
+												<Trash2 class="h-4 w-4" />
+											</button>
+										</form>
+									</div>
+								{/each}
+							{/if}
+						</div>
 					</div>
 				</div>
 

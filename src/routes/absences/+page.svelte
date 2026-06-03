@@ -77,6 +77,11 @@
 		return `${formatter.format(start)} - ${formatter.format(end)}`;
 	}
 
+	function formatBlockedHours(dayFraction: number): string {
+		const blockedHours = Math.round(dayFraction * 10 * 10) / 10;
+		return Number.isInteger(blockedHours) ? `${blockedHours}h` : `${blockedHours.toFixed(1)}h`;
+	}
+
 	function getWeekdayName(dayNum: number): string {
 		// Jan 7 2024 is Sunday (dayNum 0), Jan 8 is Monday (1), etc.
 		const date = new Date(2024, 0, 7 + dayNum);
@@ -102,10 +107,17 @@
 				// WEEKLY
 				if (weekdayArray.length > 0) {
 					const days = weekdayArray
-						.map((d: number | { weekday: number }) => {
-							const dayNum = typeof d === 'number' ? d : d.weekday;
+						.map((d) => {
+							const dayNum =
+								typeof d === 'number'
+									? d
+									: typeof d === 'string'
+										? ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].indexOf(d)
+										: d.weekday;
+							if (dayNum < 0) return '';
 							return getWeekdayName(dayNum);
 						})
+						.filter(Boolean)
 						.join(', ');
 					desc += days;
 				} else {
@@ -156,9 +168,15 @@
 						<h3 class="text-base font-semibold text-foreground sm:text-lg">
 							{getAbsenceTypeLabel(absence.absence_type_id)}
 						</h3>
+						<span
+							class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+						>
+							{absence.day_fraction}
+							{m.absence_day_fraction_short()}
+						</span>
 						{#if absence.is_recurring}
 							<span
-								class="rounded-full bg-blue-100 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+								class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
 							>
 								{m.recurring_label()}
 							</span>
@@ -166,6 +184,12 @@
 					</div>
 					<p class="mt-2 text-sm text-muted-foreground">
 						{formatDateRange(absence.start_date, absence.end_date)}
+					</p>
+					<p class="mt-1 text-xs text-muted-foreground">
+						{m.absence_hours_consumed({
+							hours: formatBlockedHours(Number(absence.day_fraction ?? 1)),
+							max: '10h'
+						})}
 					</p>
 					{#if absence.is_recurring}
 						<p class="mt-1 text-xs text-muted-foreground">
@@ -179,7 +203,7 @@
 				<Button
 					variant="outline"
 					size="sm"
-					class="flex-shrink-0"
+					class="mt-3 flex-shrink-0 self-start sm:mt-0"
 					onclick={() => handleEditAbsence(absence)}
 				>
 					<Edit2 class="h-4 w-4" />
@@ -233,7 +257,7 @@
 				</Card.Root>
 			{:else if absences.length === 0}
 				<Card.Root>
-					<Card.Content class="flex flex-col items-center justify-center">
+					<Card.Content class="flex flex-col items-center justify-center py-12">
 						<AlertCircle class="mb-2 h-12 w-12 text-muted-foreground/50" />
 						<h3 class="mb-1 text-lg font-medium">{m.no_absences_found()}</h3>
 						<p class="mb-4 text-sm text-muted-foreground">
@@ -246,7 +270,7 @@
 					</Card.Content>
 				</Card.Root>
 			{:else}
-				<div class="grid lg:gap-6">
+				<div class="grid gap-3 lg:gap-6">
 					{#each upcomingAbsences as absence (absence.id)}
 						{@render absenceCard(absence)}
 					{/each}

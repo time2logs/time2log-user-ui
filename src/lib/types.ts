@@ -65,6 +65,7 @@ export type AbsenceRecord = {
 	absence_type_id: AbsenceType;
 	start_date: string;
 	end_date: string;
+	day_fraction: number;
 	is_recurring: boolean;
 	rrule: string | null;
 	notes: string | null;
@@ -77,4 +78,5 @@ export type InviteDetails = {
 	organization_name: string;
 	email: string;
 	role: string;
+	current_semester: string | null;
 };

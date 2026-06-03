@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 vi.mock('./supabaseClient', () => ({ supabase: { from: vi.fn() } }));
 
 import type { AbsenceRecord } from './types';
-import { isDateInAbsence } from './absenceStorage';
+import { getAbsenceFractionForDate, isDateInAbsence } from './absenceStorage';
 
 function makeAbsence(overrides: Partial<AbsenceRecord> = {}): AbsenceRecord {
 	return {
@@ -14,6 +14,7 @@ function makeAbsence(overrides: Partial<AbsenceRecord> = {}): AbsenceRecord {
 		absence_type_id: 'vacation' as AbsenceRecord['absence_type_id'],
 		start_date: '2024-03-01',
 		end_date: '2024-03-05',
+		day_fraction: 1,
 		is_recurring: false,
 		rrule: null,
 		notes: null,
@@ -99,5 +100,46 @@ describe('isDateInAbsence — recurring (rrule)', () => {
 		});
 		expect(() => isDateInAbsence('2024-01-08', absence)).not.toThrow();
 		expect(isDateInAbsence('2024-01-08', absence)).toBe(false);
+	});
+});
+
+describe('getAbsenceFractionForDate', () => {
+	it('returns 1 for a full-day absence', () => {
+		const absences = [
+			makeAbsence({ day_fraction: 1, start_date: '2024-03-01', end_date: '2024-03-01' })
+		];
+		expect(getAbsenceFractionForDate('2024-03-01', absences)).toBe(1);
+	});
+
+	it('returns the stored fraction for a partial-day absence', () => {
+		const absences = [
+			makeAbsence({ day_fraction: 0.5, start_date: '2024-03-01', end_date: '2024-03-01' })
+		];
+		expect(getAbsenceFractionForDate('2024-03-01', absences)).toBe(0.5);
+	});
+
+	it('returns 0 when no absence applies to the date', () => {
+		const absences = [
+			makeAbsence({ day_fraction: 0.5, start_date: '2024-03-01', end_date: '2024-03-01' })
+		];
+		expect(getAbsenceFractionForDate('2024-03-02', absences)).toBe(0);
+	});
+
+	it('caps overlapping absences at 1', () => {
+		const absences = [
+			makeAbsence({
+				id: 'abs-1',
+				day_fraction: 0.6,
+				start_date: '2024-03-01',
+				end_date: '2024-03-01'
+			}),
+			makeAbsence({
+				id: 'abs-2',
+				day_fraction: 0.7,
+				start_date: '2024-03-01',
+				end_date: '2024-03-01'
+			})
+		];
+		expect(getAbsenceFractionForDate('2024-03-01', absences)).toBe(1);
 	});
 });

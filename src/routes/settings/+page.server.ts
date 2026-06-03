@@ -173,5 +173,61 @@ export const actions: Actions = {
 		}
 
 		return { passwordSuccess: true };
+	},
+
+	addLocation: async ({ request, locals }) => {
+		const session = await locals.safeGetSession();
+
+		if (!session) throw redirect(302, '/login');
+
+		const formData = await request.formData();
+		const location = formData.get('location')?.toString().trim() ?? '';
+
+		if (!location) {
+			return fail(400, { locationError: 'Standort darf nicht leer sein.' });
+		}
+
+		const { error } = await locals.supabase
+			.from('user_locations')
+			.insert({ user_id: session.user.id, location, is_default: false });
+
+		if (error) {
+			if (error.code === '23505') {
+				return fail(400, { locationError: m.location_already_exists() });
+			}
+			return fail(500, { locationError: 'Fehler beim Speichern.' });
+		}
+		return { locationSuccess: true };
+	},
+	deleteLocation: async ({ request, locals }) => {
+		const session = await locals.safeGetSession();
+		if (!session) throw redirect(302, '/login');
+
+		const formData = await request.formData();
+		const location = formData.get('location')?.toString() ?? '';
+
+		await locals.supabase
+			.from('user_locations')
+			.delete()
+			.eq('user_id', session.user.id)
+			.eq('location', location);
+
+		return { locationDeleteSuccess: true };
+	},
+	updateColorblindType: async ({ request, locals }) => {
+		const session = await locals.safeGetSession();
+		if (!session) throw redirect(302, '/login');
+
+		const formData = await request.formData();
+		const colorblindType = formData.get('colorblind_type')?.toString() ?? 'none';
+
+		const { error } = await locals.supabase
+			.from('profiles')
+			.update({ colorblind_type: colorblindType })
+			.eq('id', session.user.id);
+
+		if (error) return fail(500, { colorblindError: 'Fehler beim Speichern.' });
+
+		return { colorblindSuccess: true };
 	}
 };

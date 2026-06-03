@@ -1,7 +1,8 @@
 import type { ActivityRecord, CurriculumNodeSummary } from './types';
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { supabase } from './supabaseClient';
 import * as m from '$lib/paraglide/messages.js';
+import { isWithinEditWindow, EDIT_WINDOW_DAYS } from './utils';
 
 const LAST_ACTIVITY_KEY = 'last_activity_id';
 const LAST_LOCATION_KEY = 'last_location';
@@ -98,7 +99,8 @@ function enrichActivityRecords(records: ActivityRecordSource[]): ActivityRecord[
 }
 
 function createActivityStore() {
-	const { subscribe, set, update: updateStore } = writable<ActivityRecord[]>([]);
+	const store = writable<ActivityRecord[]>([]);
+	const { subscribe, set, update: updateStore } = store;
 
 	const load = async () => {
 		if (typeof window === 'undefined') return;
@@ -250,6 +252,13 @@ function createActivityStore() {
 		delete: async (id: string): Promise<boolean> => {
 			debugLog('Deleting activity via store', { id });
 
+			const existing = get(store).find((a) => a.id === id);
+			if (existing && !isWithinEditWindow(existing.entry_date)) {
+				throw new Error(
+					`Einträge können nur innerhalb von ${EDIT_WINDOW_DAYS} Tagen gelöscht werden.`
+				);
+			}
+
 			const { error } = await supabase.from('activity_records').delete().eq('id', id);
 
 			if (error) {
@@ -284,6 +293,13 @@ function createActivityStore() {
 			if (activity.hours !== undefined && !validateActivity({ hours: activity.hours })) {
 				console.warn('[ActivityStorage] Activity validation failed, not updating');
 				return null;
+			}
+
+			const existing = get(store).find((a) => a.id === id);
+			if (existing && !isWithinEditWindow(existing.entry_date)) {
+				throw new Error(
+					`Einträge können nur innerhalb von ${EDIT_WINDOW_DAYS} Tagen bearbeitet werden.`
+				);
 			}
 
 			const updateData: Record<string, unknown> = {};
