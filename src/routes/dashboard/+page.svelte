@@ -19,11 +19,13 @@
 		TeamMember
 	} from '$lib/types';
 	import { resolve } from '$app/paths';
-	import { LogOut, Loader2, Plus, Menu, Settings, Calendar } from 'lucide-svelte';
+	import { LogOut, Loader2, Plus, Menu, Settings, Calendar, Trophy } from 'lucide-svelte';
 	import { DateFormatter, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
 	import { getDateLocale } from '$lib/dateLocale';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import StatsOverview from '$lib/components/stats-overview.svelte';
+	import UnreportedDaysBanner from '$lib/components/unreported-days-banner.svelte';
+	import DailyHoursProgress from '$lib/components/daily-hours-progress.svelte';
 
 	const dateLocale = $derived(getDateLocale());
 	type DashboardPageData = {
@@ -31,6 +33,7 @@
 			first_name: string;
 			last_name: string;
 			avatar_url: string | null;
+			target_hours?: number | null;
 		} | null;
 		teamMember: TeamMember | null;
 		curriculumNodes: CurriculumNode[];
@@ -90,6 +93,11 @@
 
 	const selectedDateIso = $derived(selectedDate.toString());
 	const activityDates = $derived(new Set(activities.map((a) => a.entry_date)));
+
+	const selectedDateLoggedHours = $derived(
+		activities.filter((a) => a.entry_date === selectedDateIso).reduce((sum, a) => sum + a.hours, 0)
+	);
+	const targetHours = $derived(data.profile?.target_hours ?? 8);
 	const selectedDateLabel = $derived(
 		new DateFormatter(dateLocale, {
 			weekday: 'long',
@@ -189,6 +197,14 @@
 						<Calendar class="h-4 w-4" />
 					</a>
 					<a
+						href="/achievements"
+						aria-label={m.achievements_title()}
+						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						title={m.achievements_title()}
+					>
+						<Trophy class="h-4 w-4" />
+					</a>
+					<a
 						href={resolve('/settings')}
 						data-sveltekit-reload
 						aria-label={m.settings_title()}
@@ -215,6 +231,13 @@
 						<Calendar class="h-4 w-4" />
 					</a>
 					<a
+						href="/achievements"
+						aria-label={m.achievements_title()}
+						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+					>
+						<Trophy class="h-4 w-4" />
+					</a>
+					<a
 						href={resolve('/settings')}
 						data-sveltekit-reload
 						aria-label={m.settings_title()}
@@ -233,10 +256,10 @@
 				</div>
 			</div>
 
-			<div
-				class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:items-start xl:gap-6"
-			>
-				<div class="order-2 flex justify-center lg:order-1 lg:justify-start">
+			<UnreportedDaysBanner {activities} {absences} />
+
+			<div class="mt-4 grid gap-4 lg:grid-cols-2 lg:items-stretch xl:gap-6">
+				<div class="order-2 flex h-full w-full lg:order-1">
 					<WorkdayCalendar
 						bind:value={selectedDate}
 						{isDateDisabled}
@@ -246,7 +269,7 @@
 					/>
 				</div>
 
-				<Card.Root class="order-1 flex-1 lg:order-2">
+				<Card.Root class="order-1 h-full flex-1 gap-0 lg:order-2">
 					<Card.Header
 						class="flex flex-col gap-1 pt-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:pt-6"
 					>
@@ -269,6 +292,7 @@
 							</Button>
 						</div>
 					</Card.Header>
+					<DailyHoursProgress loggedHours={selectedDateLoggedHours} {targetHours} />
 					<Card.Content class="flex flex-1 flex-col p-0">
 						<ActivityList
 							onRefresh={handleActivityAdded}
@@ -280,6 +304,13 @@
 						/>
 					</Card.Content>
 				</Card.Root>
+			</div>
+
+			<div class="mt-6 flex items-center justify-end">
+				<Button variant="outline" size="sm" href="/achievements">
+					<Trophy class="mr-2 h-4 w-4" />
+					{m.achievements_view_full()}
+				</Button>
 			</div>
 
 			<StatsOverview {activities} />
@@ -380,6 +411,16 @@
 					<Calendar class="h-4 w-4" />
 				</div>
 				<span class="text-sm font-medium">{m.absences_title()}</span>
+			</a>
+			<a
+				href="/achievements"
+				onclick={() => (mobileMenuOpen = false)}
+				class="flex items-center gap-3 rounded-lg px-3 py-3 text-foreground transition-colors hover:bg-muted"
+			>
+				<div class="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+					<Trophy class="h-4 w-4" />
+				</div>
+				<span class="text-sm font-medium">{m.achievements_title()}</span>
 			</a>
 			<a
 				href={resolve('/settings')}

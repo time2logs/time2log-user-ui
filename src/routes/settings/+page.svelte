@@ -18,7 +18,8 @@
 		Camera,
 		ShieldAlert,
 		MapPin,
-		Trash2
+		Trash2,
+		Clock
 	} from 'lucide-svelte';
 	import { theme } from '$lib/themeStore';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
@@ -30,7 +31,24 @@
 		currentPalette = p;
 	});
 
-	let { data, form } = $props();
+	type SettingsForm = {
+		profileError?: string;
+		profileSuccess?: boolean;
+		emailError?: string;
+		emailSuccess?: boolean;
+		passwordError?: string;
+		passwordSuccess?: boolean;
+		locationError?: string;
+		locationSuccess?: boolean;
+		locationDeleteSuccess?: boolean;
+		colorblindError?: string;
+		colorblindSuccess?: boolean;
+		targetHoursError?: string;
+		targetHoursSuccess?: boolean;
+	} | null;
+
+	let { data, form: rawForm } = $props();
+	const form = $derived(rawForm as SettingsForm);
 
 	let isLoggingOut = $state(false);
 	let logoutDialogOpen = $state(false);
@@ -41,6 +59,8 @@
 	let currentTheme = $state<'light' | 'dark'>('light');
 	let newLocation = $state('');
 	let isSavingLocation = $state(false);
+	let targetHoursValue = $state(data.profile?.target_hours ?? 8);
+	let isSavingTargetHours = $state(false);
 
 	let firstName = $state(data.profile?.first_name ?? '');
 	let lastName = $state(data.profile?.last_name ?? '');
@@ -50,6 +70,7 @@
 		firstName = data.profile?.first_name ?? '';
 		lastName = data.profile?.last_name ?? '';
 		emailValue = data.email ?? '';
+		targetHoursValue = data.profile?.target_hours ?? 8;
 	});
 
 	let avatarFile: File | null = $state(null);
@@ -487,6 +508,64 @@
 							{/if}
 						</div>
 					</div>
+				</div>
+
+				<!-- Target Hours -->
+				<div class="rounded-xl border border-border bg-card shadow-sm">
+					<form
+						method="POST"
+						action="?/updateTargetHours"
+						use:enhance={() => {
+							isSavingTargetHours = true;
+							return async ({ update }) => {
+								isSavingTargetHours = false;
+								await update();
+							};
+						}}
+					>
+						<div class="p-4">
+							<div class="mb-4 flex items-center gap-2 text-foreground">
+								<Clock class="h-5 w-5" />
+								<h3 class="font-semibold">{m.settings_target_hours_label()}</h3>
+							</div>
+							<p class="mb-3 text-sm text-muted-foreground">{m.settings_target_hours_hint()}</p>
+							<div class="flex items-center gap-3">
+								<Input
+									id="target_hours"
+									name="target_hours"
+									type="number"
+									min="1"
+									max="24"
+									bind:value={targetHoursValue}
+									disabled={isSavingTargetHours}
+									class="w-24"
+								/>
+								<span class="text-sm text-muted-foreground">{m.settings_target_hours_unit()}</span>
+							</div>
+							{#if form?.targetHoursError}
+								<div
+									class="mt-3 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
+								>
+									{form.targetHoursError}
+								</div>
+							{/if}
+							{#if form?.targetHoursSuccess}
+								<div
+									class="mt-3 rounded-md border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-600"
+								>
+									{m.settings_target_hours_saved()}
+								</div>
+							{/if}
+							<Button type="submit" class="mt-4 w-full" disabled={isSavingTargetHours}>
+								{#if isSavingTargetHours}
+									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+									{m.saving()}
+								{:else}
+									{m.save()}
+								{/if}
+							</Button>
+						</div>
+					</form>
 				</div>
 
 				<!-- Danger Zone -->

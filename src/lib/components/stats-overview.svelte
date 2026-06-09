@@ -5,6 +5,7 @@
 	import { browser } from '$app/environment';
 	import { Chart, Bars, Svg, Axis, Tooltip } from 'layerchart';
 	import { scaleBand, pie, arc as d3Arc } from 'd3';
+	import { formatHoursMinutes } from '$lib/utils';
 
 	import {
 		computeHoursThisWeek,
@@ -58,7 +59,7 @@
 			<Card.Description>{m.stats_hours_this_week()}</Card.Description>
 		</Card.Header>
 		<Card.Content class="pb-5">
-			<p class="text-3xl font-bold tabular-nums">{hoursThisWeek}</p>
+			<p class="text-3xl font-bold tabular-nums">{formatHoursMinutes(hoursThisWeek)}</p>
 		</Card.Content>
 	</Card.Root>
 
@@ -67,7 +68,7 @@
 			<Card.Description>{m.stats_total_hours()}</Card.Description>
 		</Card.Header>
 		<Card.Content class="pb-5">
-			<p class="text-3xl font-bold tabular-nums">{totalHours}</p>
+			<p class="text-3xl font-bold tabular-nums">{formatHoursMinutes(totalHours)}</p>
 		</Card.Content>
 	</Card.Root>
 
@@ -107,7 +108,7 @@
 							<Bars radius={4} rounded="top" fill="var(--chart-1)" />
 						</Svg>
 						<Tooltip.Root let:data>
-							<Tooltip.Item label={data.label} value="{data.hours}h" />
+							<Tooltip.Item label={data.label} value={formatHoursMinutes(data.hours)} />
 						</Tooltip.Root>
 					</Chart>
 				</div>

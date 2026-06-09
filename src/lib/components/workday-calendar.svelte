@@ -122,7 +122,9 @@
 	}
 </script>
 
-<div class="w-full max-w-md rounded-3xl border border-border bg-card p-3 shadow-sm sm:p-4">
+<div
+	class="flex h-full w-full flex-col rounded-xl border border-border bg-card p-3 shadow-sm sm:p-4"
+>
 	<div class="mb-3 flex items-center justify-between gap-2 sm:mb-4 sm:gap-3">
 		<div>
 			<h3 class="text-base font-semibold text-card-foreground sm:text-lg">{monthLabel}</h3>
@@ -165,7 +167,7 @@
 			<button
 				type="button"
 				class={cn(
-					'flex aspect-square flex-col items-center justify-center gap-0.5 rounded-lg border text-xs font-medium transition-all sm:rounded-xl sm:text-sm',
+					'flex aspect-square flex-col items-center justify-center gap-0.5 rounded-xl border text-xs font-medium transition-all sm:rounded-2xl sm:text-sm',
 					cell.outsideMonth && 'border-transparent bg-transparent text-muted-foreground/40',
 					!cell.outsideMonth && 'border-border bg-card text-foreground shadow-sm',
 					!cell.disabled &&
