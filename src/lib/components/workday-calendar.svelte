@@ -13,14 +13,15 @@
 		today,
 		type DateValue
 	} from '@internationalized/date';
-	import { ChevronLeft, ChevronRight } from 'lucide-svelte';
+	import { ChevronLeft, ChevronRight, Palmtree } from 'lucide-svelte';
+	import type { AbsenceType } from '$lib/types';
 
 	type WorkdayCalendarProps = {
 		value?: DateValue;
 		locale?: string;
 		isDateDisabled?: (date: DateValue) => boolean;
 		activityDates?: Set<string>;
-		isAbsenceDate?: (dateStr: string) => boolean;
+		isAbsenceDate?: (dateStr: string) => AbsenceType | null;
 	};
 
 	let {
@@ -28,7 +29,7 @@
 		locale = 'en-GB',
 		isDateDisabled = () => false,
 		activityDates = new Set<string>(),
-		isAbsenceDate = () => false
+		isAbsenceDate = () => null
 	}: WorkdayCalendarProps = $props();
 
 	const timeZone = getLocalTimeZone();
@@ -76,7 +77,7 @@
 			const isToday = isEqualDay(date, todayDate);
 			const dateStr = date.toString();
 			const hasActivity = activityDates.has(dateStr);
-			const hasAbsence = isAbsenceDate(dateStr);
+			const absenceType = isAbsenceDate(dateStr);
 
 			return {
 				date,
@@ -87,7 +88,7 @@
 				selected,
 				isToday,
 				hasActivity,
-				hasAbsence
+				absenceType
 			};
 		});
 	});
@@ -183,7 +184,21 @@
 				aria-label={formatFullDate(cell.date)}
 			>
 				<span>{cell.dayNumber}</span>
-				{#if !cell.outsideMonth && !cell.isWeekend && !cell.disabled && cell.hasActivity}
+				{#if !cell.outsideMonth && !cell.isWeekend && !cell.disabled && cell.absenceType === 'vacation'}
+					<Palmtree
+						class={cn(
+							'h-3 w-3 sm:h-3.5 sm:w-3.5',
+							cell.selected ? 'text-primary-foreground' : 'text-emerald-500 dark:text-emerald-400'
+						)}
+					/>
+				{:else if !cell.outsideMonth && !cell.isWeekend && !cell.disabled && cell.absenceType}
+					<span
+						class={cn(
+							'h-1 w-1 rounded-full sm:h-1.5 sm:w-1.5',
+							cell.selected ? 'bg-primary-foreground' : 'bg-amber-500 dark:bg-amber-400'
+						)}
+					></span>
+				{:else if !cell.outsideMonth && !cell.isWeekend && !cell.disabled && cell.hasActivity}
 					<span
 						class={cn(
 							'h-1 w-1 rounded-full sm:h-1.5 sm:w-1.5',
