@@ -33,12 +33,12 @@ vi.mock('$lib/server/avatarValidation', () => ({
 	validateImageMagicBytes: vi.fn().mockResolvedValue('jpg')
 }));
 
+import { actions } from './+page.server';
 import {
-	actions,
-	_normalizeSwissPhone as normalizeSwissPhone,
-	_hashOtp as hashOtp,
-	_isSupabaseAuthSecretError as isSupabaseAuthSecretError
-} from './+page.server';
+	normalizeSwissPhone,
+	hashOtp,
+	isSupabaseAuthSecretError
+} from '$lib/server/onboarding';
 
 type ActionEvent = Parameters<NonNullable<(typeof actions)[keyof typeof actions]>>[0];
 
