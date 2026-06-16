@@ -16,7 +16,8 @@
 		AbsenceRecord,
 		CurriculumNode,
 		CurriculumNodeSummary,
-		TeamMember
+		TeamMember,
+		Organization
 	} from '$lib/types';
 	import { resolve } from '$app/paths';
 	import { LogOut, Loader2, Plus, Menu, Settings, Calendar, Trophy } from 'lucide-svelte';
@@ -33,14 +34,13 @@
 			first_name: string;
 			last_name: string;
 			avatar_url: string | null;
-			target_hours?: number | null;
 		} | null;
 		teamMember: TeamMember | null;
 		curriculumNodes: CurriculumNode[];
 		curriculumNodeSummaries: CurriculumNodeSummary[];
-		organizationName: string | null;
 		professionLabel: string | null;
 		userLocations: string[];
+		organization: Organization | null;
 	};
 
 	let { data }: { data: DashboardPageData } = $props();
@@ -105,7 +105,7 @@
 			.reduce((sum, absence) => sum + absence.day_fraction, 0)
 	);
 
-	const targetHours = $derived(data.profile?.target_hours ?? 8);
+	const targetHours = $derived(data.organization?.target_hours ?? 8);
 	const selectedDateLabel = $derived(
 		new DateFormatter(dateLocale, {
 			weekday: 'long',
@@ -186,9 +186,9 @@
 						<p class="text-xs text-muted-foreground sm:text-sm lg:text-base">
 							{m.dashboard_subtitle()}
 						</p>
-						{#if data.professionLabel || data.organizationName}
+						{#if data.professionLabel || data.organization?.name}
 							<p class="mt-0.5 truncate text-xs text-muted-foreground/70 sm:text-sm">
-								{[data.professionLabel, data.organizationName].filter(Boolean).join(' · ')}
+								{[data.professionLabel, data.organization?.name].filter(Boolean).join(' · ')}
 							</p>
 						{/if}
 					</div>
