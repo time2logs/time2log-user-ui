@@ -97,6 +97,14 @@
 	const selectedDateLoggedHours = $derived(
 		activities.filter((a) => a.entry_date === selectedDateIso).reduce((sum, a) => sum + a.hours, 0)
 	);
+	const loggedAbsenceTimeInDays = $derived(
+		absences
+			.filter(
+				(absence) => selectedDateIso >= absence.start_date && selectedDateIso <= absence.end_date
+			)
+			.reduce((sum, absence) => sum + absence.day_fraction, 0)
+	);
+
 	const targetHours = $derived(data.profile?.target_hours ?? 8);
 	const selectedDateLabel = $derived(
 		new DateFormatter(dateLocale, {
@@ -295,7 +303,11 @@
 							</Button>
 						</div>
 					</Card.Header>
-					<DailyHoursProgress loggedHours={selectedDateLoggedHours} {targetHours} />
+					<DailyHoursProgress
+						loggedHours={selectedDateLoggedHours}
+						{targetHours}
+						{loggedAbsenceTimeInDays}
+					/>
 					<Card.Content class="flex flex-1 flex-col p-0">
 						<ActivityList
 							onRefresh={handleActivityAdded}
