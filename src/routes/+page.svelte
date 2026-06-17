@@ -1,6 +1,10 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { ArrowRight, Clock, TrendingUp, Lock, Users } from 'lucide-svelte';
+	import ArrowRight from '@lucide/svelte/icons/arrow-right';
+	import Clock from '@lucide/svelte/icons/clock';
+	import TrendingUp from '@lucide/svelte/icons/trending-up';
+	import Lock from '@lucide/svelte/icons/lock';
+	import Users from '@lucide/svelte/icons/users';
 	import SiteHeader from '$lib/components/site-header.svelte';
 	import SiteFooter from '$lib/components/site-footer.svelte';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
@@ -186,6 +190,6 @@
 	</section>
 
 	<div class="relative z-10">
-		<SiteFooter/>
+		<SiteFooter />
 	</div>
 </div>

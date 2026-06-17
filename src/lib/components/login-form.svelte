@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { Loader2 } from 'lucide-svelte';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import { Alert } from '$lib/components/ui/alert';
+	import { FormField } from '$lib/components/ui/form-field';
 	import { buttonVariants } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
 	import * as Card from '$lib/components/ui/card';
 	import { supabase } from '$lib/supabaseClient';
 	import { cn } from '$lib/utils';
@@ -66,15 +67,10 @@
 					class="grid gap-8"
 				>
 					{#if errorMessage}
-						<div
-							class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive"
-						>
-							{errorMessage}
-						</div>
+						<Alert variant="error">{errorMessage}</Alert>
 					{/if}
 
-					<div class="grid gap-2">
-						<Label for="email">{m.email_label()}</Label>
+					<FormField label={m.email_label()} htmlFor="email">
 						<Input
 							id="email"
 							type="email"
@@ -83,11 +79,8 @@
 							required
 							disabled={isLoading}
 						/>
-					</div>
-					<div class="grid gap-2">
-						<div class="flex items-center">
-							<Label for="password">{m.password_label()}</Label>
-						</div>
+					</FormField>
+					<FormField label={m.password_label()} htmlFor="password">
 						<Input
 							id="password"
 							type="password"
@@ -95,10 +88,10 @@
 							required
 							disabled={isLoading}
 						/>
-					</div>
+					</FormField>
 					<button type="submit" class={cn(buttonVariants(), 'w-full')} disabled={isLoading}>
 						{#if isLoading}
-							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+							<Spinner size="sm" class="mr-2" />
 							{m.logging_in()}
 						{:else}
 							{m.login_button()}

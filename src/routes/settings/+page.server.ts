@@ -21,32 +21,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const profile = profileResult.error ? null : profileResult.data;
 
-	type UserLocation = {
-		user_id: string;
-		location: string;
-		is_default: boolean;
-		created_at: string;
-	};
-
-	let locations: UserLocation[] = [];
-	let defaultLocation: string | null = null;
-
-	try {
-		const locationsResult = await locals.supabase
-			.from('user_locations')
-			.select('*')
-			.eq('user_id', userId)
-			.order('created_at', { ascending: false });
-
-		if (!locationsResult.error && locationsResult.data) {
-			locations = locationsResult.data as UserLocation[];
-			defaultLocation = locations.find((l) => l.is_default)?.location ?? null;
-		}
-	} catch (e) {
-		console.warn('user_locations table not available:', e);
-	}
-
-	return { profile, email, defaultLocation, pastLocations: locations };
+	return { profile, email };
 };
 
 export const actions: Actions = {
@@ -173,83 +148,5 @@ export const actions: Actions = {
 		}
 
 		return { passwordSuccess: true };
-	},
-
-	addLocation: async ({ request, locals }) => {
-		const session = await locals.safeGetSession();
-
-		if (!session) throw redirect(302, '/login');
-
-		const formData = await request.formData();
-		const location = formData.get('location')?.toString().trim() ?? '';
-
-		if (!location) {
-			return fail(400, { locationError: 'Standort darf nicht leer sein.' });
-		}
-
-		const { error } = await locals.supabase
-			.from('user_locations')
-			.insert({ user_id: session.user.id, location, is_default: false });
-
-		if (error) {
-			if (error.code === '23505') {
-				return fail(400, { locationError: m.location_already_exists() });
-			}
-			return fail(500, { locationError: 'Fehler beim Speichern.' });
-		}
-		return { locationSuccess: true };
-	},
-	deleteLocation: async ({ request, locals }) => {
-		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
-
-		const formData = await request.formData();
-		const location = formData.get('location')?.toString() ?? '';
-
-		await locals.supabase
-			.from('user_locations')
-			.delete()
-			.eq('user_id', session.user.id)
-			.eq('location', location);
-
-		return { locationDeleteSuccess: true };
-	},
-	updateColorblindType: async ({ request, locals }) => {
-		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
-
-		const formData = await request.formData();
-		const colorblindType = formData.get('colorblind_type')?.toString() ?? 'none';
-
-		const { error } = await locals.supabase
-			.from('profiles')
-			.update({ colorblind_type: colorblindType })
-			.eq('id', session.user.id);
-
-		if (error) return fail(500, { colorblindError: 'Fehler beim Speichern.' });
-
-		return { colorblindSuccess: true };
-	},
-
-	updateTargetHours: async ({ request, locals }) => {
-		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
-
-		const formData = await request.formData();
-		const raw = formData.get('target_hours')?.toString() ?? '';
-		const targetHours = parseInt(raw, 10);
-
-		if (isNaN(targetHours) || targetHours < 1 || targetHours > 24) {
-			return fail(400, { targetHoursError: m.settings_target_hours_error() });
-		}
-
-		const { error } = await locals.supabase
-			.from('profiles')
-			.update({ target_hours: targetHours })
-			.eq('id', session.user.id);
-
-		if (error) return fail(500, { targetHoursError: 'Fehler beim Speichern.' });
-
-		return { targetHoursSuccess: true };
 	}
 };
