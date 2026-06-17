@@ -26,8 +26,7 @@
 		selectedDate,
 		existingAbsences = [],
 		onEdit,
-		onEditAbsence,
-		targetHours = 8
+		onEditAbsence
 	}: {
 		onRefresh: () => void;
 		onAbsenceRefresh?: () => void;
@@ -35,7 +34,6 @@
 		existingAbsences?: AbsenceRecord[];
 		onEdit?: (activity: ActivityRecord) => void;
 		onEditAbsence?: (absence: AbsenceRecord) => void;
-		targetHours?: number;
 	} = $props();
 
 	const activities = $derived($activityStore);
@@ -115,25 +113,6 @@
 			day: 'numeric',
 			year: 'numeric'
 		});
-	}
-
-	function getAbsenceTypeLabel(typeId: string): string {
-		switch (typeId) {
-			case 'sick':
-				return m.absence_type_sick();
-			case 'vacation':
-				return m.absence_type_vacation();
-			case 'military':
-				return m.absence_type_military();
-			case 'uk':
-				return m.absence_type_uk();
-			case 'berufsschule':
-				return m.absence_type_berufsschule();
-			case 'custom':
-				return m.absence_type_custom();
-			default:
-				return typeId;
-		}
 	}
 
 	const selectedDateLabel = $derived(selectedDate ? formatDate(selectedDate) : null);

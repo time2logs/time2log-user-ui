@@ -59,8 +59,7 @@
 		activityToEdit = null,
 		existingActivities = [],
 		userLocations = [],
-		existingAbsences = [],
-		targetHours = 8
+		existingAbsences = []
 	}: {
 		open: boolean;
 		curriculumNodes: CurriculumNode[];
@@ -71,7 +70,6 @@
 		existingActivities?: ActivityRecord[];
 		userLocations?: string[];
 		existingAbsences?: AbsenceRecord[];
-		targetHours?: number;
 	} = $props();
 
 	const tree = $derived(buildTree(curriculumNodes));

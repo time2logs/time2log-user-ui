@@ -49,8 +49,7 @@
 		selectedDate,
 		absenceToEdit = null,
 		existingActivities = [],
-		existingAbsences = [],
-		targetHours = 8
+		existingAbsences = []
 	}: {
 		open: boolean;
 		teamMember: TeamMember | null;
@@ -59,7 +58,6 @@
 		absenceToEdit?: AbsenceRecord | null;
 		existingActivities?: ActivityRecord[];
 		existingAbsences?: AbsenceRecord[];
-		targetHours?: number;
 	} = $props();
 
 	const maxHoursPerDay = $derived(teamMember?.max_hours_per_day ?? DEFAULT_MAX_HOURS_PER_DAY);

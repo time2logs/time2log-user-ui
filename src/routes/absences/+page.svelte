@@ -77,11 +77,6 @@
 
 	const targetHours = $derived(data.organization?.target_hours ?? 8);
 
-	function formatBlockedHours(dayFraction: number): string {
-		const blockedHours = Math.round(dayFraction * targetHours * 10) / 10;
-		return Number.isInteger(blockedHours) ? `${blockedHours}h` : `${blockedHours.toFixed(1)}h`;
-	}
-
 	function getWeekdayName(dayNum: number): string {
 		// Jan 7 2024 is Sunday (dayNum 0), Jan 8 is Monday (1), etc.
 		const date = new Date(2024, 0, 7 + dayNum);
