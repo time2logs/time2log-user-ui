@@ -1,3 +1,4 @@
+import { env } from '$env/dynamic/private';
 import { createHash } from 'node:crypto';
 
 export function isSupabaseAuthSecretError(message: string): boolean {
@@ -8,6 +9,11 @@ export function isSupabaseAuthSecretError(message: string): boolean {
 
 export function hashOtp(value: string): string {
 	return createHash('sha256').update(value).digest('hex');
+}
+
+export function isSmsEnabled(): boolean {
+	const value = env.USE_SMS?.trim().toLowerCase();
+	return value === '1' || value === 'true';
 }
 
 export function normalizeSwissPhone(phoneNumberRaw: string): string | null {

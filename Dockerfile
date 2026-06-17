@@ -24,6 +24,7 @@ RUN bun install --frozen-lockfile --production
 FROM node:22-slim
 WORKDIR /app
 ENV NODE_ENV=production
+ENV USE_SMS=0
 
 # package.json required — "type": "module" tells Node to use ESM
 COPY --from=builder /app/package.json ./

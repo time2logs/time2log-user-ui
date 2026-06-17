@@ -11,6 +11,7 @@ export default defineConfig({
 			$lib: resolve(__dirname, 'src/lib'),
 			'$app/environment': resolve(__dirname, 'src/tests/mocks/app-environment.ts'),
 			'$app/stores': resolve(__dirname, 'src/tests/mocks/app-stores.ts'),
+			'$env/dynamic/private': resolve(__dirname, 'src/tests/mocks/env-dynamic-private.ts'),
 			'$env/static/public': resolve(__dirname, 'src/tests/mocks/env-static-public.ts')
 		}
 	}

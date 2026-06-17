@@ -343,61 +343,66 @@
 								/>
 							</div>
 
-							<div class="space-y-2">
-								<Label for="phone_number">{m.onboarding_phone_label()}</Label>
-								<div class="flex gap-2">
-									<Input
-										id="phone_number"
-										name="phone_number"
-										bind:value={phoneNumber}
-										placeholder={m.onboarding_phone_placeholder()}
-										required
-										readonly={isSubmitting || isSendingCode || phoneVerified}
-									/>
-									<Button
-										type="submit"
-										formaction="?/sendPhoneCode"
-										formnovalidate
-										class="shrink-0"
-										variant="outline"
-										disabled={!phoneNumber || isSendingCode || isSubmitting || cooldownSeconds > 0}
-									>
-										{#if isSendingCode}
-											<Spinner size="sm" />
-										{:else if cooldownSeconds > 0}
-											{cooldownSeconds}s
-										{:else}
-											{m.onboarding_phone_send_button()}
-										{/if}
-									</Button>
+							{#if data.useSms}
+								<div class="space-y-2">
+									<Label for="phone_number">{m.onboarding_phone_label()}</Label>
+									<div class="flex gap-2">
+										<Input
+											id="phone_number"
+											name="phone_number"
+											bind:value={phoneNumber}
+											placeholder={m.onboarding_phone_placeholder()}
+											required
+											readonly={isSubmitting || isSendingCode || phoneVerified}
+										/>
+										<Button
+											type="submit"
+											formaction="?/sendPhoneCode"
+											formnovalidate
+											class="shrink-0"
+											variant="outline"
+											disabled={!phoneNumber ||
+												isSendingCode ||
+												isSubmitting ||
+												cooldownSeconds > 0}
+										>
+											{#if isSendingCode}
+												<Spinner size="sm" />
+											{:else if cooldownSeconds > 0}
+												{cooldownSeconds}s
+											{:else}
+												{m.onboarding_phone_send_button()}
+											{/if}
+										</Button>
+									</div>
+									<div class="flex gap-2">
+										<Input
+											id="phone_code"
+											name="phone_code"
+											bind:value={phoneCode}
+											placeholder={m.onboarding_phone_code_placeholder()}
+											maxlength={6}
+											readonly={isSubmitting || isVerifyingCode || phoneVerified}
+										/>
+										<Button
+											type="submit"
+											formaction="?/verifyPhoneCode"
+											formnovalidate
+											class="shrink-0"
+											variant={phoneVerified ? 'secondary' : 'outline'}
+											disabled={!phoneCode || isVerifyingCode || isSubmitting || phoneVerified}
+										>
+											{#if phoneVerified}
+												{m.onboarding_phone_verified_badge()}
+											{:else if isVerifyingCode}
+												<Spinner size="sm" />
+											{:else}
+												{m.onboarding_phone_verify_button()}
+											{/if}
+										</Button>
+									</div>
 								</div>
-								<div class="flex gap-2">
-									<Input
-										id="phone_code"
-										name="phone_code"
-										bind:value={phoneCode}
-										placeholder={m.onboarding_phone_code_placeholder()}
-										maxlength={6}
-										readonly={isSubmitting || isVerifyingCode || phoneVerified}
-									/>
-									<Button
-										type="submit"
-										formaction="?/verifyPhoneCode"
-										formnovalidate
-										class="shrink-0"
-										variant={phoneVerified ? 'secondary' : 'outline'}
-										disabled={!phoneCode || isVerifyingCode || isSubmitting || phoneVerified}
-									>
-										{#if phoneVerified}
-											{m.onboarding_phone_verified_badge()}
-										{:else if isVerifyingCode}
-											<Spinner size="sm" />
-										{:else}
-											{m.onboarding_phone_verify_button()}
-										{/if}
-									</Button>
-								</div>
-							</div>
+							{/if}
 
 							<div>
 								<Label for="first_name">{m.onboarding_first_name_label()}</Label>
@@ -440,7 +445,7 @@
 							<Button
 								type="submit"
 								class="w-full"
-								disabled={isSubmitting || isCompressing || !phoneVerified}
+								disabled={isSubmitting || isCompressing || (data.useSms && !phoneVerified)}
 							>
 								{#if isSubmitting}
 									<Spinner size="sm" class="mr-2" />
