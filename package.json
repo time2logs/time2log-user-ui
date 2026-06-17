@@ -24,7 +24,7 @@
 		"@inlang/paraglide-js": "^2.18.1",
 		"@internationalized/date": "^3.12.2",
 		"@lucide/svelte": "^1.17.0",
-		"@playwright/test": "^1.60.0",
+		"@playwright/test": "^1.61.0",
 		"@sveltejs/adapter-auto": "^7.0.1",
 		"@sveltejs/adapter-node": "^5.5.4",
 		"@sveltejs/kit": "^2.61.1",
