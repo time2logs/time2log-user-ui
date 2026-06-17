@@ -182,6 +182,8 @@
 	"error_select_weekday": "Seleziona almeno un giorno della settimana.",
 	"error_save_absence_failed": "Salvataggio dell'assenza non riuscito. Riprovare.",
 	"error_delete_absence_failed": "Eliminazione dell'assenza non riuscita.",
+	"error_edit_window_delete": "Le voci possono essere eliminate solo entro {days} giorni.",
+	"error_edit_window_update": "Le voci possono essere modificate solo entro {days} giorni.",
 	"absences_description": "Gestisci le tue regole e i tuoi orari di assenza",
 	"absence_new_button": "Nuova assenza",
 	"absences_loading": "Caricamento assenze...",

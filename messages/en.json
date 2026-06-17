@@ -182,6 +182,8 @@
 	"error_select_weekday": "Please select at least one day of the week.",
 	"error_save_absence_failed": "Failed to save absence. Please try again.",
 	"error_delete_absence_failed": "Failed to delete absence.",
+	"error_edit_window_delete": "Entries can only be deleted within {days} days.",
+	"error_edit_window_update": "Entries can only be edited within {days} days.",
 	"absences_description": "Manage your absence rules and schedules",
 	"absence_new_button": "New Absence",
 	"absences_loading": "Loading absences...",

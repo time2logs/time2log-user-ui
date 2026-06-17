@@ -7,7 +7,7 @@
 	import Edit2 from '@lucide/svelte/icons/pencil';
 	import Plus from '@lucide/svelte/icons/plus';
 	import * as m from '$lib/paraglide/messages.js';
-	import { getAbsences } from '$lib/absenceStorage';
+	import { absenceStore } from '$lib/absenceStorage';
 	import type { AbsenceRecord } from '$lib/types';
 	import AbsenceFormDialog from '$lib/components/absence-form-dialog.svelte';
 	import { resolve } from '$app/paths';
@@ -22,7 +22,7 @@
 	const dateLocale = getDateLocale();
 
 	let { data } = $props();
-	let absences = $state<AbsenceRecord[]>([]);
+	const absences = $derived($absenceStore);
 	let isLoading = $state(true);
 	let formDialogOpen = $state(false);
 	let editingAbsence = $state<AbsenceRecord | null>(null);
@@ -43,18 +43,20 @@
 	);
 
 	onMount(async () => {
-		await loadAbsences();
-	});
-
-	async function loadAbsences() {
-		isLoading = true;
 		try {
-			absences = await getAbsences();
-		} catch (error) {
-			console.error('Failed to load absences:', error);
+			await absenceStore.load();
 		} finally {
 			isLoading = false;
 		}
+	});
+
+	function handleEditAbsence(absence: AbsenceRecord) {
+		editingAbsence = absence;
+		formDialogOpen = true;
+	}
+
+	function handleAbsenceAdded() {
+		editingAbsence = null;
 	}
 
 	function formatDateRange(startDate: string, endDate: string): string {
@@ -142,16 +144,6 @@
 			console.error('Failed to parse rrule:', e);
 			return '';
 		}
-	}
-
-	function handleEditAbsence(absence: AbsenceRecord) {
-		editingAbsence = absence;
-		formDialogOpen = true;
-	}
-
-	function handleAbsenceAdded() {
-		editingAbsence = null;
-		loadAbsences();
 	}
 </script>
 

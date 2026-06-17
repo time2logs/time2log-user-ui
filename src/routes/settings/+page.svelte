@@ -34,8 +34,6 @@
 		emailSuccess?: boolean;
 		passwordError?: string;
 		passwordSuccess?: boolean;
-		colorblindError?: string;
-		colorblindSuccess?: boolean;
 	} | null;
 
 	let { data, form: rawForm } = $props();
