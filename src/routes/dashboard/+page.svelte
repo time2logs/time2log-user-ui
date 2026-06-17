@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { ConfirmDialog } from '$lib/components/ui/confirm-dialog';
+	import { IconButton } from '$lib/components/ui/icon-button';
 	import * as Sheet from '$lib/components/ui/sheet';
 	import { Button } from '$lib/components/ui/button';
 	import ActivityList from '$lib/components/activity-list.svelte';
@@ -20,7 +21,12 @@
 		Organization
 	} from '$lib/types';
 	import { resolve } from '$app/paths';
-	import { LogOut, Loader2, Plus, Menu, Settings, Calendar, Trophy } from 'lucide-svelte';
+	import LogOut from '@lucide/svelte/icons/log-out';
+	import Plus from '@lucide/svelte/icons/plus';
+	import Menu from '@lucide/svelte/icons/menu';
+	import Settings from '@lucide/svelte/icons/settings';
+	import Calendar from '@lucide/svelte/icons/calendar';
+	import Trophy from '@lucide/svelte/icons/trophy';
 	import { DateFormatter, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
 	import { getDateLocale } from '$lib/dateLocale';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
@@ -196,30 +202,27 @@
 				<div class="hidden items-center gap-2 sm:flex">
 					<LanguageSwitcher />
 
-					<a
+					<IconButton
+						icon={Calendar}
 						href="/absences"
-						aria-label={m.absences_title()}
-						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						label={m.absences_title()}
+						iconClass="h-4 w-4"
 						title={m.absences_title()}
-					>
-						<Calendar class="h-4 w-4" />
-					</a>
-					<a
+					/>
+					<IconButton
+						icon={Trophy}
 						href="/achievements"
-						aria-label={m.achievements_title()}
-						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						label={m.achievements_title()}
+						iconClass="h-4 w-4"
 						title={m.achievements_title()}
-					>
-						<Trophy class="h-4 w-4" />
-					</a>
-					<a
-						href={resolve('/settings')}
+					/>
+					<IconButton
+						icon={Settings}
+						href="/settings"
+						label={m.settings_title()}
+						iconClass="h-4 w-4"
 						data-sveltekit-reload
-						aria-label={m.settings_title()}
-						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-					>
-						<Settings class="h-4 w-4" />
-					</a>
+					/>
 					<Button
 						variant="ghost"
 						onclick={() => (logoutDialogOpen = true)}
@@ -231,28 +234,28 @@
 					</Button>
 				</div>
 				<div class="flex items-center gap-1 sm:hidden">
-					<a
+					<IconButton
+						icon={Calendar}
+						size="icon-sm"
 						href="/absences"
-						aria-label={m.absences_title()}
-						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-					>
-						<Calendar class="h-4 w-4" />
-					</a>
-					<a
+						label={m.absences_title()}
+						iconClass="h-4 w-4"
+					/>
+					<IconButton
+						icon={Trophy}
+						size="icon-sm"
 						href="/achievements"
-						aria-label={m.achievements_title()}
-						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-					>
-						<Trophy class="h-4 w-4" />
-					</a>
-					<a
-						href={resolve('/settings')}
+						label={m.achievements_title()}
+						iconClass="h-4 w-4"
+					/>
+					<IconButton
+						icon={Settings}
+						size="icon-sm"
+						href="/settings"
+						label={m.settings_title()}
+						iconClass="h-4 w-4"
 						data-sveltekit-reload
-						aria-label={m.settings_title()}
-						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-					>
-						<Settings class="h-4 w-4" />
-					</a>
+					/>
 					<Button
 						variant="outline"
 						onclick={() => (mobileMenuOpen = true)}
@@ -274,9 +277,9 @@
 						locale={dateLocale}
 						{activityDates}
 						isAbsenceDate={(dateStr) => {
-						const matching = absences.find((a) => isDateInAbsence(dateStr, a));
-						return matching?.absence_type_id ?? null;
-					}}
+							const matching = absences.find((a) => isDateInAbsence(dateStr, a));
+							return matching?.absence_type_id ?? null;
+						}}
 					/>
 				</div>
 
@@ -366,28 +369,16 @@
 	</div>
 </div>
 
-<AlertDialog.Root bind:open={logoutDialogOpen}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>{m.logout_confirm_title()}</AlertDialog.Title>
-			<AlertDialog.Description>{m.logout_confirm_description()}</AlertDialog.Description>
-		</AlertDialog.Header>
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel>{m.cancel()}</AlertDialog.Cancel>
-			<AlertDialog.Action
-				onclick={handleLogout}
-				disabled={isLoggingOut}
-				class="bg-red-500 hover:bg-red-600"
-			>
-				{#if isLoggingOut}
-					<Loader2 class="mr-2 h-4 w-4 animate-spin" /> {m.logging_out()}
-				{:else}
-					{m.logout()}
-				{/if}
-			</AlertDialog.Action>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<ConfirmDialog
+	bind:open={logoutDialogOpen}
+	title={m.logout_confirm_title()}
+	description={m.logout_confirm_description()}
+	confirmLabel={m.logout()}
+	cancelLabel={m.cancel()}
+	variant="destructive"
+	loading={isLoggingOut}
+	onConfirm={handleLogout}
+/>
 
 <Sheet.Root bind:open={mobileMenuOpen}>
 	<Sheet.Content

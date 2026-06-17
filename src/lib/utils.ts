@@ -1,11 +1,16 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import type { Component } from 'svelte';
 export type {
 	WithElementRef,
 	WithoutChild,
 	WithoutChildren,
 	WithoutChildrenOrChild
 } from 'bits-ui';
+
+/** Accepts any icon component (e.g. lucide-svelte icons). */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type IconComponent = Component<any>;
 
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));

@@ -8,8 +8,11 @@ const LAST_ACTIVITY_KEY = 'last_activity_id';
 const LAST_LOCATION_KEY = 'last_location';
 const DEBUG = import.meta.env.DEV ?? false;
 
-export const MAX_HOURS_PER_ENTRY = 10;
-export const MAX_HOURS_PER_DAY = 10;
+export const DEFAULT_MAX_HOURS_PER_DAY = 10;
+/** @deprecated use {@link DEFAULT_MAX_HOURS_PER_DAY} or a per-team value */
+export const MAX_HOURS_PER_ENTRY = DEFAULT_MAX_HOURS_PER_DAY;
+/** @deprecated use {@link DEFAULT_MAX_HOURS_PER_DAY} or a per-team value */
+export const MAX_HOURS_PER_DAY = DEFAULT_MAX_HOURS_PER_DAY;
 export const MIN_HOURS = 1;
 
 type ActivityRecordSource = Omit<
@@ -28,7 +31,10 @@ function debugLog(message: string, data?: unknown) {
 	}
 }
 
-function validateActivity(activity: { hours: number }): boolean {
+function validateActivity(
+	activity: { hours: number },
+	maxHours: number = DEFAULT_MAX_HOURS_PER_DAY
+): boolean {
 	if (typeof activity.hours !== 'number' || isNaN(activity.hours)) {
 		console.error('[ActivityStorage] Invalid hours value:', activity.hours);
 		return false;
@@ -37,13 +43,8 @@ function validateActivity(activity: { hours: number }): boolean {
 		console.error('[ActivityStorage] Hours below minimum:', activity.hours, '<', MIN_HOURS);
 		return false;
 	}
-	if (activity.hours > MAX_HOURS_PER_ENTRY) {
-		console.error(
-			'[ActivityStorage] Hours exceed maximum:',
-			activity.hours,
-			'>',
-			MAX_HOURS_PER_ENTRY
-		);
+	if (activity.hours > maxHours) {
+		console.error('[ActivityStorage] Hours exceed maximum:', activity.hours, '>', maxHours);
 		return false;
 	}
 	return true;
@@ -154,11 +155,12 @@ function createActivityStore() {
 		},
 		load,
 		add: async (
-			activity: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>
+			activity: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>,
+			maxHours: number = DEFAULT_MAX_HOURS_PER_DAY
 		): Promise<ActivityRecord | null> => {
 			debugLog('Adding new activity via store', activity);
 
-			if (!validateActivity(activity)) {
+			if (!validateActivity(activity, maxHours)) {
 				console.warn('[ActivityStorage] Activity validation failed, not adding');
 				return null;
 			}
@@ -205,11 +207,19 @@ function createActivityStore() {
 			return newActivity;
 		},
 		addMany: async (
-			activities: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>[]
+			activities: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>[],
+			maxHours: number = DEFAULT_MAX_HOURS_PER_DAY
 		): Promise<ActivityRecord[]> => {
 			if (activities.length === 0) return [];
 
 			debugLog('Adding multiple activities via store', { count: activities.length });
+
+			if (activities.some((a) => !validateActivity(a, maxHours))) {
+				console.warn('[ActivityStorage] One or more activities failed validation, not adding');
+				throw new Error(
+					'Invalid activity: hours must be a positive number within the allowed range'
+				);
+			}
 
 			const rows = activities.map((a) => ({
 				organization_id: a.organization_id,
@@ -286,11 +296,12 @@ function createActivityStore() {
 					| 'activity_key'
 					| 'activity_label'
 				>
-			>
+			>,
+			maxHours: number = DEFAULT_MAX_HOURS_PER_DAY
 		): Promise<ActivityRecord | null> => {
 			debugLog('Updating activity via store', { id, activity });
 
-			if (activity.hours !== undefined && !validateActivity({ hours: activity.hours })) {
+			if (activity.hours !== undefined && !validateActivity({ hours: activity.hours }, maxHours)) {
 				console.warn('[ActivityStorage] Activity validation failed, not updating');
 				return null;
 			}
@@ -366,11 +377,12 @@ export async function getActivities(): Promise<ActivityRecord[]> {
 }
 
 export async function addActivity(
-	activity: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>
+	activity: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>,
+	maxHours: number = DEFAULT_MAX_HOURS_PER_DAY
 ): Promise<ActivityRecord> {
 	debugLog('Adding new activity', activity);
 
-	if (!validateActivity(activity)) {
+	if (!validateActivity(activity, maxHours)) {
 		throw new Error('Invalid activity: hours must be a positive number');
 	}
 

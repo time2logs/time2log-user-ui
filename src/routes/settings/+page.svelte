@@ -2,22 +2,21 @@
 	import * as m from '$lib/paraglide/messages.js';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
 	import { Separator } from '$lib/components/ui/separator';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { ConfirmDialog } from '$lib/components/ui/confirm-dialog';
+	import { Alert } from '$lib/components/ui/alert';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import { FormField } from '$lib/components/ui/form-field';
 	import { enhance } from '$app/forms';
-	import {
-		ArrowLeft,
-		User,
-		Globe,
-		LogOut,
-		Loader2,
-		Moon,
-		Sun,
-		Camera,
-		ShieldAlert
-	} from 'lucide-svelte';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import User from '@lucide/svelte/icons/user';
+	import Globe from '@lucide/svelte/icons/globe';
+	import LogOut from '@lucide/svelte/icons/log-out';
+	import Moon from '@lucide/svelte/icons/moon';
+	import Sun from '@lucide/svelte/icons/sun';
+	import Camera from '@lucide/svelte/icons/camera';
+	import ShieldAlert from '@lucide/svelte/icons/shield-alert';
 	import { theme } from '$lib/themeStore';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import * as Select from '$lib/components/ui/select';
@@ -278,7 +277,7 @@
 										class="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity group-hover:opacity-100"
 									>
 										{#if isCompressing}
-											<Loader2 class="h-5 w-5 animate-spin text-white drop-shadow" />
+											<Spinner class="h-5 w-5 text-white drop-shadow" />
 										{:else}
 											<Camera class="h-5 w-5 text-white drop-shadow" />
 										{/if}
@@ -300,8 +299,7 @@
 							</div>
 
 							<div class="space-y-3">
-								<div class="space-y-1">
-									<Label for="first_name">{m.first_name()}</Label>
+								<FormField label={m.first_name()} htmlFor="first_name">
 									<Input
 										id="first_name"
 										name="first_name"
@@ -310,10 +308,9 @@
 										disabled={isSaving}
 										required
 									/>
-								</div>
+								</FormField>
 								<Separator />
-								<div class="space-y-1">
-									<Label for="last_name">{m.last_name()}</Label>
+								<FormField label={m.last_name()} htmlFor="last_name">
 									<Input
 										id="last_name"
 										name="last_name"
@@ -322,27 +319,19 @@
 										disabled={isSaving}
 										required
 									/>
-								</div>
+								</FormField>
 							</div>
 
 							{#if form?.profileError}
-								<div
-									class="mt-4 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-								>
-									{form.profileError}
-								</div>
+								<Alert variant="error" class="mt-4">{form.profileError}</Alert>
 							{/if}
 							{#if form?.profileSuccess}
-								<div
-									class="mt-4 rounded-md border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-600"
-								>
-									{m.settings_profile_saved()}
-								</div>
+								<Alert variant="success" class="mt-4">{m.settings_profile_saved()}</Alert>
 							{/if}
 
 							<Button type="submit" class="mt-4 w-full" disabled={isSaving || isCompressing}>
 								{#if isSaving}
-									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+									<Spinner size="sm" class="mr-2" />
 									{m.saving()}
 								{:else}
 									{m.save()}
@@ -370,7 +359,7 @@
 									: 'Switch to dark mode'}
 								class="relative h-7 w-14 rounded-full transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none {currentTheme ===
 								'dark'
-									? 'bg-slate-600'
+									? 'bg-primary'
 									: 'bg-muted'}"
 							>
 								<span
@@ -380,7 +369,7 @@
 										: 'left-1'}"
 								>
 									{#if currentTheme === 'dark'}
-										<Moon class="mt-0.5 ml-0.5 h-4 w-4 text-slate-600" />
+										<Moon class="mt-0.5 ml-0.5 h-4 w-4 text-primary" />
 									{:else}
 										<Sun class="mt-0.5 ml-0.5 h-4 w-4 text-primary" />
 									{/if}
@@ -449,8 +438,7 @@
 								<p class="text-sm font-medium text-foreground">
 									{m.change_email()}
 								</p>
-								<div class="space-y-1">
-									<Label for="email">{m.email_label()}</Label>
+								<FormField label={m.email_label()} htmlFor="email">
 									<Input
 										id="email"
 										name="email"
@@ -458,29 +446,21 @@
 										bind:value={emailValue}
 										disabled={isSavingEmail}
 									/>
-								</div>
+								</FormField>
 								{#if form?.emailError}
-									<div
-										class="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-									>
-										{form.emailError}
-									</div>
+									<Alert variant="error">{form.emailError}</Alert>
 								{/if}
 								{#if form?.emailSuccess}
-									<div
-										class="rounded-md border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-600"
-									>
-										{m.settings_email_confirmation_sent()}
-									</div>
+									<Alert variant="success">{m.settings_email_confirmation_sent()}</Alert>
 								{/if}
 								<Button
 									type="submit"
 									variant="outline"
-									class="w-full border-destructive/20 text-destructive hover:bg-destructive/10 dark:hover:bg-red-950"
+									class="w-full border-destructive/20 text-destructive hover:bg-destructive/10"
 									disabled={isSavingEmail}
 								>
 									{#if isSavingEmail}
-										<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+										<Spinner size="sm" class="mr-2" />
 										{m.saving()}
 									{:else}
 										{m.change_email()}
@@ -506,8 +486,7 @@
 								<p class="text-sm font-medium text-foreground">
 									{m.change_password_title()}
 								</p>
-								<div class="space-y-1">
-									<Label for="password">{m.new_password_label()}</Label>
+								<FormField label={m.new_password_label()} htmlFor="password">
 									<Input
 										id="password"
 										name="password"
@@ -515,9 +494,8 @@
 										placeholder={m.onboarding_password_placeholder()}
 										disabled={isSavingPassword}
 									/>
-								</div>
-								<div class="space-y-1">
-									<Label for="confirm_password">{m.confirm_password_label()}</Label>
+								</FormField>
+								<FormField label={m.confirm_password_label()} htmlFor="confirm_password">
 									<Input
 										id="confirm_password"
 										name="confirm_password"
@@ -525,29 +503,21 @@
 										placeholder={m.onboarding_password_placeholder()}
 										disabled={isSavingPassword}
 									/>
-								</div>
+								</FormField>
 								{#if form?.passwordError}
-									<div
-										class="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-									>
-										{form.passwordError}
-									</div>
+									<Alert variant="error">{form.passwordError}</Alert>
 								{/if}
 								{#if form?.passwordSuccess}
-									<div
-										class="rounded-md border border-green-500/20 bg-green-500/10 p-3 text-sm text-green-600"
-									>
-										{m.settings_password_saved()}
-									</div>
+									<Alert variant="success">{m.settings_password_saved()}</Alert>
 								{/if}
 								<Button
 									type="submit"
 									variant="outline"
-									class="w-full border-destructive/20 text-destructive hover:bg-destructive/10 dark:hover:bg-red-950"
+									class="w-full border-destructive/20 text-destructive hover:bg-destructive/10"
 									disabled={isSavingPassword}
 								>
 									{#if isSavingPassword}
-										<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+										<Spinner size="sm" class="mr-2" />
 										{m.saving()}
 									{:else}
 										{m.change_password_title()}
@@ -565,7 +535,7 @@
 								<Button
 									variant="outline"
 									onclick={() => (logoutDialogOpen = true)}
-									class="w-full justify-start gap-2 border-destructive/20 bg-destructive/5 text-destructive hover:bg-destructive/10 dark:hover:bg-red-900"
+									class="w-full justify-start gap-2 border-destructive/20 bg-destructive/5 text-destructive hover:bg-destructive/10"
 								>
 									<LogOut class="h-4 w-4" />
 									{m.logout()}
@@ -579,25 +549,13 @@
 	</main>
 </div>
 
-<AlertDialog.Root bind:open={logoutDialogOpen}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>{m.logout_confirm_title()}</AlertDialog.Title>
-			<AlertDialog.Description>{m.logout_confirm_description()}</AlertDialog.Description>
-		</AlertDialog.Header>
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel>{m.cancel()}</AlertDialog.Cancel>
-			<AlertDialog.Action
-				onclick={handleLogout}
-				disabled={isLoggingOut}
-				class="bg-destructive/50 hover:bg-red-600"
-			>
-				{#if isLoggingOut}
-					<Loader2 class="mr-2 h-4 w-4 animate-spin" /> {m.logging_out()}
-				{:else}
-					{m.logout()}
-				{/if}
-			</AlertDialog.Action>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<ConfirmDialog
+	bind:open={logoutDialogOpen}
+	title={m.logout_confirm_title()}
+	description={m.logout_confirm_description()}
+	confirmLabel={m.logout()}
+	cancelLabel={m.cancel()}
+	variant="destructive"
+	loading={isLoggingOut}
+	onConfirm={handleLogout}
+/>

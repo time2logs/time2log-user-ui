@@ -1,7 +1,8 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { ConfirmDialog } from '$lib/components/ui/confirm-dialog';
 	import { Button } from '$lib/components/ui/button';
+	import { Alert } from '$lib/components/ui/alert';
 	import * as Select from '$lib/components/ui/select';
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
@@ -12,8 +13,7 @@
 		activityStore,
 		getLastActivityId,
 		getLastLocation,
-		MAX_HOURS_PER_ENTRY,
-		MAX_HOURS_PER_DAY,
+		DEFAULT_MAX_HOURS_PER_DAY,
 		MIN_HOURS
 	} from '$lib/activityStorage';
 	import { getAbsenceFractionForDate } from '$lib/absenceStorage';
@@ -24,20 +24,19 @@
 		CurriculumTreeNode,
 		TeamMember
 	} from '$lib/types';
-	import {
-		Star,
-		ChevronRight,
-		ChevronDown,
-		Folder,
-		FileText,
-		Check,
-		AlertCircle,
-		Trash2,
-		X
-	} from 'lucide-svelte';
+	import Star from '@lucide/svelte/icons/star';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import ChevronDown from '@lucide/svelte/icons/chevron-down';
+	import Folder from '@lucide/svelte/icons/folder';
+	import FileText from '@lucide/svelte/icons/file-text';
+	import Check from '@lucide/svelte/icons/check';
+	import AlertCircle from '@lucide/svelte/icons/circle-alert';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import X from '@lucide/svelte/icons/x';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getCurriculumLabel } from '$lib/curriculumLabel';
 	import { getDateLocale } from '$lib/dateLocale';
+	import { Spinner } from '$lib/components/ui/spinner';
 
 	import { SvelteSet } from 'svelte/reactivity';
 	import { buildTree } from '$lib/curriculumTree';
@@ -75,6 +74,8 @@
 
 	// Get all activity nodes for pre-selection
 	const activityNodes = $derived(curriculumNodes.filter((node) => node.node_type === 'activity'));
+
+	const maxHoursPerDay = $derived(teamMember?.max_hours_per_day ?? DEFAULT_MAX_HOURS_PER_DAY);
 
 	type PendingActivity = Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>;
 
@@ -185,8 +186,8 @@
 			return;
 		}
 
-		if (hours > MAX_HOURS_PER_ENTRY) {
-			submitError = m.error_hours_max_entry({ max: MAX_HOURS_PER_ENTRY.toString() });
+		if (hours > maxHoursPerDay) {
+			submitError = m.error_hours_max_entry({ max: maxHoursPerDay.toString() });
 			return;
 		}
 
@@ -228,7 +229,7 @@
 					throw new Error('Rating must be between 1 and 5');
 				}
 
-				await activityStore.update(activityToEdit.id, updateData);
+				await activityStore.update(activityToEdit.id, updateData, maxHoursPerDay);
 			} else {
 				const activityData = {
 					organization_id: teamMember.organization_id || '',
@@ -263,10 +264,10 @@
 				}
 
 				if (pendingActivities.length > 0) {
-					await activityStore.addMany([...pendingActivities, activityData]);
+					await activityStore.addMany([...pendingActivities, activityData], maxHoursPerDay);
 					pendingActivities = [];
 				} else {
-					await activityStore.add(activityData);
+					await activityStore.add(activityData, maxHoursPerDay);
 				}
 			}
 
@@ -302,13 +303,13 @@
 		}
 	}
 
-	const hoursExceedsMax = $derived(hours > MAX_HOURS_PER_ENTRY);
+	const hoursExceedsMax = $derived(hours > maxHoursPerDay);
 	const entryDate = $derived(
 		selectedDate || activityToEdit?.entry_date || new Date().toISOString().split('T')[0]
 	);
 	const absenceFraction = $derived(getAbsenceFractionForDate(entryDate, existingAbsences));
-	const blockedHoursForDate = $derived(MAX_HOURS_PER_DAY * absenceFraction);
-	const maxHoursForDate = $derived(Math.max(0, MAX_HOURS_PER_DAY * (1 - absenceFraction)));
+	const blockedHoursForDate = $derived(maxHoursPerDay * absenceFraction);
+	const maxHoursForDate = $derived(Math.max(0, maxHoursPerDay * (1 - absenceFraction)));
 	const currentDayHours = $derived(
 		existingActivities
 			.filter((a) => a.entry_date === entryDate)
@@ -361,15 +362,13 @@
 
 		<!-- Error Display -->
 		{#if submitError}
-			<div
-				class="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950"
-			>
-				<AlertCircle class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500 dark:text-red-400" />
+			<Alert variant="error" class="mb-4">
+				<AlertCircle class="mt-0.5 h-5 w-5 shrink-0" />
 				<div class="flex-1">
-					<p class="text-sm font-medium text-red-800 dark:text-red-300">Error</p>
-					<p class="text-sm text-red-600 dark:text-red-400">{submitError}</p>
+					<p class="text-sm font-medium">Error</p>
+					<p class="text-sm">{submitError}</p>
 				</div>
-			</div>
+			</Alert>
 		{/if}
 
 		<div class="grid gap-4 py-4">
@@ -518,7 +517,7 @@
 						<Input
 							type="number"
 							min="0"
-							max="10"
+							max={String(maxHoursPerDay)}
 							step="1"
 							bind:value={inputHours}
 							aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
@@ -537,12 +536,8 @@
 						<span class="text-sm text-muted-foreground">min</span>
 					</div>
 				</div>
-				{#if hoursExceedsMax}
-					<p class="text-sm text-red-600">
-						{m.error_hours_max_entry({ max: MAX_HOURS_PER_ENTRY.toString() })}
-					</p>
-				{:else if wouldExceedDailyMax && hours > 0}
-					<p class="text-sm text-red-600">
+				{#if wouldExceedDailyMax && hours > 0}
+					<p class="text-sm text-destructive">
 						{m.error_hours_max_day({
 							max: maxHoursForDate.toString(),
 							remaining: Math.max(0, maxHoursForDate - currentDayHours).toString()
@@ -554,50 +549,34 @@
 					</p>
 				{/if}
 			</div>
-			{#if hoursExceedsMax}
-				<p class="text-sm text-red-600">
-					{m.error_hours_max_entry({ max: MAX_HOURS_PER_ENTRY.toString() })}
+		</div>
+
+		<!-- Location -->
+		<div class="grid gap-2">
+			<Label>{m.location_label()}</Label>
+			{#if userLocations.length === 0}
+				<p class="text-sm text-muted-foreground">
+					{m.no_locations_for_activity()}
 				</p>
-			{:else if wouldExceedDailyMax && hours > 0}
-				<p class="text-sm text-red-600">
-					{m.error_hours_max_day({
-						max: maxHoursForDate.toString(),
-						remaining: Math.max(0, maxHoursForDate - currentDayHours).toString()
-					})}
-				</p>
-			{:else if hours > 0 && hours < MIN_HOURS}
-				<p class="text-sm text-amber-600">
-					{m.error_hours_min({ min: MIN_HOURS.toString() })}
-				</p>
+			{:else}
+				<Select.Root bind:value={location} type="single">
+					<Select.Trigger>
+						{location || m.location_placeholder()}
+					</Select.Trigger>
+					<Select.Content>
+						{#each userLocations as loc (loc)}
+							<Select.Item value={loc} label={loc}>{loc}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
 			{/if}
 		</div>
 
-			<!-- Location -->
-			<div class="grid gap-2">
-				<Label>{m.location_label()}</Label>
-				{#if userLocations.length === 0}
-					<p class="text-sm text-muted-foreground">
-						{m.no_locations_for_activity()}
-					</p>
-				{:else}
-					<Select.Root bind:value={location} type="single">
-						<Select.Trigger>
-							{location || m.location_placeholder()}
-						</Select.Trigger>
-						<Select.Content>
-							{#each userLocations as loc (loc)}
-								<Select.Item value={loc} label={loc}>{loc}</Select.Item>
-							{/each}
-						</Select.Content>
-					</Select.Root>
-				{/if}
-			</div>
-
-			<!-- Notes (Optional) -->
-			<div class="grid gap-2">
-				<Label for="notes">{m.notes_optional()}</Label>
-				<Textarea id="notes" bind:value={notes} placeholder={m.notes_placeholder()} />
-			</div>
+		<!-- Notes (Optional) -->
+		<div class="grid gap-2">
+			<Label for="notes">{m.notes_optional()}</Label>
+			<Textarea id="notes" bind:value={notes} placeholder={m.notes_placeholder()} />
+		</div>
 
 		<Dialog.Footer class={activityToEdit ? 'flex gap-2' : ''}>
 			{#if activityToEdit}
@@ -630,7 +609,7 @@
 				<Button variant="default" onclick={handleSubmit} disabled={!isValid || isSubmitting}>
 					{#if isSubmitting}
 						<span class="flex items-center gap-2">
-							<span class="h-4 w-4 animate-spin">⟳</span>
+							<Spinner size="sm" />
 							Saving...
 						</span>
 					{:else if activityToEdit}
@@ -646,31 +625,16 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<AlertDialog.Root bind:open={deleteDialogOpen}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>{m.delete_activity_confirm()}</AlertDialog.Title>
-			{#if deleteError}
-				<AlertDialog.Description class="text-red-500">{deleteError}</AlertDialog.Description>
-			{/if}
-		</AlertDialog.Header>
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel disabled={isDeleting}>{m.cancel()}</AlertDialog.Cancel>
-			<AlertDialog.Action
-				onclick={handleDelete}
-				disabled={isDeleting}
-				class="text-destructive-foreground bg-destructive hover:bg-destructive/90"
-			>
-				{#if isDeleting}
-					<span class="flex items-center gap-2">
-						<span class="h-4 w-4 animate-spin">⟳</span>
-						Deleting...
-					</span>
-				{:else}
-					<Trash2 class="mr-2 h-4 w-4" />
-					{m.delete_activity_confirm_button()}
-				{/if}
-			</AlertDialog.Action>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<ConfirmDialog
+	bind:open={deleteDialogOpen}
+	title={m.delete_activity_confirm()}
+	confirmLabel={m.delete_activity_confirm_button()}
+	cancelLabel={m.cancel()}
+	variant="destructive"
+	loading={isDeleting}
+	onConfirm={handleDelete}
+>
+	{#if deleteError}
+		<Alert variant="error">{deleteError}</Alert>
+	{/if}
+</ConfirmDialog>

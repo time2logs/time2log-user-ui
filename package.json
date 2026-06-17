@@ -62,9 +62,7 @@
 		"@supabase/supabase-js": "^2.106.2",
 		"csstype": "^3.2.3",
 		"d3": "^7.9.0",
-		"flowbite-svelte": "^1.33.1",
 		"layerchart": "^1.0.13",
-		"lucide-svelte": "^1.0.1",
 		"rrule": "^2.8.1"
 	}
 }

@@ -54,14 +54,14 @@ describe('exported constants', () => {
 		expect(MIN_HOURS).toBe(1);
 	});
 
-	it('MAX_HOURS_PER_ENTRY equals 10', async () => {
+	it('DEFAULT_MAX_HOURS_PER_DAY equals 10', async () => {
 		// Arrange
-		const { MAX_HOURS_PER_ENTRY } = await import('./activityStorage');
+		const { DEFAULT_MAX_HOURS_PER_DAY } = await import('./activityStorage');
 
 		// Act
 
 		// Assert
-		expect(MAX_HOURS_PER_ENTRY).toBe(10);
+		expect(DEFAULT_MAX_HOURS_PER_DAY).toBe(10);
 	});
 });
 
@@ -102,13 +102,22 @@ describe('addActivity — validation', () => {
 		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
 	});
 
-	it('throws when hours exceed MAX_HOURS_PER_ENTRY (11 > 10)', async () => {
+	it('throws when hours exceed the default max (11 > 10)', async () => {
 		// Arrange
 		const { addActivity } = await import('./activityStorage');
 		const activity = { ...makeRecord(), hours: 11 };
 
 		// Act und Assert
 		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
+	});
+
+	it('throws when hours exceed a custom max passed explicitly (9 > 8)', async () => {
+		// Arrange
+		const { addActivity } = await import('./activityStorage');
+		const activity = { ...makeRecord(), hours: 9 };
+
+		// Act und Assert
+		await expect(addActivity(activity, 8)).rejects.toThrow(/hours must be a positive number/i);
 	});
 
 	it('accepts hours exactly at the MIN_HOURS lower boundary (1)', async () => {
@@ -125,7 +134,7 @@ describe('addActivity — validation', () => {
 		expect(result.hours).toBe(1);
 	});
 
-	it('accepts hours exactly at the MAX_HOURS_PER_ENTRY upper boundary (10)', async () => {
+	it('accepts hours exactly at the default max upper boundary (10)', async () => {
 		// Arrange
 		const insertedRow = { ...makeRecord(), id: 'new-id', hours: 10 };
 		const { insertMock } = makeInsertMock({ data: insertedRow, error: null });
@@ -137,6 +146,23 @@ describe('addActivity — validation', () => {
 
 		// Assert
 		expect(result.hours).toBe(10);
+	});
+
+	it('accepts hours at a custom max upper boundary (8) and rejects above it (9)', async () => {
+		// Arrange
+		const insertedRow = { ...makeRecord(), id: 'new-id', hours: 8 };
+		const { insertMock } = makeInsertMock({ data: insertedRow, error: null });
+		supabaseMock.from.mockReturnValue({ insert: insertMock });
+		const { addActivity } = await import('./activityStorage');
+
+		// Act
+		const result = await addActivity({ ...makeRecord(), hours: 8 }, 8);
+
+		// Assert
+		expect(result.hours).toBe(8);
+		await expect(addActivity({ ...makeRecord(), hours: 9 }, 8)).rejects.toThrow(
+			/hours must be a positive number/i
+		);
 	});
 
 	it('throws when hours are 0.5 (below new MIN_HOURS of 1)', async () => {

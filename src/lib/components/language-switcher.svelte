@@ -77,7 +77,7 @@
 				<span class="flex items-center gap-2">
 					<span class="text-lg">{locale.flag}</span>
 					<span>{locale.name}</span>
-					<span class="text-xs text-gray-400">{locale.display}</span>
+					<span class="text-xs text-muted-foreground">{locale.display}</span>
 				</span>
 			</Select.Item>
 		{/each}

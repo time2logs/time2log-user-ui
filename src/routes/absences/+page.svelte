@@ -2,7 +2,10 @@
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
-	import { AlertCircle, ArrowLeft, Edit2, Plus } from 'lucide-svelte';
+	import AlertCircle from '@lucide/svelte/icons/circle-alert';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import Edit2 from '@lucide/svelte/icons/pencil';
+	import Plus from '@lucide/svelte/icons/plus';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getAbsences } from '$lib/absenceStorage';
 	import type { AbsenceRecord } from '$lib/types';
@@ -11,6 +14,10 @@
 	import { getDateLocale } from '$lib/dateLocale';
 	import { rrulestr } from 'rrule';
 	import AbsenceChart from '$lib/components/absence-chart.svelte';
+	import { getAbsenceTypeLabel } from '$lib/absence-types';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import { Badge } from '$lib/components/ui/badge';
+	import { EmptyState } from '$lib/components/ui/empty-state';
 
 	const dateLocale = getDateLocale();
 
@@ -48,18 +55,6 @@
 		} finally {
 			isLoading = false;
 		}
-	}
-
-	function getAbsenceTypeLabel(typeId: string): string {
-		const typeMap: Record<string, string> = {
-			sick: m.absence_type_sick(),
-			vacation: m.absence_type_vacation(),
-			military: m.absence_type_military(),
-			uk: m.absence_type_uk(),
-			berufsschule: m.absence_type_berufsschule(),
-			custom: m.absence_type_custom()
-		};
-		return typeMap[typeId] || typeId;
 	}
 
 	function formatDateRange(startDate: string, endDate: string): string {
@@ -169,18 +164,12 @@
 						<h3 class="text-base font-semibold text-foreground sm:text-lg">
 							{getAbsenceTypeLabel(absence.absence_type_id)}
 						</h3>
-						<span
-							class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-						>
+						<Badge variant="warning">
 							{absence.day_fraction}
 							{m.absence_day_fraction_short()}
-						</span>
+						</Badge>
 						{#if absence.is_recurring}
-							<span
-								class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-							>
-								{m.recurring_label()}
-							</span>
+							<Badge variant="secondary">{m.recurring_label()}</Badge>
 						{/if}
 					</div>
 					<p class="mt-2 text-sm text-muted-foreground">
@@ -253,9 +242,9 @@
 				<Card.Root>
 					<Card.Content class="flex items-center justify-center py-12">
 						<div class="text-center">
-							<div
-								class="mb-2 inline-flex h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-primary"
-							></div>
+							<div class="mb-2 flex justify-center text-primary">
+								<Spinner size="lg" />
+							</div>
 							<p class="text-sm text-muted-foreground">{m.absences_loading()}</p>
 						</div>
 					</Card.Content>
@@ -263,15 +252,18 @@
 			{:else if absences.length === 0}
 				<Card.Root>
 					<Card.Content class="flex flex-col items-center justify-center py-12">
-						<AlertCircle class="mb-2 h-12 w-12 text-muted-foreground/50" />
-						<h3 class="mb-1 text-lg font-medium">{m.no_absences_found()}</h3>
-						<p class="mb-4 text-sm text-muted-foreground">
-							{m.absences_empty_hint()}
-						</p>
-						<Button onclick={() => (formDialogOpen = true)} variant="outline">
-							<Plus class="mr-2 h-4 w-4" />
-							{m.absence_add_button()}
-						</Button>
+						<EmptyState
+							icon={AlertCircle}
+							title={m.no_absences_found()}
+							hint={m.absences_empty_hint()}
+						>
+							<div class="mt-3">
+								<Button onclick={() => (formDialogOpen = true)} variant="outline">
+									<Plus class="mr-2 h-4 w-4" />
+									{m.absence_add_button()}
+								</Button>
+							</div>
+						</EmptyState>
 					</Card.Content>
 				</Card.Root>
 			{:else}

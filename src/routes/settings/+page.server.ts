@@ -164,5 +164,41 @@ export const actions: Actions = {
 		if (error) return fail(500, { colorblindError: 'Fehler beim Speichern.' });
 
 		return { colorblindSuccess: true };
+	},
+
+	addLocation: async ({ request, locals }) => {
+		const session = await locals.safeGetSession();
+		if (!session) throw redirect(302, '/login');
+
+		const formData = await request.formData();
+		const location = formData.get('location')?.toString().trim() ?? '';
+
+		if (!location) {
+			return fail(400, { locationError: 'Standort darf nicht leer sein.' });
+		}
+
+		const { data: existing } = await locals.supabase
+			.from('user_locations')
+			.select('id')
+			.eq('user_id', session.user.id)
+			.eq('location', location)
+			.maybeSingle();
+
+		if (existing) {
+			return fail(400, { locationError: m.location_already_exists() });
+		}
+
+		const { error } = await locals.supabase
+			.from('user_locations')
+			.insert({ user_id: session.user.id, location });
+
+		if (error) {
+			console.error('[Settings] Failed to add location:', error.message);
+			return fail(500, {
+				locationError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
+			});
+		}
+
+		return { locationSuccess: true };
 	}
 };

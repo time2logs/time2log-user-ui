@@ -107,7 +107,8 @@ export function computeAbsencesBySemester(
 	const result: { semester: string; type: string; days: number }[] = [];
 	for (const [semester, typeMap] of [...map.entries()].sort()) {
 		for (const [type, days] of typeMap.entries()) {
-			result.push({ semester, type, days: Math.round(days) });}
+			result.push({ semester, type, days: Math.round(days) });
+		}
 	}
 	return result;
 }

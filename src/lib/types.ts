@@ -32,6 +32,7 @@ export type TeamMember = {
 	team_role: string;
 	organization_id: string;
 	profession_id: string;
+	max_hours_per_day: number | null;
 };
 
 export type Team = {

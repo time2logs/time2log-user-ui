@@ -34,11 +34,7 @@ vi.mock('$lib/server/avatarValidation', () => ({
 }));
 
 import { actions } from './+page.server';
-import {
-	normalizeSwissPhone,
-	hashOtp,
-	isSupabaseAuthSecretError
-} from '$lib/server/onboarding';
+import { normalizeSwissPhone, hashOtp, isSupabaseAuthSecretError } from '$lib/server/onboarding';
 
 type ActionEvent = Parameters<NonNullable<(typeof actions)[keyof typeof actions]>>[0];
 
