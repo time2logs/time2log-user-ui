@@ -1,7 +1,12 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
 	import * as m from '$lib/paraglide/messages.js';
-	import { Award, Sparkles, Clock, Flame, Crown, Lock } from 'lucide-svelte';
+	import Award from '@lucide/svelte/icons/award';
+	import Sparkles from '@lucide/svelte/icons/sparkles';
+	import Clock from '@lucide/svelte/icons/clock';
+	import Flame from '@lucide/svelte/icons/flame';
+	import Crown from '@lucide/svelte/icons/crown';
+	import Lock from '@lucide/svelte/icons/lock';
 	import type { AchievementStatus } from '$lib/achievementsUtils';
 
 	let { achievements }: { achievements: AchievementStatus[] } = $props();

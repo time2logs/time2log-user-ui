@@ -32,6 +32,7 @@ export type TeamMember = {
 	team_role: string;
 	organization_id: string;
 	profession_id: string;
+	max_hours_per_day: number | null;
 };
 
 export type Team = {
@@ -59,6 +60,24 @@ export type ActivityRecord = {
 	activity_name: string;
 	activity_key: string;
 	activity_label: string;
+};
+
+/** Raw Supabase row shape for an absence (before mapping to AbsenceRecord). */
+export type AbsenceRow = {
+	id: string;
+	user_id: string;
+	team_id: string | null;
+	organization_id: string;
+	absence_type_id: string;
+	start_date: string;
+	end_date: string;
+	day_fraction: number;
+	is_recurring: boolean;
+	rrule: string | null;
+	notes: string | null;
+	created_at: string;
+	updated_at: string;
+	absence_types?: { label_key: string; is_recurring_allowed: boolean } | null;
 };
 
 export type AbsenceType = 'sick' | 'vacation' | 'military' | 'uk' | 'berufsschule' | 'custom';

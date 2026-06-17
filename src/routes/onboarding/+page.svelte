@@ -4,8 +4,10 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import { Alert } from '$lib/components/ui/alert';
 	import { enhance } from '$app/forms';
-	import { Loader2, Plus } from 'lucide-svelte';
+	import Plus from '@lucide/svelte/icons/plus';
 	import * as m from '$lib/paraglide/messages.js';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import { escapeHtml } from '$lib/htmlUtils';
@@ -218,11 +220,7 @@
 					</Card.Header>
 					<Card.Content class="pt-4">
 						{#if form?.error}
-							<div
-								class="mb-4 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-							>
-								{form.error}
-							</div>
+							<Alert variant="error" class="mb-4">{form.error}</Alert>
 						{/if}
 
 						<form
@@ -369,7 +367,7 @@
 												cooldownSeconds > 0}
 										>
 											{#if isSendingCode}
-												<Loader2 class="h-4 w-4 animate-spin" />
+												<Spinner size="sm" />
 											{:else if cooldownSeconds > 0}
 												{cooldownSeconds}s
 											{:else}
@@ -397,7 +395,7 @@
 											{#if phoneVerified}
 												{m.onboarding_phone_verified_badge()}
 											{:else if isVerifyingCode}
-												<Loader2 class="h-4 w-4 animate-spin" />
+												<Spinner size="sm" />
 											{:else}
 												{m.onboarding_phone_verify_button()}
 											{/if}
@@ -450,10 +448,10 @@
 								disabled={isSubmitting || isCompressing || (data.useSms && !phoneVerified)}
 							>
 								{#if isSubmitting}
-									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+									<Spinner size="sm" class="mr-2" />
 									{m.onboarding_creating_account()}
 								{:else if isCompressing}
-									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+									<Spinner size="sm" class="mr-2" />
 									Processing image...
 								{:else}
 									{m.onboarding_create_account()}

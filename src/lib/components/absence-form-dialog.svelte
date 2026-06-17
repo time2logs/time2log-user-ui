@@ -1,18 +1,25 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { ConfirmDialog } from '$lib/components/ui/confirm-dialog';
 	import { Button } from '$lib/components/ui/button';
+	import { Alert } from '$lib/components/ui/alert';
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
-	import { MAX_HOURS_PER_DAY } from '$lib/activityStorage';
+	import { DEFAULT_MAX_HOURS_PER_DAY } from '$lib/activityStorage';
 	import { absenceStore, getAbsenceFractionForDate } from '$lib/absenceStorage';
 	import type { AbsenceType, AbsenceRecord, ActivityRecord, TeamMember } from '$lib/types';
-	import { AlertCircle, Calendar, Info, Trash2 } from 'lucide-svelte';
+	import AlertCircle from '@lucide/svelte/icons/circle-alert';
+	import Calendar from '@lucide/svelte/icons/calendar';
+	import Info from '@lucide/svelte/icons/info';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
 	import { rrulestr, Frequency } from 'rrule';
 	import { getFrequencyString, buildRruleString } from '$lib/rruleUtils';
+	import { getAbsenceTypeLabel } from '$lib/absence-types';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import { SegmentedControl } from '$lib/components/ui/segmented-control';
 
 	const dateLocale = $derived(getDateLocale());
 
@@ -53,6 +60,8 @@
 		existingAbsences?: AbsenceRecord[];
 	} = $props();
 
+	const maxHoursPerDay = $derived(teamMember?.max_hours_per_day ?? DEFAULT_MAX_HOURS_PER_DAY);
+
 	let selectedAbsenceType = $state<AbsenceType | null>(null);
 	let isRecurring = $state(false);
 	let startDate = $state<string>('');
@@ -66,7 +75,7 @@
 	let hasInitialized = $state(false);
 	let submitError = $state<string | null>(null);
 	let deleteDialogOpen = $state(false);
-	let deleteChoice = $state<'this' | 'all' | null>(null);
+	let deleteChoice = $state<'all' | null>(null);
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
 	let showDayFractionInfo = $state(false);
@@ -190,28 +199,6 @@
 		}
 	}
 
-	function getAbsenceTypeLabel(typeId: AbsenceType): string {
-		const type = absenceTypes.find((t) => t.id === typeId);
-		if (!type) return typeId;
-
-		switch (type.labelKey) {
-			case 'absence_type_sick':
-				return m.absence_type_sick();
-			case 'absence_type_vacation':
-				return m.absence_type_vacation();
-			case 'absence_type_military':
-				return m.absence_type_military();
-			case 'absence_type_uk':
-				return m.absence_type_uk();
-			case 'absence_type_berufsschule':
-				return m.absence_type_berufsschule();
-			case 'absence_type_custom':
-				return m.absence_type_custom();
-			default:
-				return typeId;
-		}
-	}
-
 	const isValid = $derived(selectedAbsenceType !== null && startDate && endDate && !isSubmitting);
 	const showRecurrenceOptions = $derived(isRecurring && selectedAbsenceType !== null);
 	const canSubmitRecurring = $derived(
@@ -294,7 +281,7 @@
 				1,
 				getAbsenceFractionForDate(date, otherAbsences) + Number(dayFraction)
 			);
-			const availableHours = Math.max(0, MAX_HOURS_PER_DAY * (1 - blockedFraction));
+			const availableHours = Math.max(0, maxHoursPerDay * (1 - blockedFraction));
 
 			if (activityHours > availableHours) {
 				submitError = m.error_absence_conflicts_with_activities({
@@ -362,10 +349,7 @@
 		deleteError = null;
 
 		try {
-			if (deleteChoice === 'all') {
-				await absenceStore.delete(absenceToEdit.id);
-			}
-
+			await absenceStore.delete(absenceToEdit.id);
 			deleteDialogOpen = false;
 			open = false;
 			onAbsenceAdded();
@@ -389,15 +373,13 @@
 		</Dialog.Header>
 
 		{#if submitError}
-			<div
-				class="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950"
-			>
-				<AlertCircle class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500 dark:text-red-400" />
+			<Alert variant="error" class="mb-4">
+				<AlertCircle class="mt-0.5 h-5 w-5 shrink-0" />
 				<div class="flex-1">
-					<p class="text-sm font-medium text-red-800 dark:text-red-300">{m.error_label()}</p>
-					<p class="text-sm text-red-600 dark:text-red-400">{submitError}</p>
+					<p class="text-sm font-medium">{m.error_label()}</p>
+					<p class="text-sm">{submitError}</p>
 				</div>
-			</div>
+			</Alert>
 		{/if}
 
 		<div class="grid gap-4 py-4">
@@ -502,58 +484,30 @@
 							<div class="mt-2 grid gap-3">
 								<div class="grid gap-2">
 									<Label>{m.recurring_frequency_label()}</Label>
-									<div class="flex gap-2">
-										<button
-											type="button"
-											onclick={() => (recurrenceFrequency = 'daily')}
-											class="flex-1 rounded-lg border px-3 py-2 text-sm transition-colors {recurrenceFrequency ===
-											'daily'
-												? 'border-primary bg-primary/10 text-primary'
-												: 'border-border bg-background text-foreground hover:bg-accent'}"
-										>
-											{m.recurring_frequency_daily()}
-										</button>
-										<button
-											type="button"
-											onclick={() => (recurrenceFrequency = 'weekly')}
-											class="flex-1 rounded-lg border px-3 py-2 text-sm transition-colors {recurrenceFrequency ===
-											'weekly'
-												? 'border-primary bg-primary/10 text-primary'
-												: 'border-border bg-background text-foreground hover:bg-accent'}"
-										>
-											{m.recurring_frequency_weekly()}
-										</button>
-										<button
-											type="button"
-											onclick={() => (recurrenceFrequency = 'monthly')}
-											class="flex-1 rounded-lg border px-3 py-2 text-sm transition-colors {recurrenceFrequency ===
-											'monthly'
-												? 'border-primary bg-primary/10 text-primary'
-												: 'border-border bg-background text-foreground hover:bg-accent'}"
-										>
-											{m.recurring_frequency_monthly()}
-										</button>
-									</div>
+									<SegmentedControl
+										items={[
+											{ value: 'daily', label: m.recurring_frequency_daily() },
+											{ value: 'weekly', label: m.recurring_frequency_weekly() },
+											{ value: 'monthly', label: m.recurring_frequency_monthly() }
+										]}
+										value={recurrenceFrequency}
+										onSelect={(v) => (recurrenceFrequency = v as typeof recurrenceFrequency)}
+									/>
 								</div>
 
 								{#if recurrenceFrequency !== 'monthly'}
 									<div class="grid gap-2">
 										<Label>{m.recurring_days_of_week()}</Label>
-										<div class="flex flex-wrap gap-2">
-											{#each weekdays as day (day.value)}
-												<button
-													type="button"
-													onclick={() => toggleDay(day.value)}
-													class="min-w-[2.5rem] rounded-lg border px-2 py-1 text-xs font-medium transition-colors {selectedDays.includes(
-														day.value
-													)
-														? 'border-primary bg-primary text-primary-foreground'
-														: 'border-border bg-background text-foreground hover:bg-accent'}"
-												>
-													{day.short}
-												</button>
-											{/each}
-										</div>
+										<SegmentedControl
+											class="flex-wrap"
+											buttonClass="min-w-[2.5rem] px-2 py-1 text-xs"
+											items={weekdays.map((day) => ({
+												value: String(day.value),
+												label: day.short
+											}))}
+											selected={selectedDays.map(String)}
+											onToggle={(v) => toggleDay(Number(v))}
+										/>
 									</div>
 								{/if}
 
@@ -625,7 +579,7 @@
 				>
 					{#if isSubmitting}
 						<span class="flex items-center gap-2">
-							<span class="h-4 w-4 animate-spin">⟳</span>
+							<Spinner size="sm" />
 							{m.saving()}
 						</span>
 					{:else}
@@ -637,57 +591,26 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<AlertDialog.Root bind:open={deleteDialogOpen}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>{m.delete_absence_title()}</AlertDialog.Title>
-			{#if deleteError}
-				<AlertDialog.Description class="text-red-500">{deleteError}</AlertDialog.Description>
-			{/if}
-		</AlertDialog.Header>
-		<AlertDialog.Description>
-			{#if absenceToEdit?.is_recurring}
-				{m.delete_absence_recurring_confirm()}
-			{:else}
-				{m.delete_absence_confirm()}
-			{/if}
-		</AlertDialog.Description>
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel disabled={isDeleting}>{m.cancel()}</AlertDialog.Cancel>
-			{#if absenceToEdit?.is_recurring}
-				<Button
-					variant="outline"
-					onclick={() => {
-						deleteChoice = 'this';
-						handleDelete();
-					}}
-					disabled={isDeleting}
-				>
-					{m.delete_absence_this_occurrence()}
-				</Button>
-			{/if}
-			<AlertDialog.Action
-				onclick={() => {
-					deleteChoice = 'all';
-					handleDelete();
-				}}
-				disabled={isDeleting}
-				class="text-destructive-foreground bg-destructive hover:bg-destructive/90"
-			>
-				{#if isDeleting}
-					<span class="flex items-center gap-2">
-						<span class="h-4 w-4 animate-spin">⟳</span>
-						{m.deleting()}
-					</span>
-				{:else}
-					<Trash2 class="mr-2 h-4 w-4" />
-					{#if absenceToEdit?.is_recurring}
-						{m.delete_absence_all()}
-					{:else}
-						{m.delete_activity_confirm_button()}
-					{/if}
-				{/if}
-			</AlertDialog.Action>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<ConfirmDialog
+	bind:open={deleteDialogOpen}
+	title={m.delete_absence_title()}
+	confirmLabel={absenceToEdit?.is_recurring
+		? m.delete_absence_all()
+		: m.delete_activity_confirm_button()}
+	cancelLabel={m.cancel()}
+	variant="destructive"
+	loading={isDeleting}
+	onConfirm={() => {
+		deleteChoice = 'all';
+		handleDelete();
+	}}
+>
+	{#if deleteError}
+		<Alert variant="error">{deleteError}</Alert>
+	{/if}
+	<p class="text-sm text-muted-foreground">
+		{absenceToEdit?.is_recurring
+			? m.delete_absence_recurring_confirm()
+			: m.delete_absence_confirm()}
+	</p>
+</ConfirmDialog>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import { Home, ArrowLeft } from 'lucide-svelte';
+	import Home from '@lucide/svelte/icons/house';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import { page } from '$app/stores';
 
 	const status = $derived($page.status);
