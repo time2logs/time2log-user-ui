@@ -316,6 +316,7 @@
 							existingAbsences={absences}
 							onEdit={handleEditActivity}
 							onEditAbsence={handleEditAbsence}
+							{targetHours}
 						/>
 					</Card.Content>
 				</Card.Root>
@@ -341,6 +342,7 @@
 					activityToEdit={editingActivity}
 					existingActivities={activities}
 					existingAbsences={absences}
+					{targetHours}
 				/>
 				<AbsenceFormDialog
 					bind:open={absenceDialogOpen}
@@ -350,6 +352,7 @@
 					absenceToEdit={editingAbsence}
 					existingActivities={activities}
 					existingAbsences={absences}
+					{targetHours}
 				/>
 			{/if}
 		</div>

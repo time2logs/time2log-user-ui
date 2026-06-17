@@ -58,7 +58,8 @@
 		activityToEdit = null,
 		existingActivities = [],
 		userLocations = [],
-		existingAbsences = []
+		existingAbsences = [],
+		targetHours = 8
 	}: {
 		open: boolean;
 		curriculumNodes: CurriculumNode[];
@@ -69,6 +70,7 @@
 		existingActivities?: ActivityRecord[];
 		userLocations?: string[];
 		existingAbsences?: AbsenceRecord[];
+		targetHours?: number;
 	} = $props();
 
 	const tree = $derived(buildTree(curriculumNodes));
@@ -307,8 +309,8 @@
 		selectedDate || activityToEdit?.entry_date || new Date().toISOString().split('T')[0]
 	);
 	const absenceFraction = $derived(getAbsenceFractionForDate(entryDate, existingAbsences));
-	const blockedHoursForDate = $derived(MAX_HOURS_PER_DAY * absenceFraction);
-	const maxHoursForDate = $derived(Math.max(0, MAX_HOURS_PER_DAY * (1 - absenceFraction)));
+	const blockedHoursForDate = $derived(targetHours * absenceFraction);
+	const maxHoursForDate = $derived(Math.max(0, targetHours * (1 - absenceFraction)));
 	const currentDayHours = $derived(
 		existingActivities
 			.filter((a) => a.entry_date === entryDate)

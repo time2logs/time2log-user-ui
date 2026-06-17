@@ -17,7 +17,8 @@
 		selectedDate,
 		existingAbsences = [],
 		onEdit,
-		onEditAbsence
+		onEditAbsence,
+		targetHours = 8
 	}: {
 		onRefresh: () => void;
 		onAbsenceRefresh?: () => void;
@@ -25,6 +26,7 @@
 		existingAbsences?: AbsenceRecord[];
 		onEdit?: (activity: ActivityRecord) => void;
 		onEditAbsence?: (absence: AbsenceRecord) => void;
+		targetHours?: number;
 	} = $props();
 
 	const activities = $derived($activityStore);
@@ -107,7 +109,7 @@
 	}
 
 	function formatBlockedHours(dayFraction: number): string {
-		const blockedHours = Math.round(dayFraction * 10 * 10) / 10;
+		const blockedHours = Math.round(dayFraction * targetHours * 10) / 10;
 		return Number.isInteger(blockedHours) ? `${blockedHours}h` : `${blockedHours.toFixed(1)}h`;
 	}
 
@@ -272,7 +274,7 @@
 								<span>
 									{m.absence_hours_consumed({
 										hours: formatBlockedHours(Number(absence.day_fraction ?? 1)),
-										max: '8h'
+										max: `${targetHours}h`
 									})}
 								</span>
 							</div>
