@@ -17,15 +17,11 @@
 	const isComplete = $derived(totalHours >= targetHours);
 
 	const barColor = $derived(
-		isComplete ? 'bg-green-500' : pct >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+		isComplete ? 'bg-success' : pct >= 50 ? 'bg-warning' : 'bg-destructive'
 	);
 
 	const textColor = $derived(
-		isComplete
-			? 'text-green-600 dark:text-green-400'
-			: pct >= 50
-				? 'text-yellow-600 dark:text-yellow-400'
-				: 'text-red-600 dark:text-red-400'
+		isComplete ? 'text-success' : pct >= 50 ? 'text-warning' : 'text-destructive'
 	);
 </script>
 

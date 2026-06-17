@@ -10,7 +10,7 @@
 		<div class="mx-auto max-w-3xl">
 			<h1 class="mb-12 text-4xl font-bold tracking-tight">Privacy Policy</h1>
 
-			<div class="prose prose-invert max-w-none space-y-8 text-foreground">
+			<div class="prose max-w-none space-y-8 text-foreground prose-invert">
 				<section>
 					<h2 class="mb-4 text-2xl font-semibold">Overview</h2>
 					<div class="space-y-2 text-muted-foreground">

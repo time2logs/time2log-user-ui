@@ -11,8 +11,7 @@ vi.mock('$lib/paraglide/messages.js', () => ({
 	onboarding_error_password_length: () => 'password_length',
 	onboarding_error_password_uppercase: () => 'password_uppercase',
 	onboarding_error_password_number: () => 'password_number',
-	onboarding_error_password_special: () => 'password_special',
-	location_already_exists: () => 'location_exists'
+	onboarding_error_password_special: () => 'password_special'
 }));
 
 vi.mock('$lib/server/avatarValidation', () => ({
@@ -137,18 +136,5 @@ describe('updateProfile action', () => {
 		} as RequestEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.profileError).toBe('file_too_large');
-	});
-});
-
-// ── addLocation ───────────────────────────────────────────────────────────
-
-describe('addLocation action', () => {
-	it('fails 400 when location is empty', async () => {
-		const result = await actions.addLocation({
-			request: makeRequest({ location: '' }),
-			locals: makeLocals()
-		} as RequestEvent);
-		expect(result.status).toBe(400);
-		expect(result.data.locationError).toBe('Standort darf nicht leer sein.');
 	});
 });

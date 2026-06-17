@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
 	import * as m from '$lib/paraglide/messages.js';
-	import { MapPin } from 'lucide-svelte';
+	import MapPin from '@lucide/svelte/icons/map-pin';
 	import type { LocationStat } from '$lib/achievementsUtils';
 
 	let { locations: locationStats }: { locations: LocationStat[] } = $props();

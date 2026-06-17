@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages.js';
 	import { Button } from '$lib/components/ui/button';
-	import { ArrowLeft } from 'lucide-svelte';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import LevelHero from '$lib/components/achievements/level-hero.svelte';
 	import TopLocations from '$lib/components/achievements/top-locations.svelte';

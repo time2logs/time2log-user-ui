@@ -1,13 +1,22 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import { Trash2, Calendar, Clock, Star, Pencil, MapPin } from 'lucide-svelte';
+	import { ConfirmDialog } from '$lib/components/ui/confirm-dialog';
+	import { Alert } from '$lib/components/ui/alert';
+	import { Badge } from '$lib/components/ui/badge';
+	import { EmptyState } from '$lib/components/ui/empty-state';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import Calendar from '@lucide/svelte/icons/calendar';
+	import Clock from '@lucide/svelte/icons/clock';
+	import Star from '@lucide/svelte/icons/star';
+	import Pencil from '@lucide/svelte/icons/pencil';
+	import MapPin from '@lucide/svelte/icons/map-pin';
 	import { activityStore } from '$lib/activityStorage';
 	import { absenceStore, isDateInAbsence } from '$lib/absenceStorage';
 	import type { ActivityRecord, AbsenceRecord } from '$lib/types';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
 	import { formatHoursMinutes, isWithinEditWindow } from '$lib/utils';
+	import { getAbsenceTypeLabel } from '$lib/absence-types';
 
 	const dateLocale = $derived(getDateLocale());
 
@@ -17,8 +26,7 @@
 		selectedDate,
 		existingAbsences = [],
 		onEdit,
-		onEditAbsence,
-		targetHours = 8
+		onEditAbsence
 	}: {
 		onRefresh: () => void;
 		onAbsenceRefresh?: () => void;
@@ -26,7 +34,6 @@
 		existingAbsences?: AbsenceRecord[];
 		onEdit?: (activity: ActivityRecord) => void;
 		onEditAbsence?: (absence: AbsenceRecord) => void;
-		targetHours?: number;
 	} = $props();
 
 	const activities = $derived($activityStore);
@@ -108,52 +115,25 @@
 		});
 	}
 
-	function getAbsenceTypeLabel(typeId: string): string {
-		switch (typeId) {
-			case 'sick':
-				return m.absence_type_sick();
-			case 'vacation':
-				return m.absence_type_vacation();
-			case 'military':
-				return m.absence_type_military();
-			case 'uk':
-				return m.absence_type_uk();
-			case 'berufsschule':
-				return m.absence_type_berufsschule();
-			case 'custom':
-				return m.absence_type_custom();
-			default:
-				return typeId;
-		}
-	}
-
 	const selectedDateLabel = $derived(selectedDate ? formatDate(selectedDate) : null);
 	const hasEntries = $derived(filteredActivities.length > 0 || filteredAbsences.length > 0);
 </script>
 
 <div class="flex h-full flex-col">
 	{#if activities.length === 0 && existingAbsences.length === 0}
-		<div class="flex-1 rounded-lg border border-border bg-muted/30 p-6 text-center sm:p-12">
-			<div
-				class="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground sm:gap-3"
-			>
-				<Calendar class="h-8 w-8 sm:h-12 sm:w-12" />
-				<p class="text-base font-medium sm:text-lg">{m.no_activities_found()}</p>
-				<p class="text-xs sm:text-sm">{m.start_by_logging_first_activity()}</p>
-			</div>
-		</div>
+		<EmptyState
+			icon={Calendar}
+			class="flex-1"
+			title={m.no_activities_found()}
+			hint={m.start_by_logging_first_activity()}
+		/>
 	{:else if !hasEntries}
-		<div class="flex-1 rounded-lg border border-border bg-muted/30 p-6 text-center sm:p-12">
-			<div
-				class="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground sm:gap-3"
-			>
-				<Calendar class="h-8 w-8 sm:h-12 sm:w-12" />
-				<p class="text-base font-medium sm:text-lg">
-					{m.no_activities_for_date({ date: selectedDateLabel ?? '' })}
-				</p>
-				<p class="text-xs sm:text-sm">{m.no_activities_for_date_hint()}</p>
-			</div>
-		</div>
+		<EmptyState
+			icon={Calendar}
+			class="flex-1"
+			title={m.no_activities_for_date({ date: selectedDateLabel ?? '' })}
+			hint={m.no_activities_for_date_hint()}
+		/>
 	{:else}
 		<div class="space-y-2 p-2 sm:space-y-3 sm:p-3">
 			{#each sortedEntries() as entry (entry.type === 'activity' ? `activity-${entry.id}` : `absence-${entry.id}`)}
@@ -231,24 +211,22 @@
 				{:else}
 					{@const absence = entry.data}
 					<div
-						class="group relative flex flex-col gap-2 rounded-lg border border-orange-200 bg-orange-50/60 p-2 shadow-sm backdrop-blur-sm transition-all hover:bg-orange-100/80 hover:shadow-md sm:flex-row sm:items-center sm:gap-4 sm:p-3"
+						class="group relative flex flex-col gap-2 rounded-lg border border-warning/30 bg-warning/5 p-2 shadow-sm backdrop-blur-sm transition-all hover:bg-warning/10 hover:shadow-md sm:flex-row sm:items-center sm:gap-4 sm:p-3"
 					>
 						<div class="min-w-0 flex-1 pr-10 sm:pr-0">
 							<div class="mb-1.5 flex flex-wrap items-center gap-1.5">
-								<span
-									class="rounded-full bg-orange-200 px-2 py-0.5 text-xs font-medium text-orange-700"
-								>
+								<Badge variant="warning">
 									{getAbsenceTypeLabel(absence.absence_type_id)}
-								</span>
+								</Badge>
+								<Badge variant="warning">
+									{absence.day_fraction}
+									{m.absence_day_fraction_short()}
+								</Badge>
 								{#if absence.is_recurring}
-									<span
-										class="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600"
-									>
-										{m.recurring_label()}
-									</span>
+									<Badge variant="warning">{m.recurring_label()}</Badge>
 								{/if}
 							</div>
-							<div class="flex items-center gap-1 text-xs text-stone-600 sm:text-sm">
+							<div class="flex items-center gap-1 text-xs text-muted-foreground sm:text-sm">
 								<Calendar class="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
 								<span>
 									{#if absence.start_date === absence.end_date}
@@ -259,7 +237,7 @@
 								</span>
 							</div>
 							{#if absence.notes}
-								<p class="mt-1.5 line-clamp-2 text-xs text-stone-600 sm:text-sm">
+								<p class="mt-1.5 line-clamp-2 text-xs text-muted-foreground sm:text-sm">
 									{absence.notes}
 								</p>
 							{/if}
@@ -271,15 +249,16 @@
 								variant="ghost"
 								size="icon"
 								onclick={() => onEditAbsence?.(absence)}
-								class="h-7 w-7 text-stone-400 transition-opacity hover:bg-blue-50 hover:text-blue-500 sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
+								class="h-7 w-7 text-muted-foreground transition-opacity hover:bg-accent hover:text-accent-foreground sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
 							>
 								<Pencil class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
 							</Button>
 							<Button
 								variant="ghost"
 								size="icon"
+								aria-label={m.delete_absence_title()}
 								onclick={() => handleDeleteAbsence(absence.id)}
-								class="hidden h-7 w-7 text-stone-400 transition-opacity hover:bg-red-50 hover:text-red-500 sm:flex sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
+								class="flex h-7 w-7 text-muted-foreground transition-opacity hover:bg-destructive/10 hover:text-destructive sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
 							>
 								<Trash2 class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
 							</Button>
@@ -291,36 +270,15 @@
 	{/if}
 </div>
 
-<AlertDialog.Root bind:open={deleteDialogOpen}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>{m.delete_activity_confirm()}</AlertDialog.Title>
-			{#if deleteError}
-				<AlertDialog.Description class="text-red-500">{deleteError}</AlertDialog.Description>
-			{/if}
-		</AlertDialog.Header>
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel>{m.cancel()}</AlertDialog.Cancel>
-			<AlertDialog.Action
-				onclick={confirmDelete}
-				class="text-destructive-foreground bg-destructive hover:bg-destructive/90"
-			>
-				<Trash2 class="mr-2 h-4 w-4" />
-				{m.delete_activity_confirm_button()}
-			</AlertDialog.Action>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
-
-<style>
-	@keyframes slideIn {
-		from {
-			opacity: 0;
-			transform: translateY(-10px);
-		}
-		to {
-			opacity: 1;
-			transform: translateY(0);
-		}
-	}
-</style>
+<ConfirmDialog
+	bind:open={deleteDialogOpen}
+	title={m.delete_activity_confirm()}
+	confirmLabel={m.delete_activity_confirm_button()}
+	cancelLabel={m.cancel()}
+	variant="destructive"
+	onConfirm={confirmDelete}
+>
+	{#if deleteError}
+		<Alert variant="error">{deleteError}</Alert>
+	{/if}
+</ConfirmDialog>
