@@ -45,6 +45,7 @@ function makeRequest(data: Record<string, string>): Request {
 
 // Minimal locals stub for tests that fail before any Supabase call
 const emptyLocals = {} as App.Locals;
+process.env.USE_SMS = '1';
 
 // ── normalizeSwissPhone ────────────────────────────────────────────────────
 

@@ -37,6 +37,7 @@ import { actions } from './+page.server';
 import {
 	normalizeSwissPhone,
 	hashOtp,
+	isSmsEnabled,
 	isSupabaseAuthSecretError
 } from '$lib/server/onboarding';
 
@@ -50,6 +51,7 @@ function makeRequest(data: Record<string, string>): Request {
 
 // Minimal locals stub for tests that fail before any Supabase call
 const emptyLocals = {} as App.Locals;
+process.env.USE_SMS = '1';
 
 // ── normalizeSwissPhone ────────────────────────────────────────────────────
 
@@ -125,9 +127,46 @@ describe('isSupabaseAuthSecretError', () => {
 	);
 });
 
+// ── isSmsEnabled ─────────────────────────────────────────────────────────
+
+describe('isSmsEnabled', () => {
+	it('is off by default and only enabled by true/1', () => {
+		delete process.env.USE_SMS;
+		expect(isSmsEnabled()).toBe(false);
+
+		process.env.USE_SMS = '0';
+		expect(isSmsEnabled()).toBe(false);
+
+		process.env.USE_SMS = 'false';
+		expect(isSmsEnabled()).toBe(false);
+
+		process.env.USE_SMS = '1';
+		expect(isSmsEnabled()).toBe(true);
+
+		process.env.USE_SMS = 'true';
+		expect(isSmsEnabled()).toBe(true);
+
+		process.env.USE_SMS = '1';
+	});
+});
+
 // ── sendPhoneCode — early validation ─────────────────────────────────────
 
 describe('sendPhoneCode action — early validation', () => {
+	it('fails 404 when SMS is disabled', async () => {
+		process.env.USE_SMS = '0';
+		const result = await actions.sendPhoneCode({
+			request: makeRequest({
+				invite_token: 'tok',
+				email: 'user@example.com',
+				phone_number: '0791234567'
+			}),
+			locals: emptyLocals
+		} as ActionEvent);
+		expect(result.status).toBe(404);
+		process.env.USE_SMS = '1';
+	});
+
 	it('fails 400 when invite_token is missing', async () => {
 		const result = await actions.sendPhoneCode({
 			request: makeRequest({ email: 'user@example.com', phone_number: '0791234567' }),
@@ -161,6 +200,20 @@ describe('sendPhoneCode action — early validation', () => {
 // ── verifyPhoneCode — early validation ────────────────────────────────────
 
 describe('verifyPhoneCode action — early validation', () => {
+	it('fails 404 when SMS is disabled', async () => {
+		process.env.USE_SMS = '0';
+		const result = await actions.verifyPhoneCode({
+			request: makeRequest({
+				invite_token: 'tok',
+				email: 'user@example.com',
+				phone_code: '123456'
+			}),
+			locals: emptyLocals
+		} as ActionEvent);
+		expect(result.status).toBe(404);
+		process.env.USE_SMS = '1';
+	});
+
 	it('fails 400 when invite_token is missing', async () => {
 		const result = await actions.verifyPhoneCode({
 			request: makeRequest({ email: 'user@example.com', phone_code: '123456' }),
