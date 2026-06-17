@@ -75,8 +75,10 @@
 		return `${formatter.format(start)} - ${formatter.format(end)}`;
 	}
 
+	const targetHours = $derived(data.organization?.target_hours ?? 8);
+
 	function formatBlockedHours(dayFraction: number): string {
-		const blockedHours = Math.round(dayFraction * 10 * 10) / 10;
+		const blockedHours = Math.round(dayFraction * targetHours * 10) / 10;
 		return Number.isInteger(blockedHours) ? `${blockedHours}h` : `${blockedHours.toFixed(1)}h`;
 	}
 
@@ -166,12 +168,6 @@
 					</div>
 					<p class="mt-2 text-sm text-muted-foreground">
 						{formatDateRange(absence.start_date, absence.end_date)}
-					</p>
-					<p class="mt-1 text-xs text-muted-foreground">
-						{m.absence_hours_consumed({
-							hours: formatBlockedHours(Number(absence.day_fraction ?? 1)),
-							max: '10h'
-						})}
 					</p>
 					{#if absence.is_recurring}
 						<p class="mt-1 text-xs text-muted-foreground">
@@ -300,5 +296,6 @@
 		teamMember={data.teamMember}
 		onAbsenceAdded={handleAbsenceAdded}
 		absenceToEdit={editingAbsence}
+		{targetHours}
 	/>
 {/if}

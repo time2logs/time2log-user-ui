@@ -59,7 +59,8 @@
 		activityToEdit = null,
 		existingActivities = [],
 		userLocations = [],
-		existingAbsences = []
+		existingAbsences = [],
+		targetHours = 8
 	}: {
 		open: boolean;
 		curriculumNodes: CurriculumNode[];
@@ -70,6 +71,7 @@
 		existingActivities?: ActivityRecord[];
 		userLocations?: string[];
 		existingAbsences?: AbsenceRecord[];
+		targetHours?: number;
 	} = $props();
 
 	const tree = $derived(buildTree(curriculumNodes));
@@ -86,7 +88,33 @@
 	let rating = $state<number>(0);
 	let inputHours = $state<number>(0);
 	let inputMinutes = $state<number>(0);
-	const hours = $derived(inputHours + inputMinutes / 60);
+	// The Input wrapper sets `type` dynamically, so Svelte doesn't apply numeric
+	// coercion on bind:value and these come back as strings. Coerce here so the
+	// hours total is a real number (otherwise `inputHours + ...` concatenates).
+	// Both fields must be whole numbers; otherwise a decimal typed into the hours
+	// field (e.g. 8.4) would be saved on top of the minutes and inflate the total.
+	const hours = $derived(
+		(Math.floor(Number(inputHours)) || 0) + (Math.floor(Number(inputMinutes)) || 0) / 60
+	);
+
+	// Turn whatever the user typed into a whole number between min and max, and
+	// make the field show that cleaned-up value (so "8.4" snaps back to "8").
+	function cleanNumberInput(input: HTMLInputElement, min: number, max: number): number {
+		const wholeNumber = Math.floor(Number(input.value) || 0);
+		const withinRange = Math.min(max, Math.max(min, wholeNumber));
+		if (input.value !== '' && input.value !== String(withinRange)) {
+			input.value = String(withinRange);
+		}
+		return withinRange;
+	}
+
+	function handleHoursInput(event: Event) {
+		inputHours = cleanNumberInput(event.currentTarget as HTMLInputElement, 0, MAX_HOURS_PER_ENTRY);
+	}
+
+	function handleMinutesInput(event: Event) {
+		inputMinutes = cleanNumberInput(event.currentTarget as HTMLInputElement, 0, 59);
+	}
 	let location = $state<string>('');
 	let notes = $state<string>('');
 	let isSubmitting = $state(false);
@@ -577,7 +605,8 @@
 							min="0"
 							max={String(maxHoursPerDay)}
 							step="1"
-							bind:value={inputHours}
+							value={inputHours}
+							oninput={handleHoursInput}
 							aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
 						/>
 						<span class="text-sm text-muted-foreground">h</span>
@@ -586,9 +615,10 @@
 						<Input
 							type="number"
 							min="0"
-							max="55"
-							step="5"
-							bind:value={inputMinutes}
+							max="59"
+							step="1"
+							value={inputMinutes}
+							oninput={handleMinutesInput}
 							aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
 						/>
 						<span class="text-sm text-muted-foreground">min</span>
