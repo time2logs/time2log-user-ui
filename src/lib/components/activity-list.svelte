@@ -17,7 +17,8 @@
 		selectedDate,
 		existingAbsences = [],
 		onEdit,
-		onEditAbsence
+		onEditAbsence,
+		targetHours = 8
 	}: {
 		onRefresh: () => void;
 		onAbsenceRefresh?: () => void;
@@ -25,6 +26,7 @@
 		existingAbsences?: AbsenceRecord[];
 		onEdit?: (activity: ActivityRecord) => void;
 		onEditAbsence?: (absence: AbsenceRecord) => void;
+		targetHours?: number;
 	} = $props();
 
 	const activities = $derived($activityStore);
@@ -107,7 +109,7 @@
 	}
 
 	function formatBlockedHours(dayFraction: number): string {
-		const blockedHours = Math.round(dayFraction * 10 * 10) / 10;
+		const blockedHours = Math.round(dayFraction * targetHours * 10) / 10;
 		return Number.isInteger(blockedHours) ? `${blockedHours}h` : `${blockedHours.toFixed(1)}h`;
 	}
 
@@ -243,12 +245,6 @@
 								>
 									{getAbsenceTypeLabel(absence.absence_type_id)}
 								</span>
-								<span
-									class="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600"
-								>
-									{absence.day_fraction}
-									{m.absence_day_fraction_short()}
-								</span>
 								{#if absence.is_recurring}
 									<span
 										class="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600"
@@ -265,15 +261,6 @@
 									{:else}
 										{formatDate(absence.start_date)} – {formatDate(absence.end_date)}
 									{/if}
-								</span>
-							</div>
-							<div class="mt-1 flex items-center gap-1 text-xs text-stone-600 sm:text-sm">
-								<Clock class="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
-								<span>
-									{m.absence_hours_consumed({
-										hours: formatBlockedHours(Number(absence.day_fraction ?? 1)),
-										max: '10h'
-									})}
 								</span>
 							</div>
 							{#if absence.notes}

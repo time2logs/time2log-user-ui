@@ -42,7 +42,8 @@
 		selectedDate,
 		absenceToEdit = null,
 		existingActivities = [],
-		existingAbsences = []
+		existingAbsences = [],
+		targetHours = 8
 	}: {
 		open: boolean;
 		teamMember: TeamMember | null;
@@ -51,6 +52,7 @@
 		absenceToEdit?: AbsenceRecord | null;
 		existingActivities?: ActivityRecord[];
 		existingAbsences?: AbsenceRecord[];
+		targetHours?: number;
 	} = $props();
 
 	let selectedAbsenceType = $state<AbsenceType | null>(null);
@@ -294,7 +296,7 @@
 				1,
 				getAbsenceFractionForDate(date, otherAbsences) + Number(dayFraction)
 			);
-			const availableHours = Math.max(0, MAX_HOURS_PER_DAY * (1 - blockedFraction));
+			const availableHours = Math.max(0, targetHours * (1 - blockedFraction));
 
 			if (activityHours > availableHours) {
 				submitError = m.error_absence_conflicts_with_activities({

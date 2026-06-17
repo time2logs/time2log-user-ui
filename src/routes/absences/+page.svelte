@@ -78,8 +78,10 @@
 		return `${formatter.format(start)} - ${formatter.format(end)}`;
 	}
 
+	const targetHours = $derived(data.organization?.target_hours ?? 8);
+
 	function formatBlockedHours(dayFraction: number): string {
-		const blockedHours = Math.round(dayFraction * 10 * 10) / 10;
+		const blockedHours = Math.round(dayFraction * targetHours * 10) / 10;
 		return Number.isInteger(blockedHours) ? `${blockedHours}h` : `${blockedHours.toFixed(1)}h`;
 	}
 
@@ -169,12 +171,6 @@
 						<h3 class="text-base font-semibold text-foreground sm:text-lg">
 							{getAbsenceTypeLabel(absence.absence_type_id)}
 						</h3>
-						<span
-							class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-						>
-							{absence.day_fraction}
-							{m.absence_day_fraction_short()}
-						</span>
 						{#if absence.is_recurring}
 							<span
 								class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
@@ -185,12 +181,6 @@
 					</div>
 					<p class="mt-2 text-sm text-muted-foreground">
 						{formatDateRange(absence.start_date, absence.end_date)}
-					</p>
-					<p class="mt-1 text-xs text-muted-foreground">
-						{m.absence_hours_consumed({
-							hours: formatBlockedHours(Number(absence.day_fraction ?? 1)),
-							max: '10h'
-						})}
 					</p>
 					{#if absence.is_recurring}
 						<p class="mt-1 text-xs text-muted-foreground">
@@ -316,5 +306,6 @@
 		teamMember={data.teamMember}
 		onAbsenceAdded={handleAbsenceAdded}
 		absenceToEdit={editingAbsence}
+		{targetHours}
 	/>
 {/if}
