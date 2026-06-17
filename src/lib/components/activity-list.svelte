@@ -245,12 +245,6 @@
 								>
 									{getAbsenceTypeLabel(absence.absence_type_id)}
 								</span>
-								<span
-									class="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600"
-								>
-									{absence.day_fraction}
-									{m.absence_day_fraction_short()}
-								</span>
 								{#if absence.is_recurring}
 									<span
 										class="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-600"
@@ -267,15 +261,6 @@
 									{:else}
 										{formatDate(absence.start_date)} – {formatDate(absence.end_date)}
 									{/if}
-								</span>
-							</div>
-							<div class="mt-1 flex items-center gap-1 text-xs text-stone-600 sm:text-sm">
-								<Clock class="h-3 w-3 shrink-0 sm:h-3.5 sm:w-3.5" />
-								<span>
-									{m.absence_hours_consumed({
-										hours: formatBlockedHours(Number(absence.day_fraction ?? 1)),
-										max: `${targetHours}h`
-									})}
 								</span>
 							</div>
 							{#if absence.notes}
