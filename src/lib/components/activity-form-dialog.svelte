@@ -92,22 +92,23 @@
 		(Math.floor(Number(inputHours)) || 0) + (Math.floor(Number(inputMinutes)) || 0) / 60
 	);
 
+	// Turn whatever the user typed into a whole number between min and max, and
+	// make the field show that cleaned-up value (so "8.4" snaps back to "8").
+	function cleanNumberInput(input: HTMLInputElement, min: number, max: number): number {
+		const wholeNumber = Math.floor(Number(input.value) || 0);
+		const withinRange = Math.min(max, Math.max(min, wholeNumber));
+		if (input.value !== '' && input.value !== String(withinRange)) {
+			input.value = String(withinRange);
+		}
+		return withinRange;
+	}
+
 	function handleHoursInput(event: Event) {
-		const el = event.currentTarget as HTMLInputElement;
-		const raw = Math.floor(Number(el.value) || 0);
-		const clamped = Math.min(MAX_HOURS_PER_ENTRY, Math.max(0, raw));
-		inputHours = clamped;
-		// Force the displayed value back to a whole number (the DOM keeps "8.4"
-		// even though our state floors it, because the floored state can be unchanged).
-		if (el.value !== '' && el.value !== String(clamped)) el.value = String(clamped);
+		inputHours = cleanNumberInput(event.currentTarget as HTMLInputElement, 0, MAX_HOURS_PER_ENTRY);
 	}
 
 	function handleMinutesInput(event: Event) {
-		const el = event.currentTarget as HTMLInputElement;
-		const raw = Math.floor(Number(el.value) || 0);
-		const clamped = Math.min(59, Math.max(0, raw));
-		inputMinutes = clamped;
-		if (el.value !== '' && el.value !== String(clamped)) el.value = String(clamped);
+		inputMinutes = cleanNumberInput(event.currentTarget as HTMLInputElement, 0, 59);
 	}
 	let location = $state<string>('');
 	let notes = $state<string>('');
