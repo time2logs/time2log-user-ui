@@ -493,6 +493,7 @@ export const actions: Actions = {
 			existingUser.id,
 			{
 				password,
+				email_confirm: true,
 				user_metadata: {
 					first_name: firstName,
 					last_name: lastName
