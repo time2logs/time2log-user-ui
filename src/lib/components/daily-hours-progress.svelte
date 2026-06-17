@@ -3,14 +3,18 @@
 
 	let {
 		loggedHours,
-		targetHours
+		targetHours,
+		loggedAbsenceTimeInDays
 	}: {
 		loggedHours: number;
 		targetHours: number;
+		loggedAbsenceTimeInDays: number;
 	} = $props();
 
-	const pct = $derived(targetHours > 0 ? Math.min((loggedHours / targetHours) * 100, 100) : 0);
-	const isComplete = $derived(loggedHours >= targetHours);
+	const totalHours = $derived(loggedHours + loggedAbsenceTimeInDays * targetHours);
+
+	const pct = $derived(targetHours > 0 ? Math.min((totalHours / targetHours) * 100, 100) : 0);
+	const isComplete = $derived(totalHours >= targetHours);
 
 	const barColor = $derived(
 		isComplete ? 'bg-green-500' : pct >= 50 ? 'bg-yellow-500' : 'bg-red-500'
@@ -29,7 +33,7 @@
 	<div class="mb-1.5 flex items-center justify-between gap-2">
 		<span class="text-xs font-medium text-muted-foreground">{m.daily_hours_goal_label()}</span>
 		<span class="text-xs font-semibold tabular-nums {textColor}">
-			{m.daily_hours_logged({ logged: loggedHours, target: targetHours })}
+			{m.daily_hours_logged({ logged: totalHours, target: targetHours })}
 		</span>
 	</div>
 	<div class="h-2 w-full overflow-hidden rounded-full bg-muted">

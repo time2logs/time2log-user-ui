@@ -14,6 +14,12 @@ export type CurriculumNode = {
 	updated_at: string;
 };
 
+export type Organization = {
+	id: string;
+	name: string;
+	target_hours: number | null;
+};
+
 export type CurriculumTreeNode = CurriculumNode & {
 	children: CurriculumTreeNode[];
 };
