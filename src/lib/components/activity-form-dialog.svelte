@@ -33,7 +33,9 @@
 	import AlertCircle from '@lucide/svelte/icons/circle-alert';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import X from '@lucide/svelte/icons/x';
+	import Plus from '@lucide/svelte/icons/plus';
 	import * as m from '$lib/paraglide/messages.js';
+	import { addUserLocation } from '$lib/locationStorage';
 	import { getCurriculumLabel } from '$lib/curriculumLabel';
 	import { getDateLocale } from '$lib/dateLocale';
 	import { Spinner } from '$lib/components/ui/spinner';
@@ -95,9 +97,19 @@
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
 
+	// Inline location creation state
+	let locationsList = $state<string[]>([]);
+	let pendingNewLocations = $state<string[]>([]);
+	let isAddingLocation = $state(false);
+	let newLocationInput = $state('');
+	let locationError = $state<string | null>(null);
+
 	// Pre-fill with last activity or edit activity when dialog opens
 	$effect(() => {
 		if (open && !hasInitialized) {
+			locationsList = [...(userLocations ?? [])];
+			isAddingLocation = false;
+			locationError = null;
 			if (activityToEdit) {
 				selectedActivityId = activityToEdit.curriculum_activity_id;
 				rating = activityToEdit.rating || 0;
@@ -116,8 +128,7 @@
 				inputHours = 0;
 				inputMinutes = 0;
 				const lastLoc = getLastLocation();
-				location =
-					lastLoc && userLocations?.includes(lastLoc) ? lastLoc : (userLocations?.[0] ?? '');
+				location = lastLoc && locationsList.includes(lastLoc) ? lastLoc : (locationsList[0] ?? '');
 				notes = '';
 			}
 			// Auto-expand all categories to show activities
@@ -127,6 +138,7 @@
 		} else if (!open) {
 			hasInitialized = false;
 			pendingActivities = [];
+			pendingNewLocations = [];
 		}
 	});
 
@@ -142,6 +154,36 @@
 
 	function selectActivity(id: string) {
 		selectedActivityId = id;
+	}
+
+	function startAddLocation() {
+		isAddingLocation = true;
+		newLocationInput = '';
+		locationError = null;
+	}
+
+	function cancelAddLocation() {
+		isAddingLocation = false;
+		newLocationInput = '';
+		locationError = null;
+	}
+
+	function saveNewLocation() {
+		const trimmed = newLocationInput.trim();
+		if (!trimmed) {
+			return;
+		}
+		if (locationsList.some((loc) => loc.toLowerCase() === trimmed.toLowerCase())) {
+			locationError = m.location_already_exists();
+			return;
+		}
+
+		locationError = null;
+		locationsList = [...locationsList, trimmed];
+		pendingNewLocations = [...pendingNewLocations, trimmed];
+		location = trimmed;
+		isAddingLocation = false;
+		newLocationInput = '';
 	}
 
 	function handleAddAnother() {
@@ -170,6 +212,8 @@
 		inputMinutes = 0;
 		notes = '';
 		rating = 0;
+		isAddingLocation = false;
+		locationError = null;
 		if (activityNodes.length > 0) selectedActivityId = activityNodes[0].id;
 		submitError = null;
 	}
@@ -269,6 +313,20 @@
 				} else {
 					await activityStore.add(activityData, maxHoursPerDay);
 				}
+			}
+
+			// Persist any new locations created inline (best-effort, non-blocking)
+			if (pendingNewLocations.length > 0 && teamMember?.user_id) {
+				const userId = teamMember.user_id;
+				const orgId = teamMember.organization_id;
+				for (const loc of pendingNewLocations) {
+					try {
+						await addUserLocation(loc, userId, orgId);
+					} catch (err) {
+						console.warn('[ActivityForm] Failed to persist location:', loc, err);
+					}
+				}
+				pendingNewLocations = [];
 			}
 
 			open = false;
@@ -554,21 +612,66 @@
 		<!-- Location -->
 		<div class="grid gap-2">
 			<Label>{m.location_label()}</Label>
-			{#if userLocations.length === 0}
+
+			{#if isAddingLocation}
+				<!-- Inline creation: text input + save/cancel -->
+				<div class="flex flex-wrap gap-2">
+					<Input
+						bind:value={newLocationInput}
+						placeholder={m.add_location_placeholder()}
+						onkeydown={(e) => {
+							if (e.key === 'Enter') {
+								e.preventDefault();
+								saveNewLocation();
+							} else if (e.key === 'Escape') {
+								cancelAddLocation();
+							}
+						}}
+						class="min-w-40 flex-1"
+					/>
+					<Button type="button" size="sm" onclick={saveNewLocation}>
+						{m.save()}
+					</Button>
+					<Button type="button" size="sm" variant="outline" onclick={cancelAddLocation}>
+						{m.cancel()}
+					</Button>
+				</div>
+			{:else if locationsList.length === 0}
+				<!-- No saved locations: prompt + add button -->
 				<p class="text-sm text-muted-foreground">
 					{m.no_locations_for_activity()}
 				</p>
+				<Button type="button" size="sm" variant="outline" class="w-fit" onclick={startAddLocation}>
+					<Plus class="mr-2 h-4 w-4" />
+					{m.add_location_action()}
+				</Button>
 			{:else}
-				<Select.Root bind:value={location} type="single">
-					<Select.Trigger>
-						{location || m.location_placeholder()}
-					</Select.Trigger>
-					<Select.Content>
-						{#each userLocations as loc (loc)}
-							<Select.Item value={loc} label={loc}>{loc}</Select.Item>
-						{/each}
-					</Select.Content>
-				</Select.Root>
+				<!-- Existing locations dropdown + add-new trigger -->
+				<div class="flex gap-2">
+					<Select.Root bind:value={location} type="single">
+						<Select.Trigger class="flex-1">
+							{location || m.location_placeholder()}
+						</Select.Trigger>
+						<Select.Content>
+							{#each locationsList as loc (loc)}
+								<Select.Item value={loc} label={loc}>{loc}</Select.Item>
+							{/each}
+						</Select.Content>
+					</Select.Root>
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						onclick={startAddLocation}
+						title={m.add_location_action()}
+					>
+						<Plus class="h-4 w-4" />
+					</Button>
+				</div>
+			{/if}
+
+			{#if locationError}
+				<p class="text-sm text-destructive">{locationError}</p>
 			{/if}
 		</div>
 
