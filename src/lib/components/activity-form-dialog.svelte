@@ -83,7 +83,32 @@
 	let rating = $state<number>(0);
 	let inputHours = $state<number>(0);
 	let inputMinutes = $state<number>(0);
-	const hours = $derived(inputHours + inputMinutes / 60);
+	// The Input wrapper sets `type` dynamically, so Svelte doesn't apply numeric
+	// coercion on bind:value and these come back as strings. Coerce here so the
+	// hours total is a real number (otherwise `inputHours + ...` concatenates).
+	// Both fields must be whole numbers; otherwise a decimal typed into the hours
+	// field (e.g. 8.4) would be saved on top of the minutes and inflate the total.
+	const hours = $derived(
+		(Math.floor(Number(inputHours)) || 0) + (Math.floor(Number(inputMinutes)) || 0) / 60
+	);
+
+	function handleHoursInput(event: Event) {
+		const el = event.currentTarget as HTMLInputElement;
+		const raw = Math.floor(Number(el.value) || 0);
+		const clamped = Math.min(MAX_HOURS_PER_ENTRY, Math.max(0, raw));
+		inputHours = clamped;
+		// Force the displayed value back to a whole number (the DOM keeps "8.4"
+		// even though our state floors it, because the floored state can be unchanged).
+		if (el.value !== '' && el.value !== String(clamped)) el.value = String(clamped);
+	}
+
+	function handleMinutesInput(event: Event) {
+		const el = event.currentTarget as HTMLInputElement;
+		const raw = Math.floor(Number(el.value) || 0);
+		const clamped = Math.min(59, Math.max(0, raw));
+		inputMinutes = clamped;
+		if (el.value !== '' && el.value !== String(clamped)) el.value = String(clamped);
+	}
 	let location = $state<string>('');
 	let notes = $state<string>('');
 	let isSubmitting = $state(false);
@@ -520,7 +545,8 @@
 							min="0"
 							max="10"
 							step="1"
-							bind:value={inputHours}
+							value={inputHours}
+							oninput={handleHoursInput}
 							aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
 						/>
 						<span class="text-sm text-muted-foreground">h</span>
@@ -529,9 +555,10 @@
 						<Input
 							type="number"
 							min="0"
-							max="55"
-							step="5"
-							bind:value={inputMinutes}
+							max="59"
+							step="1"
+							value={inputMinutes}
+							oninput={handleMinutesInput}
 							aria-invalid={hoursExceedsMax || wouldExceedDailyMax}
 						/>
 						<span class="text-sm text-muted-foreground">min</span>
