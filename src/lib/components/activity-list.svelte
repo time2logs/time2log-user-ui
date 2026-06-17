@@ -272,7 +272,7 @@
 								<span>
 									{m.absence_hours_consumed({
 										hours: formatBlockedHours(Number(absence.day_fraction ?? 1)),
-										max: '10h'
+										max: '8h'
 									})}
 								</span>
 							</div>
