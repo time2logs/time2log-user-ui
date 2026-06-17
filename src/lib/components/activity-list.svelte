@@ -108,11 +108,6 @@
 		});
 	}
 
-	function formatBlockedHours(dayFraction: number): string {
-		const blockedHours = Math.round(dayFraction * targetHours * 10) / 10;
-		return Number.isInteger(blockedHours) ? `${blockedHours}h` : `${blockedHours.toFixed(1)}h`;
-	}
-
 	function getAbsenceTypeLabel(typeId: string): string {
 		switch (typeId) {
 			case 'sick':
