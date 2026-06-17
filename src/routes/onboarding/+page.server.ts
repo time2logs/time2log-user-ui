@@ -1,5 +1,4 @@
 import { redirect, fail } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
 import type { PageServerLoad, Actions } from './$types';
 import type { InviteDetails } from '$lib/types';
 import * as m from '$lib/paraglide/messages.js';
@@ -19,27 +18,6 @@ type ResolvedInviteUser =
 			ok: false;
 			reason: 'invite_invalid' | 'email_mismatch' | 'auth_misconfigured';
 	  };
-
-function debugOnboarding(step: string, details: Record<string, unknown> = {}) {
-	if (env.DEBUG_ONBOARDING !== '1' && env.NODE_ENV === 'production') return;
-	console.info(`[Onboarding][${step}]`, details);
-}
-
-function errorDetails(error: unknown): Record<string, unknown> {
-	if (!error || typeof error !== 'object') return { error };
-	const maybeError = error as {
-		name?: unknown;
-		message?: unknown;
-		status?: unknown;
-		code?: unknown;
-	};
-	return {
-		name: maybeError.name,
-		message: maybeError.message,
-		status: maybeError.status,
-		code: maybeError.code
-	};
-}
 
 export const load: PageServerLoad = async ({
 	url,
@@ -329,15 +307,6 @@ export const actions: Actions = {
 		const avatarFile = formData.get('avatar') as File | null;
 		const useSms = isSmsEnabled();
 
-		debugOnboarding('complete:start', {
-			email: email.toLowerCase(),
-			useSms,
-			hasToken: Boolean(token),
-			hasPhoneNumber: Boolean(phoneNumber),
-			hasAvatar: Boolean(avatarFile && avatarFile.size > 0),
-			avatarSize: avatarFile?.size ?? 0
-		});
-
 		let avatarExt: string | null = null;
 		if (avatarFile && avatarFile.size > 0) {
 			if (avatarFile.size > 512 * 1024) {
@@ -412,11 +381,9 @@ export const actions: Actions = {
 			});
 		}
 
-		debugOnboarding('complete:resolve-invited-user:start', { email: email.toLowerCase() });
 		const resolved = await resolveInvitedUser(locals, token, email.toLowerCase());
 
 		if (resolved.ok === false) {
-			debugOnboarding('complete:resolve-invited-user:failed', { reason: resolved.reason });
 			if (resolved.reason === 'auth_misconfigured') {
 				return fail(500, {
 					error: m.onboarding_error_auth_secret_mismatch(),
@@ -429,10 +396,6 @@ export const actions: Actions = {
 			});
 		}
 		const existingUser = resolved.user;
-		debugOnboarding('complete:resolve-invited-user:success', {
-			userId: existingUser.id,
-			email: existingUser.email
-		});
 
 		let normalizedPhoneNumber: string | null = null;
 		if (useSms) {
@@ -446,10 +409,6 @@ export const actions: Actions = {
 		}
 
 		// 2. Onboarding-Status prüfen — falls bereits abgeschlossen, abbrechen
-		debugOnboarding('complete:profile-check:start', {
-			userId: existingUser.id,
-			select: useSms ? 'with-phone-verification' : 'without-phone-verification'
-		});
 		const { data: profile, error: profileError } = await locals.supabaseSecret
 			.schema('app')
 			.from('profiles')
@@ -459,18 +418,11 @@ export const actions: Actions = {
 
 		if (profileError) {
 			console.error('[Onboarding] Failed to check profile status:', profileError.message);
-			debugOnboarding('complete:profile-check:error', errorDetails(profileError));
 			return fail(500, {
 				error: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.',
 				values: { firstName, lastName }
 			});
 		}
-
-		debugOnboarding('complete:profile-check:success', {
-			onboardingStatus: profile?.onboarding_status,
-			phoneVerified: useSms ? profile?.phone_verified : undefined,
-			hasPhoneNumber: useSms ? Boolean(profile?.phone_number) : undefined
-		});
 
 		if (profile?.onboarding_status === 'completed') {
 			return fail(400, {
@@ -488,7 +440,6 @@ export const actions: Actions = {
 		}
 
 		// 3. Passwort + Metadaten setzen
-		debugOnboarding('complete:update-auth-user:start', { userId: existingUser.id });
 		const { error: updateError } = await locals.supabaseSecret.auth.admin.updateUserById(
 			existingUser.id,
 			{
@@ -503,16 +454,13 @@ export const actions: Actions = {
 
 		if (updateError) {
 			console.error('[Onboarding] Failed to update user:', updateError.message);
-			debugOnboarding('complete:update-auth-user:error', errorDetails(updateError));
 			return fail(500, {
 				error: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.',
 				values: { firstName, lastName }
 			});
 		}
-		debugOnboarding('complete:update-auth-user:success', { userId: existingUser.id });
 
 		// 4. Einloggen
-		debugOnboarding('complete:sign-in:start', { email });
 		const { error: signInError } = await locals.supabase.auth.signInWithPassword({
 			email,
 			password
@@ -520,32 +468,26 @@ export const actions: Actions = {
 
 		if (signInError) {
 			console.error('[Onboarding] Sign-in failed:', signInError.message);
-			debugOnboarding('complete:sign-in:error', errorDetails(signInError));
 			return fail(500, {
 				error: `${m.onboarding_error_signin_failed()}${signInError.message}`,
 				values: { firstName, lastName }
 			});
 		}
-		debugOnboarding('complete:sign-in:success', { email });
 
 		// 5. Invite akzeptieren
-		debugOnboarding('complete:accept-invite:start', { userId: existingUser.id });
 		const { error: acceptError } = await locals.supabase.rpc('accept_invite', {
 			invite_token: token
 		});
 
 		if (acceptError) {
 			console.error('[Onboarding] Failed to accept invite:', acceptError.message);
-			debugOnboarding('complete:accept-invite:error', errorDetails(acceptError));
 			return fail(400, {
 				error: 'Einladung konnte nicht angenommen werden. Bitte versuche es erneut.',
 				values: { firstName, lastName }
 			});
 		}
-		debugOnboarding('complete:accept-invite:success', { userId: existingUser.id });
 
 		// Profil anlegen / aktualisieren
-		debugOnboarding('complete:profile-upsert:start', { userId: existingUser.id, useSms });
 		const { error: statusError } = await locals.supabase.from('profiles').upsert(
 			{
 				id: existingUser.id,
@@ -559,10 +501,7 @@ export const actions: Actions = {
 
 		if (statusError) {
 			console.error('Failed to upsert profile:', statusError);
-			debugOnboarding('complete:profile-upsert:error', errorDetails(statusError));
 			// Kein hard fail — User ist bereits eingeloggt und Invite akzeptiert
-		} else {
-			debugOnboarding('complete:profile-upsert:success', { userId: existingUser.id });
 		}
 
 		// 6. Avatar upload
