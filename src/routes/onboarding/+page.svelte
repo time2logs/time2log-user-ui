@@ -17,15 +17,8 @@
 	let firstName = $state('');
 	let lastName = $state('');
 	let password = $state('');
-	let phoneNumber = $state('');
-	let phoneCode = $state('');
-	let phoneVerified = $state(false);
-	let verifiedPhoneNumber = $state('');
 	let isSubmitting = $state(false);
 	let isCompressing = $state(false);
-	let isSendingCode = $state(false);
-	let isVerifyingCode = $state(false);
-	let cooldownSeconds = $state(0);
 
 	let avatarFile: File | null = $state(null);
 	let avatarPreviewUrl = $state('');
@@ -165,20 +158,6 @@
 			password = '';
 		}
 	});
-
-	$effect(() => {
-		if (!cooldownSeconds || cooldownSeconds <= 0) return;
-		const timeout = window.setTimeout(() => {
-			cooldownSeconds = Math.max(0, cooldownSeconds - 1);
-		}, 1000);
-		return () => window.clearTimeout(timeout);
-	});
-
-	$effect(() => {
-		if (verifiedPhoneNumber && phoneNumber !== verifiedPhoneNumber) {
-			phoneVerified = false;
-		}
-	});
 </script>
 
 <div class="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
@@ -227,50 +206,16 @@
 							method="POST"
 							action="?/complete"
 							enctype="multipart/form-data"
-							use:enhance={({ formData, submitter }) => {
-								const submitterPath = submitter?.getAttribute('formaction') ?? '';
-								const isSendAction = submitterPath.includes('sendPhoneCode');
-								const isVerifyAction = submitterPath.includes('verifyPhoneCode');
-
-								if (isSendAction) {
-									isSendingCode = true;
-								} else if (isVerifyAction) {
-									isVerifyingCode = true;
-								} else {
-									isSubmitting = true;
-								}
+							use:enhance={({ formData }) => {
+								isSubmitting = true;
 
 								if (avatarFile) {
 									formData.set('avatar', avatarFile);
 								}
-								return async ({ update, result }) => {
+								return async ({ update }) => {
 									isSubmitting = false;
-									isSendingCode = false;
-									isVerifyingCode = false;
 
-									if (isSendAction) {
-										if (result.type === 'success' && result.data?.phoneSent) {
-											cooldownSeconds = 30;
-										} else if (
-											result.type === 'failure' &&
-											typeof result.data?.cooldownSeconds === 'number' &&
-											result.data.cooldownSeconds > 0
-										) {
-											cooldownSeconds = result.data.cooldownSeconds;
-										}
-									}
-
-									if (isVerifyAction) {
-										if (result.type === 'success' && result.data?.phoneVerified) {
-											phoneVerified = true;
-											verifiedPhoneNumber = phoneNumber;
-										}
-									}
-
-									await update({
-										reset: !(isSendAction || isVerifyAction),
-										invalidateAll: !(isSendAction || isVerifyAction)
-									});
+									await update();
 								};
 							}}
 							class="space-y-4"
@@ -343,67 +288,6 @@
 								/>
 							</div>
 
-							{#if data.useSms}
-								<div class="space-y-2">
-									<Label for="phone_number">{m.onboarding_phone_label()}</Label>
-									<div class="flex gap-2">
-										<Input
-											id="phone_number"
-											name="phone_number"
-											bind:value={phoneNumber}
-											placeholder={m.onboarding_phone_placeholder()}
-											required
-											readonly={isSubmitting || isSendingCode || phoneVerified}
-										/>
-										<Button
-											type="submit"
-											formaction="?/sendPhoneCode"
-											formnovalidate
-											class="shrink-0"
-											variant="outline"
-											disabled={!phoneNumber ||
-												isSendingCode ||
-												isSubmitting ||
-												cooldownSeconds > 0}
-										>
-											{#if isSendingCode}
-												<Spinner size="sm" />
-											{:else if cooldownSeconds > 0}
-												{cooldownSeconds}s
-											{:else}
-												{m.onboarding_phone_send_button()}
-											{/if}
-										</Button>
-									</div>
-									<div class="flex gap-2">
-										<Input
-											id="phone_code"
-											name="phone_code"
-											bind:value={phoneCode}
-											placeholder={m.onboarding_phone_code_placeholder()}
-											maxlength={6}
-											readonly={isSubmitting || isVerifyingCode || phoneVerified}
-										/>
-										<Button
-											type="submit"
-											formaction="?/verifyPhoneCode"
-											formnovalidate
-											class="shrink-0"
-											variant={phoneVerified ? 'secondary' : 'outline'}
-											disabled={!phoneCode || isVerifyingCode || isSubmitting || phoneVerified}
-										>
-											{#if phoneVerified}
-												{m.onboarding_phone_verified_badge()}
-											{:else if isVerifyingCode}
-												<Spinner size="sm" />
-											{:else}
-												{m.onboarding_phone_verify_button()}
-											{/if}
-										</Button>
-									</div>
-								</div>
-							{/if}
-
 							<div>
 								<Label for="first_name">{m.onboarding_first_name_label()}</Label>
 								<Input
@@ -442,11 +326,7 @@
 								/>
 							</div>
 
-							<Button
-								type="submit"
-								class="w-full"
-								disabled={isSubmitting || isCompressing || (data.useSms && !phoneVerified)}
-							>
+							<Button type="submit" class="w-full" disabled={isSubmitting || isCompressing}>
 								{#if isSubmitting}
 									<Spinner size="sm" class="mr-2" />
 									{m.onboarding_creating_account()}

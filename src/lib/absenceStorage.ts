@@ -1,7 +1,9 @@
 import type { AbsenceRecord, AbsenceRow, AbsenceType } from './types';
-import { writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { supabase } from './supabaseClient';
 import { rrulestr } from 'rrule';
+import * as m from '$lib/paraglide/messages.js';
+import { isAbsenceWithinEditWindow, EDIT_WINDOW_DAYS } from './utils';
 import { createDebugLogger } from './debug';
 import { unwrapSupabase } from './supabaseUtils';
 
@@ -70,7 +72,8 @@ export function getAbsenceFractionForDate(
 }
 
 function createAbsenceStore() {
-	const { subscribe, set, update: updateStore } = writable<AbsenceRecord[]>([]);
+	const store = writable<AbsenceRecord[]>([]);
+	const { subscribe, set, update: updateStore } = store;
 
 	const load = async () => {
 		if (typeof window === 'undefined') return;
@@ -102,7 +105,7 @@ function createAbsenceStore() {
 		): Promise<AbsenceRecord | null> => {
 			debug.log('Adding new absence via store', absence);
 
-			const data = unwrapSupabase(
+			const data = unwrapSupabase<AbsenceRow>(
 				await supabase
 					.from('absences')
 					.insert({
@@ -132,6 +135,11 @@ function createAbsenceStore() {
 		delete: async (id: string): Promise<boolean> => {
 			debug.log('Deleting absence via store', { id });
 
+			const existing = get(store).find((a) => a.id === id);
+			if (existing && !isAbsenceWithinEditWindow(existing)) {
+				throw new Error(m.error_edit_window_delete({ days: EDIT_WINDOW_DAYS }));
+			}
+
 			unwrapSupabase(
 				await supabase.from('absences').delete().eq('id', id),
 				'Failed to delete absence'
@@ -159,6 +167,11 @@ function createAbsenceStore() {
 		): Promise<AbsenceRecord | null> => {
 			debug.log('Updating absence via store', { id, absence });
 
+			const existing = get(store).find((a) => a.id === id);
+			if (existing && !isAbsenceWithinEditWindow(existing)) {
+				throw new Error(m.error_edit_window_update({ days: EDIT_WINDOW_DAYS }));
+			}
+
 			const updateData: Record<string, unknown> = {};
 			if (absence.absence_type_id !== undefined)
 				updateData.absence_type_id = absence.absence_type_id;
@@ -169,7 +182,7 @@ function createAbsenceStore() {
 			if (absence.rrule !== undefined) updateData.rrule = absence.rrule;
 			if (absence.notes !== undefined) updateData.notes = absence.notes;
 
-			const data = unwrapSupabase(
+			const data = unwrapSupabase<AbsenceRow>(
 				await supabase
 					.from('absences')
 					.update(updateData)

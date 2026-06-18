@@ -47,9 +47,9 @@
 	let isCompressing = $state(false);
 	let currentTheme = $state<'light' | 'dark'>('light');
 
-	let firstName = $state(data.profile?.first_name ?? '');
-	let lastName = $state(data.profile?.last_name ?? '');
-	let emailValue = $state(data.email ?? '');
+	let firstName = $state('');
+	let lastName = $state('');
+	let emailValue = $state('');
 
 	$effect(() => {
 		firstName = data.profile?.first_name ?? '';
