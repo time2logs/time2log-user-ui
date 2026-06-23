@@ -24,7 +24,8 @@ import { actions } from '../../routes/settings/+page.server';
 
 function makeLocals(email = 'current@example.com'): App.Locals {
 	return {
-		safeGetSession: vi.fn().mockResolvedValue({ user: { id: 'user-1', email } })
+		safeGetSession: vi.fn().mockResolvedValue({ user: { id: 'user-1', email } }),
+		supabase: { auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { email } } }) } }
 	} as unknown as App.Locals;
 }
 

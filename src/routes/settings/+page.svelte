@@ -51,12 +51,11 @@
 
 	let firstName = $state(data.profile?.first_name ?? '');
 	let lastName = $state(data.profile?.last_name ?? '');
-	let emailValue = $state(data.email ?? '');
+	let emailValue = $state('');
 
 	$effect(() => {
 		firstName = data.profile?.first_name ?? '';
 		lastName = data.profile?.last_name ?? '';
-		emailValue = data.email ?? '';
 	});
 
 	let avatarFile: File | null = $state(null);
