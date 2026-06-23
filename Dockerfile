@@ -7,7 +7,7 @@ ARG PUBLIC_SUPABASE_PUBLISHABLE_KEY
 ENV PUBLIC_SUPABASE_URL=$PUBLIC_SUPABASE_URL
 ENV PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
-COPY package.json bun.lock ./
+COPY package.json bun.lock patches/ ./
 RUN bun install --frozen-lockfile
 
 COPY . .
@@ -17,7 +17,7 @@ RUN bunx --bun vite build
 # Stage 2: Production dependencies only (clean, no devDeps)
 FROM oven/bun:1 AS deps
 WORKDIR /app
-COPY package.json bun.lock ./
+COPY package.json bun.lock patches/ ./
 RUN bun install --frozen-lockfile --production
 
 # Stage 3: Node runtime (adapter-node outputs a Node.js HTTP server)
