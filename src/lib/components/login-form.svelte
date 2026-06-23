@@ -11,6 +11,8 @@
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 
+	let { reset = false }: { reset?: boolean } = $props();
+
 	let email = $state('');
 	let password = $state('');
 	let errorMessage = $state('');
@@ -66,6 +68,9 @@
 					}}
 					class="grid gap-8"
 				>
+					{#if reset}
+						<Alert variant="success">{m.reset_password_success()}</Alert>
+					{/if}
 					{#if errorMessage}
 						<Alert variant="error">{errorMessage}</Alert>
 					{/if}
@@ -98,6 +103,15 @@
 						{/if}
 					</button>
 				</form>
+
+				<div class="mt-4 text-center">
+					<a
+						href="/forgot-password"
+						class="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+					>
+						{m.forgot_password_link()}
+					</a>
+				</div>
 			</Card.Content>
 		</Card.Root>
 	</main>

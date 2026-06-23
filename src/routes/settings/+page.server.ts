@@ -85,12 +85,37 @@ export const actions: Actions = {
 		return { profileSuccess: true };
 	},
 
+	sendEmailOtp: async ({ locals }) => {
+		const session = await locals.safeGetSession();
+		if (!session) throw redirect(302, '/login');
+
+		const { error } = await locals.supabase.auth.reauthenticate();
+		if (error) {
+			console.error('[Settings] Failed to send email OTP:', error.message);
+			return fail(500, {
+				emailError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
+			});
+		}
+
+		return { emailOtpSent: true };
+	},
+
 	updateEmail: async ({ request, locals }) => {
 		const session = await locals.safeGetSession();
 		if (!session) throw redirect(302, '/login');
 
 		const formData = await request.formData();
+		const currentEmail = formData.get('current_email')?.toString().trim() ?? '';
 		const email = formData.get('email')?.toString().trim() ?? '';
+		const otp = formData.get('otp')?.toString().trim() ?? '';
+
+		if (!currentEmail || currentEmail !== session.user.email) {
+			return fail(400, { emailError: m.settings_error_current_email_required() });
+		}
+
+		if (!otp) {
+			return fail(400, { emailError: m.settings_error_email_otp_required() });
+		}
 
 		if (!email) {
 			return fail(400, { emailError: m.onboarding_error_email_missing() });
@@ -100,7 +125,7 @@ export const actions: Actions = {
 			return fail(400, { emailError: m.settings_error_email_unchanged() });
 		}
 
-		const { error } = await locals.supabase.auth.updateUser({ email });
+		const { error } = await locals.supabase.auth.updateUser({ email }, { nonce: otp });
 		if (error) {
 			console.error('[Settings] Failed to update email:', error.message);
 			return fail(500, {
