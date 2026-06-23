@@ -11,7 +11,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}
 
 	const userId = session.user.id;
-	const email = session.user.email;
+	const {
+		data: { user }
+	} = await locals.supabase.auth.getUser();
+	const email = user?.email ?? session.user.email;
 
 	const profileResult = await locals.supabase
 		.from('profiles')
@@ -85,22 +88,54 @@ export const actions: Actions = {
 		return { profileSuccess: true };
 	},
 
-	updateEmail: async ({ request, locals }) => {
+	sendEmailOtp: async ({ locals }) => {
+		const session = await locals.safeGetSession();
+		if (!session) throw redirect(302, '/login');
+
+		const { error } = await locals.supabase.auth.reauthenticate();
+		if (error) {
+			console.error('[Settings] Failed to send email OTP:', error.message);
+			return fail(500, {
+				emailError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
+			});
+		}
+
+		return { emailOtpSent: true };
+	},
+
+	updateEmail: async ({ request, locals, url }) => {
 		const session = await locals.safeGetSession();
 		if (!session) throw redirect(302, '/login');
 
 		const formData = await request.formData();
+		const currentEmail = formData.get('current_email')?.toString().trim() ?? '';
 		const email = formData.get('email')?.toString().trim() ?? '';
+		const otp = formData.get('otp')?.toString().trim() ?? '';
+		const {
+			data: { user }
+		} = await locals.supabase.auth.getUser();
+		const currentUserEmail = user?.email ?? session.user.email ?? '';
+
+		if (!currentEmail || currentEmail.toLowerCase() !== currentUserEmail.toLowerCase()) {
+			return fail(400, { emailError: m.settings_error_current_email_required() });
+		}
+
+		if (!otp) {
+			return fail(400, { emailError: m.settings_error_email_otp_required() });
+		}
 
 		if (!email) {
 			return fail(400, { emailError: m.onboarding_error_email_missing() });
 		}
 
-		if (email === session.user.email) {
+		if (email.toLowerCase() === currentUserEmail.toLowerCase()) {
 			return fail(400, { emailError: m.settings_error_email_unchanged() });
 		}
 
-		const { error } = await locals.supabase.auth.updateUser({ email });
+		const { error } = await locals.supabase.auth.updateUser(
+			{ email },
+			{ nonce: otp, emailRedirectTo: `${url.origin}/settings` }
+		);
 		if (error) {
 			console.error('[Settings] Failed to update email:', error.message);
 			return fail(500, {
