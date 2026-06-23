@@ -3,7 +3,7 @@
 	import * as m from '$lib/paraglide/messages.js';
 	import type { AbsenceRecord } from '$lib/types';
 	import { computeAbsencesBySemester } from '$lib/statsUtils';
-	import { getAbsenceTypeHex, getAbsenceTypeLabel } from '$lib/absence-types';
+	import { getAbsenceTypeLabel } from '$lib/absence-types';
 
 	let { absences }: { absences: AbsenceRecord[] } = $props();
 
@@ -11,6 +11,7 @@
 	const types = $derived([...new Set(rawData.map((d) => d.type))].sort());
 	const semesters = $derived([...new Set(rawData.map((d) => d.semester))].sort());
 	const maxDays = $derived(Math.max(...rawData.map((d) => d.days), 5));
+	const CHART_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
 
 	const svgWidth = 1000;
 	const svgHeight = 500;
@@ -120,7 +121,7 @@
 										y={barY}
 										width={barWidth - 2}
 										height={barHeight}
-										fill={getAbsenceTypeHex(type)}
+										fill={CHART_COLORS[typeIndex % CHART_COLORS.length]}
 										opacity="0.85"
 										stroke="black"
 										stroke-width="1"
@@ -146,7 +147,7 @@
 						<li class="flex items-center gap-1.5">
 							<span
 								class="inline-block h-3 w-3 shrink-0 rounded"
-								style="background:{getAbsenceTypeHex(type)}"
+								style="background:{CHART_COLORS[types.indexOf(type) % CHART_COLORS.length]}"
 							></span>
 							{getAbsenceTypeLabel(type)}
 						</li>
