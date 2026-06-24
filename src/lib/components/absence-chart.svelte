@@ -11,7 +11,13 @@
 	const types = $derived([...new Set(rawData.map((d) => d.type))].sort());
 	const semesters = $derived([...new Set(rawData.map((d) => d.semester))].sort());
 	const maxDays = $derived(Math.max(...rawData.map((d) => d.days), 5));
-	const CHART_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
+	const CHART_COLORS = [
+		'var(--chart-1)',
+		'var(--chart-2)',
+		'var(--chart-3)',
+		'var(--chart-4)',
+		'var(--chart-5)'
+	];
 
 	const svgWidth = 1000;
 	const svgHeight = 500;

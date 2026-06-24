@@ -26,16 +26,21 @@
 		if (now - lastSubmitAt < 1000) return;
 		lastSubmitAt = now;
 		isLoading = true;
-		const { error } = await supabase.auth.signInWithPassword({
-			email: email,
-			password: password
-		});
-		const seconds = getRateLimitSeconds(error);
-		errorMessage = seconds ? m.rate_limited({ seconds }) : error?.message || '';
-		isLoading = false;
+		try {
+			const { error } = await supabase.auth.signInWithPassword({
+				email: email,
+				password: password
+			});
+			const seconds = getRateLimitSeconds(error);
+			errorMessage = seconds ? m.rate_limited({ seconds }) : error?.message || '';
 
-		if (!error) {
-			window.location.href = '/dashboard';
+			if (!error) {
+				window.location.href = '/dashboard';
+			}
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : String(err);
+		} finally {
+			isLoading = false;
 		}
 	}
 </script>

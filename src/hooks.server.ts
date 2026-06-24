@@ -48,8 +48,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 		if (error || !user) return null;
 
 		const {
-			data: { session }
+			data: { session },
+			error: sessionError
 		} = await event.locals.supabase.auth.getSession();
+		if (sessionError) return null;
 		return session;
 	};
 
@@ -60,7 +62,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	});
 
 	if (response.status === 404) {
-		throw redirect(302, '/login');
+		const session = await event.locals.safeGetSession();
+		if (!session) {
+			throw redirect(302, '/login');
+		}
 	}
 
 	// Security headers

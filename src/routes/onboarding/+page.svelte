@@ -11,6 +11,7 @@
 	import * as m from '$lib/paraglide/messages.js';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import { escapeHtml } from '$lib/htmlUtils';
+	import { compressImage } from '$lib/imageUtils';
 
 	let { data, form } = $props();
 
@@ -25,90 +26,6 @@
 	let avatarError = $state('');
 	let fileInput: HTMLInputElement | undefined = $state();
 
-	async function compressImage(file: File): Promise<Blob> {
-		return new Promise((resolve, reject) => {
-			const reader = new FileReader();
-			reader.readAsDataURL(file);
-			reader.onload = (event) => {
-				const img = new Image();
-				img.src = event.target?.result as string;
-				img.onload = () => {
-					const canvas = document.createElement('canvas');
-					let MAX_WIDTH = 800;
-					let MAX_HEIGHT = 800;
-					let width = img.width;
-					let height = img.height;
-
-					if (width > height) {
-						if (width > MAX_WIDTH) {
-							height *= MAX_WIDTH / width;
-							width = MAX_WIDTH;
-						}
-					} else {
-						if (height > MAX_HEIGHT) {
-							width *= MAX_HEIGHT / height;
-							height = MAX_HEIGHT;
-						}
-					}
-
-					canvas.width = width;
-					canvas.height = height;
-					const ctx = canvas.getContext('2d');
-					ctx?.drawImage(img, 0, 0, width, height);
-
-					// Start with high quality and decrease until under 0.5MB
-					let quality = 0.9;
-					const targetSize = 500 * 1024; // 0.5MB
-
-					const attemptBlob = () => {
-						canvas.toBlob(
-							(blob) => {
-								if (blob) {
-									if (blob.size > targetSize && quality > 0.1) {
-										quality -= 0.1;
-										attemptBlob();
-									} else if (blob.size > targetSize && MAX_WIDTH > 200) {
-										// If still too big, try resizing even smaller
-										MAX_WIDTH -= 200;
-										MAX_HEIGHT -= 200;
-
-										let newWidth = img.width;
-										let newHeight = img.height;
-										if (newWidth > newHeight) {
-											if (newWidth > MAX_WIDTH) {
-												newHeight *= MAX_WIDTH / newWidth;
-												newWidth = MAX_WIDTH;
-											}
-										} else {
-											if (newHeight > MAX_HEIGHT) {
-												newWidth *= MAX_HEIGHT / newHeight;
-												newHeight = MAX_HEIGHT;
-											}
-										}
-										canvas.width = newWidth;
-										canvas.height = newHeight;
-										ctx?.drawImage(img, 0, 0, newWidth, newHeight);
-										quality = 0.7; // Reset quality for smaller dimensions
-										attemptBlob();
-									} else {
-										resolve(blob);
-									}
-								} else {
-									reject(new Error('Canvas to Blob failed'));
-								}
-							},
-							'image/jpeg',
-							quality
-						);
-					};
-					attemptBlob();
-				};
-				img.onerror = () => reject(new Error('Image load failed'));
-			};
-			reader.onerror = () => reject(new Error('FileReader failed'));
-		});
-	}
-
 	async function handleAvatarChange(e: Event) {
 		const target = e.target as HTMLInputElement;
 		const file = target.files?.[0];
@@ -116,7 +33,7 @@
 
 		if (file) {
 			if (!file.type.startsWith('image/')) {
-				avatarError = 'Unsupported file type. Please use JPEG, PNG, or WEBP.';
+				avatarError = m.avatar_unsupported_type();
 				avatarFile = null;
 				avatarPreviewUrl = '';
 				target.value = '';
@@ -133,7 +50,7 @@
 				avatarPreviewUrl = URL.createObjectURL(compressedFile);
 			} catch (err) {
 				console.error('Compression failed:', err);
-				avatarError = 'Failed to process image. Please try another one.';
+				avatarError = m.avatar_process_failed();
 			} finally {
 				isCompressing = false;
 			}
@@ -223,10 +140,11 @@
 							<input type="hidden" name="invite_token" value={data.token} />
 
 							<div>
-								<Label for="avatar">Profile Picture (Optional)</Label>
+								<Label for="avatar">{m.avatar_optional()}</Label>
 								<div class="mt-2 flex flex-col items-center gap-4">
 									<button
 										type="button"
+										aria-label={m.change_avatar()}
 										onclick={() => fileInput?.click()}
 										class="group relative h-24 w-24 overflow-hidden rounded-full border-2 border-dashed border-muted-foreground/30 bg-muted/20 transition-all hover:border-primary hover:bg-muted disabled:cursor-not-allowed"
 										disabled={isSubmitting}
@@ -266,7 +184,7 @@
 									/>
 
 									<p class="text-xs text-muted-foreground">
-										Click to upload. JPG, PNG or WEBP (max. 0.5MB after auto-compression)
+										{m.avatar_upload_hint()}
 									</p>
 								</div>
 								{#if avatarError}
@@ -332,7 +250,7 @@
 									{m.onboarding_creating_account()}
 								{:else if isCompressing}
 									<Spinner size="sm" class="mr-2" />
-									Processing image...
+									{m.avatar_processing()}
 								{:else}
 									{m.onboarding_create_account()}
 								{/if}

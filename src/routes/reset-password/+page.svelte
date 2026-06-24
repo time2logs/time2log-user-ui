@@ -12,6 +12,7 @@
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import { supabase } from '$lib/supabaseClient';
 	import { getRateLimitSeconds } from '$lib/rateLimitError';
+	import { validatePassword } from '$lib/passwordValidation';
 
 	let password = $state('');
 	let confirmPassword = $state('');
@@ -47,35 +48,37 @@
 			errorMessage = m.settings_error_password_mismatch();
 			return;
 		}
-		if (!password || password.length < 8) {
-			errorMessage = m.onboarding_error_password_length();
-			return;
-		}
-		if (!/[A-Z]/.test(password)) {
-			errorMessage = m.onboarding_error_password_uppercase();
-			return;
-		}
-		if (!/[0-9]/.test(password)) {
-			errorMessage = m.onboarding_error_password_number();
-			return;
-		}
-		if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password)) {
-			errorMessage = m.onboarding_error_password_special();
+		const pwRule = validatePassword(password);
+		if (pwRule) {
+			const pwMessages = {
+				length: m.onboarding_error_password_length(),
+				uppercase: m.onboarding_error_password_uppercase(),
+				number: m.onboarding_error_password_number(),
+				special: m.onboarding_error_password_special()
+			};
+			errorMessage = pwMessages[pwRule];
 			return;
 		}
 
 		isLoading = true;
-		const { error } = await supabase.auth.updateUser({ password });
-		isLoading = false;
+		try {
+			const { error } = await supabase.auth.updateUser({ password });
 
-		if (error) {
-			const seconds = getRateLimitSeconds(error);
-			errorMessage = seconds ? m.rate_limited({ seconds }) : error.message || m.reset_password_failed();
-			return;
+			if (error) {
+				const seconds = getRateLimitSeconds(error);
+				errorMessage = seconds
+					? m.rate_limited({ seconds })
+					: error.message || m.reset_password_failed();
+				return;
+			}
+
+			await supabase.auth.signOut();
+			window.location.href = '/login?reset=1';
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : String(err);
+		} finally {
+			isLoading = false;
 		}
-
-		await supabase.auth.signOut();
-		window.location.href = '/login?reset=1';
 	}
 </script>
 

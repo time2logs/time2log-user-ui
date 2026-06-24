@@ -45,6 +45,7 @@
 	{#each items as item (item.value)}
 		<button
 			type="button"
+			aria-pressed={isActive(item)}
 			onclick={() => {
 				if (selected.length > 0 || onToggle) {
 					onToggle?.(item.value);

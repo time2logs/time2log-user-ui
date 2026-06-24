@@ -6,6 +6,7 @@ import { getRateLimitSeconds } from '$lib/rateLimitError';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
 import { isSupabaseAuthSecretError } from '$lib/server/onboarding';
 import { checkRateLimit, getClientId, hashId, rateKey } from '$lib/server/rateLimiter';
+import { validatePassword } from '$lib/passwordValidation';
 
 const WINDOW_15MIN = 15 * 60 * 1000;
 const WINDOW_1HOUR = 60 * 60 * 1000;
@@ -128,14 +129,14 @@ export const actions: Actions = {
 		if (avatarFile && avatarFile.size > 0) {
 			if (avatarFile.size > 512 * 1024) {
 				return fail(400, {
-					error: 'File size exceeds 0.5MB limit. Please choose a smaller image.',
+					error: m.settings_error_file_too_large(),
 					values: { firstName, lastName }
 				});
 			}
 			avatarExt = await validateImageMagicBytes(avatarFile);
 			if (!avatarExt) {
 				return fail(400, {
-					error: 'Unsupported file type. Please use JPEG, PNG, or WEBP.',
+					error: m.settings_error_file_type(),
 					values: { firstName, lastName }
 				});
 			}
@@ -148,32 +149,16 @@ export const actions: Actions = {
 			});
 		}
 
-		if (!password || password.length < 8) {
+		const pwError = validatePassword(password);
+		if (pwError) {
+			const pwMessages = {
+				length: m.onboarding_error_password_length(),
+				uppercase: m.onboarding_error_password_uppercase(),
+				number: m.onboarding_error_password_number(),
+				special: m.onboarding_error_password_special()
+			};
 			return fail(400, {
-				error: m.onboarding_error_password_length(),
-				values: { firstName, lastName }
-			});
-		}
-
-		const hasUppercase = /[A-Z]/.test(password);
-		const hasNumber = /[0-9]/.test(password);
-		const hasSpecialChar = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password);
-
-		if (!hasUppercase) {
-			return fail(400, {
-				error: m.onboarding_error_password_uppercase(),
-				values: { firstName, lastName }
-			});
-		}
-		if (!hasNumber) {
-			return fail(400, {
-				error: m.onboarding_error_password_number(),
-				values: { firstName, lastName }
-			});
-		}
-		if (!hasSpecialChar) {
-			return fail(400, {
-				error: m.onboarding_error_password_special(),
+				error: pwMessages[pwError],
 				values: { firstName, lastName }
 			});
 		}
@@ -227,7 +212,7 @@ export const actions: Actions = {
 				});
 			}
 			return fail(400, {
-				error: 'Kein Benutzer mit dieser E-Mail-Adresse gefunden.',
+				error: m.error_user_not_found(),
 				values: { firstName, lastName }
 			});
 		}
@@ -248,15 +233,14 @@ export const actions: Actions = {
 		if (profileError) {
 			console.error('[Onboarding] Failed to check profile status:', profileError.message);
 			return fail(500, {
-				error: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.',
+				error: m.error_server(),
 				values: { firstName, lastName }
 			});
 		}
 
 		if (profileData?.onboarding_status === 'completed') {
 			return fail(400, {
-				error:
-					'Dieser Benutzer hat das Onboarding bereits abgeschlossen. Bitte melde dich direkt an.',
+				error: m.error_onboarding_completed(),
 				values: { firstName, lastName }
 			});
 		}
@@ -285,7 +269,7 @@ export const actions: Actions = {
 
 			console.error('[Onboarding] Failed to update user:', updateError.message);
 			return fail(500, {
-				error: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.',
+				error: m.error_server(),
 				values: { firstName, lastName }
 			});
 		}
@@ -320,7 +304,7 @@ export const actions: Actions = {
 		if (acceptError) {
 			console.error('[Onboarding] Failed to accept invite:', acceptError.message);
 			return fail(400, {
-				error: 'Einladung konnte nicht angenommen werden. Bitte versuche es erneut.',
+				error: m.error_accept_invite(),
 				values: { firstName, lastName }
 			});
 		}
@@ -338,7 +322,10 @@ export const actions: Actions = {
 
 		if (statusError) {
 			console.error('Failed to upsert profile:', statusError);
-			// Kein hard fail — User ist bereits eingeloggt und Invite akzeptiert
+			return fail(500, {
+				error: m.onboarding_error_profile_save(),
+				values: { firstName, lastName }
+			});
 		}
 
 		// 6. Avatar upload
@@ -355,10 +342,13 @@ export const actions: Actions = {
 					.getPublicUrl(filePath);
 
 				if (publicUrlData) {
-					await locals.supabase
+					const { error: avatarUrlError } = await locals.supabase
 						.from('profiles')
 						.update({ avatar_url: publicUrlData.publicUrl })
 						.eq('id', existingUser.id);
+					if (avatarUrlError) {
+						console.error('Failed to link avatar URL to profile:', avatarUrlError);
+					}
 				}
 			} else {
 				console.error('Avatar upload failed:', uploadError);

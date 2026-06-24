@@ -50,8 +50,12 @@ export function isDateInAbsence(date: string, absence: AbsenceRow | AbsenceRecor
 			const checkDate = new Date(`${date}T00:00:00Z`);
 			return rule.between(checkDate, checkDate, true).length > 0;
 		} catch (error) {
-			console.error('[AbsenceStorage] Error parsing rrule:', error);
-			return false;
+			console.error(
+				'[AbsenceStorage] Error parsing rrule — failing closed (treating date as blocked):',
+				error,
+				{ absenceId: absence.id, rrule: absence.rrule }
+			);
+			return true;
 		}
 	}
 
@@ -75,30 +79,49 @@ function createAbsenceStore() {
 	const store = writable<AbsenceRecord[]>([]);
 	const { subscribe, set, update: updateStore } = store;
 
+	const loading = writable(false);
+	const error = writable<string | null>(null);
+	let loadInFlight = false;
+
 	const load = async () => {
 		if (typeof window === 'undefined') return;
+		if (loadInFlight) return;
+
+		loadInFlight = true;
+		loading.set(true);
+		error.set(null);
 
 		debug.log('Loading absences from Supabase...');
 
-		const result = await supabase
-			.from('absences')
-			.select('*, absence_types(id, label_key, is_recurring_allowed)')
-			.order('start_date', { ascending: false });
+		try {
+			const result = await supabase
+				.from('absences')
+				.select('*, absence_types(id, label_key, is_recurring_allowed)')
+				.order('start_date', { ascending: false });
 
-		if (result.error) {
-			console.error('[AbsenceStorage] Error loading from Supabase:', result.error);
-			set([]);
-			return;
+			if (result.error) {
+				console.error('[AbsenceStorage] Error loading from Supabase:', result.error);
+				error.set(result.error.message);
+				return;
+			}
+
+			debug.log(`Loaded ${result.data?.length || 0} absences from Supabase`);
+
+			const data = result.data as AbsenceRow[] | null;
+			set(data && data.length > 0 ? data.map(toAbsenceRecord) : []);
+		} catch (err) {
+			console.error('[AbsenceStorage] Exception loading from Supabase:', err);
+			error.set(err instanceof Error ? err.message : String(err));
+		} finally {
+			loading.set(false);
+			loadInFlight = false;
 		}
-
-		debug.log(`Loaded ${result.data?.length || 0} absences from Supabase`);
-
-		const data = result.data as AbsenceRow[] | null;
-		set(data && data.length > 0 ? data.map(toAbsenceRecord) : []);
 	};
 
 	return {
 		subscribe,
+		loading,
+		error,
 		load,
 		add: async (
 			absence: Omit<AbsenceRecord, 'id' | 'created_at' | 'updated_at' | 'absence_type_label'>
@@ -208,3 +231,5 @@ function createAbsenceStore() {
 }
 
 export const absenceStore = createAbsenceStore();
+export const absenceLoading = absenceStore.loading;
+export const absenceError = absenceStore.error;

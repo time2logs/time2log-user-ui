@@ -21,7 +21,7 @@
 	import { EmptyState } from '$lib/components/ui/empty-state';
 	import { isAbsenceWithinEditWindow, EDIT_WINDOW_DAYS } from '$lib/utils';
 
-	const dateLocale = getDateLocale();
+	const dateLocale = $derived(getDateLocale());
 
 	let { data } = $props();
 	const absences = $derived($absenceStore);

@@ -14,7 +14,6 @@
 		getLastActivityId,
 		getLastLocation,
 		DEFAULT_MAX_HOURS_PER_DAY,
-		MAX_HOURS_PER_ENTRY,
 		MIN_HOURS
 	} from '$lib/activityStorage';
 	import { getAbsenceFractionForDate } from '$lib/absenceStorage';
@@ -126,8 +125,8 @@
 
 	// Inline location creation state
 	let locationsList = $state<string[]>([]);
-	let pendingNewLocations = $state<string[]>([]);
 	let isAddingLocation = $state(false);
+	let isSavingLocation = $state(false);
 	let newLocationInput = $state('');
 	let locationError = $state<string | null>(null);
 
@@ -165,7 +164,6 @@
 		} else if (!open) {
 			hasInitialized = false;
 			pendingActivities = [];
-			pendingNewLocations = [];
 		}
 	});
 
@@ -195,7 +193,7 @@
 		locationError = null;
 	}
 
-	function saveNewLocation() {
+	async function saveNewLocation() {
 		const trimmed = newLocationInput.trim();
 		if (!trimmed) {
 			return;
@@ -204,13 +202,27 @@
 			locationError = m.location_already_exists();
 			return;
 		}
+		if (!teamMember?.user_id) {
+			locationError = m.error_save_location_failed();
+			return;
+		}
 
+		isSavingLocation = true;
 		locationError = null;
-		locationsList = [...locationsList, trimmed];
-		pendingNewLocations = [...pendingNewLocations, trimmed];
-		location = trimmed;
-		isAddingLocation = false;
-		newLocationInput = '';
+		try {
+			await addUserLocation(trimmed, teamMember.user_id);
+			locationsList = [...locationsList, trimmed];
+			location = trimmed;
+			isAddingLocation = false;
+			newLocationInput = '';
+		} catch (err) {
+			locationError =
+				err instanceof Error && err.message === 'DUPLICATE_LOCATION'
+					? m.location_already_exists()
+					: m.error_save_location_failed();
+		} finally {
+			isSavingLocation = false;
+		}
 	}
 
 	function handleAddAnother() {
@@ -248,7 +260,7 @@
 	async function handleSubmit() {
 		if (!selectedActivity || hours === 0 || isSubmitting) return;
 		if (!teamMember) {
-			submitError = 'Team information not found. Please contact support.';
+			submitError = m.error_team_not_found();
 			return;
 		}
 
@@ -342,25 +354,11 @@
 				}
 			}
 
-			// Persist any new locations created inline (best-effort, non-blocking)
-			if (pendingNewLocations.length > 0 && teamMember?.user_id) {
-				const userId = teamMember.user_id;
-				const orgId = teamMember.organization_id;
-				for (const loc of pendingNewLocations) {
-					try {
-						await addUserLocation(loc, userId, orgId);
-					} catch (err) {
-						console.warn('[ActivityForm] Failed to persist location:', loc, err);
-					}
-				}
-				pendingNewLocations = [];
-			}
-
 			open = false;
 			onActivityAdded();
 		} catch (error) {
-			submitError =
-				error instanceof Error ? error.message : 'Failed to save activity. Please try again.';
+			console.error('[ActivityForm] Failed to save:', error);
+			submitError = error instanceof Error ? error.message : m.error_save_activity_failed();
 		} finally {
 			isSubmitting = false;
 		}
@@ -382,7 +380,8 @@
 			open = false;
 			onActivityAdded();
 		} catch (error) {
-			deleteError = error instanceof Error ? error.message : 'Failed to delete activity';
+			console.error('[ActivityForm] Failed to delete:', error);
+			deleteError = error instanceof Error ? error.message : m.error_delete_activity_failed();
 		} finally {
 			isDeleting = false;
 		}
@@ -450,7 +449,7 @@
 			<Alert variant="error" class="mb-4">
 				<AlertCircle class="mt-0.5 h-5 w-5 shrink-0" />
 				<div class="flex-1">
-					<p class="text-sm font-medium">Error</p>
+					<p class="text-sm font-medium">{m.error_label()}</p>
 					<p class="text-sm">{submitError}</p>
 				</div>
 			</Alert>
@@ -491,7 +490,7 @@
 								size="icon"
 								class="h-6 w-6 shrink-0"
 								onclick={() => (pendingActivities = pendingActivities.filter((_, j) => j !== i))}
-								aria-label="Remove"
+								aria-label={m.remove()}
 							>
 								<X class="h-3 w-3" />
 							</Button>
@@ -514,6 +513,7 @@
 								{#if node.node_type === 'category'}
 									<button
 										type="button"
+										aria-expanded={expanded.has(node.id)}
 										class="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-accent"
 										style="padding-left: {depth * 20 + 12}px"
 										onclick={() => toggleExpand(node.id)}
@@ -538,6 +538,7 @@
 								{:else}
 									<button
 										type="button"
+										aria-pressed={selectedActivityId === node.id}
 										class="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-accent {selectedActivityId ===
 										node.id
 											? 'bg-accent'
@@ -651,17 +652,24 @@
 						onkeydown={(e) => {
 							if (e.key === 'Enter') {
 								e.preventDefault();
-								saveNewLocation();
+								if (!isSavingLocation) saveNewLocation();
 							} else if (e.key === 'Escape') {
 								cancelAddLocation();
 							}
 						}}
 						class="min-w-40 flex-1"
+						disabled={isSavingLocation}
 					/>
-					<Button type="button" size="sm" onclick={saveNewLocation}>
+					<Button type="button" size="sm" onclick={saveNewLocation} disabled={isSavingLocation}>
 						{m.save()}
 					</Button>
-					<Button type="button" size="sm" variant="outline" onclick={cancelAddLocation}>
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						onclick={cancelAddLocation}
+						disabled={isSavingLocation}
+					>
 						{m.cancel()}
 					</Button>
 				</div>
@@ -742,7 +750,7 @@
 					{#if isSubmitting}
 						<span class="flex items-center gap-2">
 							<Spinner size="sm" />
-							Saving...
+							{m.saving()}
 						</span>
 					{:else if activityToEdit}
 						{m.save_changes_button()}
