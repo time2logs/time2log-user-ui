@@ -21,6 +21,7 @@
 		Organization
 	} from '$lib/types';
 	import { resolve } from '$app/paths';
+	import { invalidateAll } from '$app/navigation';
 	import LogOut from '@lucide/svelte/icons/log-out';
 	import Plus from '@lucide/svelte/icons/plus';
 	import Menu from '@lucide/svelte/icons/menu';
@@ -126,7 +127,8 @@
 		window.location.href = '/logout';
 	}
 
-	function handleActivityAdded() {
+	async function handleActivityAdded() {
+		await invalidateAll();
 		refreshKey++;
 		editingActivity = null;
 	}
