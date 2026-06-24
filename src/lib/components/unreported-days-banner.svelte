@@ -3,7 +3,7 @@
 	import type { ActivityRecord, AbsenceRecord } from '$lib/types';
 	import { isDateInAbsence } from '$lib/absenceStorage';
 	import * as m from '$lib/paraglide/messages.js';
-	import { getLocalTimeZone, today } from '@internationalized/date';
+	import { getLocalTimeZone, startOfMonth, today } from '@internationalized/date';
 
 	type Props = {
 		activities: ActivityRecord[];
@@ -18,7 +18,9 @@
 		const todayDate = today(timeZone);
 
 		const workdays: string[] = [];
-		let cursor = todayDate.subtract({ days: 30 });
+		// Only count days within the current calendar month (matches the banner copy),
+		// up to yesterday — today isn't overdue yet. Weekends are skipped below.
+		let cursor = startOfMonth(todayDate);
 		const yesterday = todayDate.subtract({ days: 1 });
 
 		while (cursor.compare(yesterday) <= 0) {
