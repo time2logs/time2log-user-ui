@@ -43,6 +43,10 @@ function createActivityStore() {
 	const store = writable<ActivityRecord[]>([]);
 	const { subscribe, set, update: updateStore } = store;
 
+	const loading = writable(false);
+	const error = writable<string | null>(null);
+	let loadInFlight = false;
+
 	let curriculumNodeSummariesConfigured = false;
 	let curriculumNodeSummaryMap = new Map<string, CurriculumNodeSummary>();
 
@@ -99,28 +103,43 @@ function createActivityStore() {
 
 	const load = async () => {
 		if (typeof window === 'undefined') return;
+		if (loadInFlight) return;
+
+		loadInFlight = true;
+		loading.set(true);
+		error.set(null);
 
 		debug.log('Loading activities from Supabase...');
 
-		const result = await supabase
-			.from('activity_records')
-			.select('*')
-			.order('created_at', { ascending: false });
+		try {
+			const result = await supabase
+				.from('activity_records')
+				.select('*')
+				.order('created_at', { ascending: false });
 
-		if (result.error) {
-			console.error('[ActivityStorage] Error loading from Supabase:', result.error);
-			set([]);
-			return;
+			if (result.error) {
+				console.error('[ActivityStorage] Error loading from Supabase:', result.error);
+				error.set(result.error.message);
+				return;
+			}
+
+			debug.log(`Loaded ${result.data?.length || 0} activities from Supabase`);
+
+			const data = result.data as ActivityRecordSource[] | null;
+			set(data && data.length > 0 ? enrichActivityRecords(data) : []);
+		} catch (err) {
+			console.error('[ActivityStorage] Exception loading from Supabase:', err);
+			error.set(err instanceof Error ? err.message : String(err));
+		} finally {
+			loading.set(false);
+			loadInFlight = false;
 		}
-
-		debug.log(`Loaded ${result.data?.length || 0} activities from Supabase`);
-
-		const data = result.data as ActivityRecordSource[] | null;
-		set(data && data.length > 0 ? enrichActivityRecords(data) : []);
 	};
 
 	return {
 		subscribe,
+		loading,
+		error,
 		setCurriculumNodeSummaries: (summaries: CurriculumNodeSummary[]) => {
 			curriculumNodeSummaryMap = new Map(
 				summaries.map((summary) => [
@@ -152,7 +171,6 @@ function createActivityStore() {
 			debug.log('Adding new activity via store', activity);
 
 			if (!validateActivity(activity, maxHours)) {
-				console.warn('[ActivityStorage] Activity validation failed, not adding');
 				return null;
 			}
 
@@ -205,7 +223,6 @@ function createActivityStore() {
 			debug.log('Adding multiple activities via store', { count: activities.length });
 
 			if (activities.some((a) => !validateActivity(a, maxHours))) {
-				console.warn('[ActivityStorage] One or more activities failed validation, not adding');
 				throw new Error(
 					'Invalid activity: hours must be a positive number within the allowed range'
 				);
@@ -237,12 +254,24 @@ function createActivityStore() {
 				if (last.location) localStorage.setItem(STORAGE_KEYS.lastLocation, last.location);
 			}
 
-			const newActivities: ActivityRecord[] = data.map((row, i) => ({
-				...row,
-				activity_name: activities[i].activity_name || '',
-				activity_key: activities[i].activity_key || '',
-				activity_label: activities[i].activity_label || ''
-			}));
+			const inputByKey = new Map<string, (typeof activities)[number][]>();
+			for (const a of activities) {
+				const key = `${a.curriculum_activity_id}\0${a.entry_date}`;
+				const list = inputByKey.get(key);
+				if (list) list.push(a);
+				else inputByKey.set(key, [a]);
+			}
+
+			const newActivities: ActivityRecord[] = data.map((row) => {
+				const source = row as ActivityRecordSource;
+				const key = `${source.curriculum_activity_id}\0${source.entry_date}`;
+				const fallback = inputByKey.get(key)?.shift();
+				return toActivityRecord(source, {
+					activity_name: fallback?.activity_name,
+					activity_key: fallback?.activity_key,
+					activity_label: fallback?.activity_label
+				});
+			});
 
 			updateStore((existing) => [...newActivities, ...existing]);
 			return newActivities;
@@ -286,7 +315,6 @@ function createActivityStore() {
 			debug.log('Updating activity via store', { id, activity });
 
 			if (activity.hours !== undefined && !validateActivity({ hours: activity.hours }, maxHours)) {
-				console.warn('[ActivityStorage] Activity validation failed, not updating');
 				return null;
 			}
 
@@ -335,6 +363,8 @@ function createActivityStore() {
 }
 
 export const activityStore = createActivityStore();
+export const activityLoading = activityStore.loading;
+export const activityError = activityStore.error;
 
 export function getLastActivityId(): string | null {
 	if (typeof window === 'undefined') return null;

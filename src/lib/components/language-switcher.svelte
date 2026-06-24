@@ -23,8 +23,8 @@
 				selectedLocale = current as Locale;
 				return;
 			}
-		} catch {
-			// Continue to fallbacks
+		} catch (e) {
+			console.warn('[LanguageSwitcher] getLocale() failed, falling back:', e);
 		}
 
 		// Fall back to localStorage

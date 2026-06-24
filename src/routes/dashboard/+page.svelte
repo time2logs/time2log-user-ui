@@ -10,8 +10,8 @@
 	import WorkdayCalendar from '$lib/components/workday-calendar.svelte';
 	import * as m from '$lib/paraglide/messages.js';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
-	import { activityStore } from '$lib/activityStorage';
-	import { absenceStore, isDateInAbsence } from '$lib/absenceStorage';
+	import { activityStore, activityLoading, activityError } from '$lib/activityStorage';
+	import { absenceStore, isDateInAbsence, absenceLoading, absenceError } from '$lib/absenceStorage';
 	import type {
 		ActivityRecord,
 		AbsenceRecord,
@@ -33,6 +33,9 @@
 	import StatsOverview from '$lib/components/stats-overview.svelte';
 	import UnreportedDaysBanner from '$lib/components/unreported-days-banner.svelte';
 	import DailyHoursProgress from '$lib/components/daily-hours-progress.svelte';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import { Alert } from '$lib/components/ui/alert';
+	import { getInitials } from '$lib/userUtils';
 
 	const dateLocale = $derived(getDateLocale());
 	type DashboardPageData = {
@@ -74,11 +77,9 @@
 	let selectedDate = $state<DateValue>(getDefaultSelectedDate());
 
 	const activities = $derived($activityStore);
-
-	let absences = $state<AbsenceRecord[]>([]);
-	absenceStore.subscribe((data) => {
-		absences = data;
-	});
+	const absences = $derived($absenceStore);
+	const isLoading = $derived($activityLoading || $absenceLoading);
+	const loadError = $derived($activityError || $absenceError);
 
 	$effect(() => {
 		activityStore.setCurriculumNodeSummaries(data.curriculumNodeSummaries);
@@ -86,7 +87,7 @@
 	});
 
 	$effect(() => {
-		absenceStore.load();
+		void absenceStore.load();
 	});
 
 	function isDateDisabled(date: DateValue) {
@@ -147,16 +148,13 @@
 	}
 
 	const initials = $derived(
-		data.profile
-			? `${data.profile.first_name?.[0] ?? ''}${data.profile.last_name?.[0] ?? ''}`.toUpperCase() ||
-					'?'
-			: '?'
+		data.profile ? getInitials(data.profile.first_name, data.profile.last_name) : '?'
 	);
 
-	const firstName = $derived(data.profile?.first_name ?? 'Guest');
+	const firstName = $derived(data.profile?.first_name ?? m.guest());
 
 	const fullName = $derived(
-		data.profile ? `${data.profile.first_name} ${data.profile.last_name}` : 'Guest'
+		data.profile ? `${data.profile.first_name} ${data.profile.last_name}` : m.guest()
 	);
 </script>
 
@@ -312,14 +310,35 @@
 						{loggedAbsenceTimeInDays}
 					/>
 					<Card.Content class="flex flex-1 flex-col p-0">
-						<ActivityList
-							onRefresh={handleActivityAdded}
-							onAbsenceRefresh={handleAbsenceAdded}
-							selectedDate={selectedDateIso}
-							existingAbsences={absences}
-							onEdit={handleEditActivity}
-							onEditAbsence={handleEditAbsence}
-						/>
+						{#if loadError}
+							<div class="flex flex-col items-center gap-3 p-6 text-center">
+								<Alert variant="error">{m.error_loading_data()}</Alert>
+								<Button
+									variant="outline"
+									size="sm"
+									onclick={() => {
+										void activityStore.load();
+										void absenceStore.load();
+									}}
+								>
+									{m.retry()}
+								</Button>
+							</div>
+						{:else if isLoading && activities.length === 0 && absences.length === 0}
+							<div class="flex items-center justify-center gap-2 py-12">
+								<Spinner size="sm" />
+								<span class="text-sm text-muted-foreground">{m.loading_data()}</span>
+							</div>
+						{:else}
+							<ActivityList
+								onRefresh={handleActivityAdded}
+								onAbsenceRefresh={handleAbsenceAdded}
+								selectedDate={selectedDateIso}
+								existingAbsences={absences}
+								onEdit={handleEditActivity}
+								onEditAbsence={handleEditAbsence}
+							/>
+						{/if}
 					</Card.Content>
 				</Card.Root>
 			</div>
@@ -443,7 +462,9 @@
 
 		<!-- Language Switcher -->
 		<div class="border-t border-border px-4 py-3">
-			<p class="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Sprache</p>
+			<p class="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+				{m.language_settings()}
+			</p>
 			<LanguageSwitcher />
 		</div>
 

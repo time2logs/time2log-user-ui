@@ -14,7 +14,6 @@
 		getLastActivityId,
 		getLastLocation,
 		DEFAULT_MAX_HOURS_PER_DAY,
-		MAX_HOURS_PER_ENTRY,
 		MIN_HOURS
 	} from '$lib/activityStorage';
 	import { getAbsenceFractionForDate } from '$lib/absenceStorage';
@@ -248,7 +247,7 @@
 	async function handleSubmit() {
 		if (!selectedActivity || hours === 0 || isSubmitting) return;
 		if (!teamMember) {
-			submitError = 'Team information not found. Please contact support.';
+			submitError = m.error_team_not_found();
 			return;
 		}
 
@@ -359,8 +358,8 @@
 			open = false;
 			onActivityAdded();
 		} catch (error) {
-			submitError =
-				error instanceof Error ? error.message : 'Failed to save activity. Please try again.';
+			console.error('[ActivityForm] Failed to save:', error);
+			submitError = error instanceof Error ? error.message : m.error_save_activity_failed();
 		} finally {
 			isSubmitting = false;
 		}
@@ -382,7 +381,8 @@
 			open = false;
 			onActivityAdded();
 		} catch (error) {
-			deleteError = error instanceof Error ? error.message : 'Failed to delete activity';
+			console.error('[ActivityForm] Failed to delete:', error);
+			deleteError = error instanceof Error ? error.message : m.error_delete_activity_failed();
 		} finally {
 			isDeleting = false;
 		}
@@ -450,7 +450,7 @@
 			<Alert variant="error" class="mb-4">
 				<AlertCircle class="mt-0.5 h-5 w-5 shrink-0" />
 				<div class="flex-1">
-					<p class="text-sm font-medium">Error</p>
+					<p class="text-sm font-medium">{m.error_label()}</p>
 					<p class="text-sm">{submitError}</p>
 				</div>
 			</Alert>
@@ -491,7 +491,7 @@
 								size="icon"
 								class="h-6 w-6 shrink-0"
 								onclick={() => (pendingActivities = pendingActivities.filter((_, j) => j !== i))}
-								aria-label="Remove"
+								aria-label={m.remove()}
 							>
 								<X class="h-3 w-3" />
 							</Button>
@@ -514,6 +514,7 @@
 								{#if node.node_type === 'category'}
 									<button
 										type="button"
+										aria-expanded={expanded.has(node.id)}
 										class="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-accent"
 										style="padding-left: {depth * 20 + 12}px"
 										onclick={() => toggleExpand(node.id)}
@@ -538,6 +539,7 @@
 								{:else}
 									<button
 										type="button"
+										aria-pressed={selectedActivityId === node.id}
 										class="flex w-full items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-accent {selectedActivityId ===
 										node.id
 											? 'bg-accent'
@@ -742,7 +744,7 @@
 					{#if isSubmitting}
 						<span class="flex items-center gap-2">
 							<Spinner size="sm" />
-							Saving...
+							{m.saving()}
 						</span>
 					{:else if activityToEdit}
 						{m.save_changes_button()}

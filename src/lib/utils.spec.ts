@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { cn, getAbsenceReferenceDate, isAbsenceWithinEditWindow, EDIT_WINDOW_DAYS } from './utils';
+import {
+	cn,
+	getAbsenceReferenceDate,
+	isAbsenceWithinEditWindow,
+	isWithinEditWindow,
+	formatHoursMinutes,
+	EDIT_WINDOW_DAYS
+} from './utils';
 
 describe('cn', () => {
 	it('joins single class name', () => {
@@ -196,5 +203,66 @@ describe('isAbsenceWithinEditWindow', () => {
 
 	it('respects EDIT_WINDOW_DAYS constant value', () => {
 		expect(EDIT_WINDOW_DAYS).toBe(14);
+	});
+});
+
+// ── isWithinEditWindow ─────────────────────────────────────────────────────
+
+describe('isWithinEditWindow', () => {
+	it('returns true for today', () => {
+		const today = new Date().toISOString().slice(0, 10);
+		expect(isWithinEditWindow(today)).toBe(true);
+	});
+
+	it('returns true for a date within the 14-day window', () => {
+		const now = new Date(2024, 0, 20);
+		expect(isWithinEditWindow('2024-01-10', now)).toBe(true);
+	});
+
+	it('returns true on the window boundary (exactly 14 days ago)', () => {
+		const now = new Date(2024, 0, 20);
+		expect(isWithinEditWindow('2024-01-06', now)).toBe(true);
+	});
+
+	it('returns false one day past the window boundary', () => {
+		const now = new Date(2024, 0, 20);
+		expect(isWithinEditWindow('2024-01-05', now)).toBe(false);
+	});
+
+	it('returns true for a future date', () => {
+		const now = new Date(2024, 0, 20);
+		expect(isWithinEditWindow('2024-06-01', now)).toBe(true);
+	});
+
+	it('returns false for an invalid date string', () => {
+		expect(isWithinEditWindow('not-a-date')).toBe(false);
+	});
+});
+
+// ── formatHoursMinutes ─────────────────────────────────────────────────────
+
+describe('formatHoursMinutes', () => {
+	it('formats whole hours', () => {
+		expect(formatHoursMinutes(3)).toBe('3h');
+	});
+
+	it('formats zero hours', () => {
+		expect(formatHoursMinutes(0)).toBe('0h');
+	});
+
+	it('formats minutes only when whole hours is 0', () => {
+		expect(formatHoursMinutes(0.5)).toBe('30min');
+	});
+
+	it('formats hours and minutes together', () => {
+		expect(formatHoursMinutes(2.5)).toBe('2h 30min');
+	});
+
+	it('formats quarter hours', () => {
+		expect(formatHoursMinutes(1.25)).toBe('1h 15min');
+	});
+
+	it('formats when minutes round to 0', () => {
+		expect(formatHoursMinutes(1.0)).toBe('1h');
 	});
 });

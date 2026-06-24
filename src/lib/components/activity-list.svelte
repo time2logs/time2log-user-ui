@@ -50,7 +50,7 @@
 			: existingAbsences
 	);
 
-	const sortedEntries = $derived(() => {
+	const sortedEntries = $derived.by(() => {
 		const activityEntries = filteredActivities.map((a) => ({
 			type: 'activity' as const,
 			id: a.id,
@@ -75,6 +75,10 @@
 	let activityToDeleteId = $state<string | null>(null);
 	let deleteError = $state('');
 
+	let absenceDeleteDialogOpen = $state(false);
+	let absenceToDeleteId = $state<string | null>(null);
+	let absenceDeleteError = $state('');
+
 	function requestDelete(id: string) {
 		activityToDeleteId = id;
 		deleteError = '';
@@ -90,19 +94,26 @@
 			onRefresh();
 		} catch (error) {
 			console.error('[ActivityList] Exception deleting:', error);
-			deleteError = error instanceof Error ? error.message : 'Failed to delete activity';
+			deleteError = error instanceof Error ? error.message : m.error_label();
 		}
 	}
 
-	async function handleDeleteAbsence(id: string) {
-		if (confirm(m.delete_absence_confirm())) {
-			try {
-				await absenceStore.delete(id);
-				onAbsenceRefresh?.();
-			} catch (error) {
-				console.error('[ActivityList] Exception deleting:', error);
-				alert(error instanceof Error ? error.message : 'Failed to delete absence');
-			}
+	function requestDeleteAbsence(id: string) {
+		absenceToDeleteId = id;
+		absenceDeleteError = '';
+		absenceDeleteDialogOpen = true;
+	}
+
+	async function confirmDeleteAbsence() {
+		if (!absenceToDeleteId) return;
+		try {
+			await absenceStore.delete(absenceToDeleteId);
+			absenceDeleteDialogOpen = false;
+			absenceToDeleteId = null;
+			onAbsenceRefresh?.();
+		} catch (error) {
+			console.error('[ActivityList] Exception deleting absence:', error);
+			absenceDeleteError = error instanceof Error ? error.message : m.error_label();
 		}
 	}
 
@@ -136,7 +147,7 @@
 		/>
 	{:else}
 		<div class="space-y-2 p-2 sm:space-y-3 sm:p-3">
-			{#each sortedEntries() as entry (entry.type === 'activity' ? `activity-${entry.id}` : `absence-${entry.id}`)}
+			{#each sortedEntries as entry (entry.type === 'activity' ? `activity-${entry.id}` : `absence-${entry.id}`)}
 				{#if entry.type === 'activity'}
 					{@const activity = entry.data}
 					<div
@@ -249,6 +260,7 @@
 								<Button
 									variant="ghost"
 									size="icon"
+									aria-label={m.edit_absence_title()}
 									onclick={() => onEditAbsence?.(absence)}
 									class="h-7 w-7 text-muted-foreground transition-opacity hover:bg-accent hover:text-accent-foreground sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
 								>
@@ -258,7 +270,7 @@
 									variant="ghost"
 									size="icon"
 									aria-label={m.delete_absence_title()}
-									onclick={() => handleDeleteAbsence(absence.id)}
+									onclick={() => requestDeleteAbsence(absence.id)}
 									class="flex h-7 w-7 text-muted-foreground transition-opacity hover:bg-destructive/10 hover:text-destructive sm:h-9 sm:w-9 sm:opacity-0 sm:group-hover:opacity-100"
 								>
 									<Trash2 class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -282,5 +294,18 @@
 >
 	{#if deleteError}
 		<Alert variant="error">{deleteError}</Alert>
+	{/if}
+</ConfirmDialog>
+
+<ConfirmDialog
+	bind:open={absenceDeleteDialogOpen}
+	title={m.delete_absence_title()}
+	confirmLabel={m.delete_activity_confirm_button()}
+	cancelLabel={m.cancel()}
+	variant="destructive"
+	onConfirm={confirmDeleteAbsence}
+>
+	{#if absenceDeleteError}
+		<Alert variant="error">{absenceDeleteError}</Alert>
 	{/if}
 </ConfirmDialog>

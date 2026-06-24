@@ -1,7 +1,5 @@
 type FailResult = { status: number; data: Record<string, unknown> };
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { RequestEvent } from '@sveltejs/kit';
-import { resetRateLimiter } from '$lib/server/rateLimiter';
+import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('$lib/paraglide/messages.js', () => ({
 	onboarding_no_invite_token: () => 'no_invite_token',
@@ -14,7 +12,15 @@ vi.mock('$lib/paraglide/messages.js', () => ({
 	onboarding_error_password_uppercase: () => 'password_uppercase',
 	onboarding_error_password_number: () => 'password_number',
 	onboarding_error_password_special: () => 'password_special',
-	onboarding_error_signin_failed: () => 'signin_failed'
+	onboarding_error_signin_failed: () => 'signin_failed',
+	onboarding_error_profile_save: () => 'profile_save_error',
+	settings_error_file_too_large: () => 'file_too_large',
+	settings_error_file_type: () => 'file_type_error',
+	error_server: () => 'server_error',
+	error_onboarding_completed: () => 'onboarding_completed',
+	error_accept_invite: () => 'accept_invite_error',
+	error_user_not_found: () => 'user_not_found',
+	rate_limited: ({ seconds }: { seconds: string }) => `rate_limited_${seconds}`
 }));
 
 vi.mock('$lib/server/avatarValidation', () => ({

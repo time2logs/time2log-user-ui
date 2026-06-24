@@ -2,12 +2,7 @@ import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import * as m from '$lib/paraglide/messages.js';
 import { getRateLimitSeconds } from '$lib/rateLimitError';
-import {
-	checkRateLimit,
-	getClientId,
-	hashId,
-	rateKey
-} from '$lib/server/rateLimiter';
+import { checkRateLimit, getClientId, hashId, rateKey } from '$lib/server/rateLimiter';
 
 const WINDOW_1MIN = 60 * 1000;
 const WINDOW_15MIN = 15 * 60 * 1000;
@@ -63,7 +58,7 @@ export const actions: Actions = {
 			if (seconds) return fail(429, { error: m.rate_limited({ seconds }) });
 
 			console.error('[ForgotPassword] resetPasswordForEmail failed:', error);
-			return fail(500, { error: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.' });
+			return fail(500, { error: m.error_server() });
 		}
 
 		return { success: true };

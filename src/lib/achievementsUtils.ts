@@ -167,14 +167,14 @@ export function computeSickDays(
 		if (absence.is_recurring && absence.rrule) {
 			for (const isoDate of iterateDates(fromIsoDate, toIsoDate)) {
 				if (!isSwissWeekend(parseIsoDate(isoDate)) && isDateInAbsence(isoDate, absence)) {
-					sickDayTotal = Math.min(1, sickDayTotal + dayFraction);
+					sickDayTotal += dayFraction;
 				}
 			}
 			continue;
 		}
 		for (const isoDate of iterateDates(absenceStartIsoDate, absenceEndIsoDate)) {
 			if (!isSwissWeekend(parseIsoDate(isoDate))) {
-				sickDayTotal = Math.min(1, sickDayTotal + dayFraction);
+				sickDayTotal += dayFraction;
 			}
 		}
 	}

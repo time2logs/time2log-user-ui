@@ -21,11 +21,11 @@
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import * as Select from '$lib/components/ui/select';
 	import { palette, type Palette } from '$lib/paletteStore';
+	import { untrack } from 'svelte';
+	import { compressImage } from '$lib/imageUtils';
+	import { getInitials } from '$lib/userUtils';
 
-	let currentPalette = $state<Palette>('default');
-	palette.subscribe((p) => {
-		currentPalette = p;
-	});
+	let currentPalette = $derived<Palette>($palette);
 
 	type SettingsForm = {
 		profileError?: string;
@@ -47,10 +47,10 @@
 	let isSendingEmailOtp = $state(false);
 	let isSavingPassword = $state(false);
 	let isCompressing = $state(false);
-	let currentTheme = $state<'light' | 'dark'>('light');
+	let currentTheme = $derived<'light' | 'dark'>($theme);
 
-	let firstName = $state(data.profile?.first_name ?? '');
-	let lastName = $state(data.profile?.last_name ?? '');
+	let firstName = $state(untrack(() => data.profile?.first_name ?? ''));
+	let lastName = $state(untrack(() => data.profile?.last_name ?? ''));
 	let emailValue = $state('');
 
 	$effect(() => {
@@ -68,10 +68,7 @@
 	});
 
 	const initials = $derived(
-		data.profile
-			? `${data.profile.first_name?.[0] ?? ''}${data.profile.last_name?.[0] ?? ''}`.toUpperCase() ||
-					'?'
-			: '?'
+		data.profile ? getInitials(data.profile.first_name, data.profile.last_name) : '?'
 	);
 
 	const displayAvatarUrl = $derived(avatarPreviewUrl || data.profile?.avatar_url || null);
@@ -83,87 +80,6 @@
 
 	function toggleTheme() {
 		theme.toggle();
-	}
-
-	async function compressImage(file: File): Promise<Blob> {
-		return new Promise((resolve, reject) => {
-			const reader = new FileReader();
-			reader.readAsDataURL(file);
-			reader.onload = (event) => {
-				const img = new Image();
-				img.src = event.target?.result as string;
-				img.onload = () => {
-					const canvas = document.createElement('canvas');
-					let MAX_WIDTH = 800;
-					let MAX_HEIGHT = 800;
-					let width = img.width;
-					let height = img.height;
-
-					if (width > height) {
-						if (width > MAX_WIDTH) {
-							height *= MAX_WIDTH / width;
-							width = MAX_WIDTH;
-						}
-					} else {
-						if (height > MAX_HEIGHT) {
-							width *= MAX_HEIGHT / height;
-							height = MAX_HEIGHT;
-						}
-					}
-
-					canvas.width = width;
-					canvas.height = height;
-					const ctx = canvas.getContext('2d');
-					ctx?.drawImage(img, 0, 0, width, height);
-
-					let quality = 0.9;
-					const targetSize = 500 * 1024;
-
-					const attemptBlob = () => {
-						canvas.toBlob(
-							(blob) => {
-								if (blob) {
-									if (blob.size > targetSize && quality > 0.1) {
-										quality -= 0.1;
-										attemptBlob();
-									} else if (blob.size > targetSize && MAX_WIDTH > 200) {
-										MAX_WIDTH -= 200;
-										MAX_HEIGHT -= 200;
-										let newWidth = img.width;
-										let newHeight = img.height;
-										if (newWidth > newHeight) {
-											if (newWidth > MAX_WIDTH) {
-												newHeight *= MAX_WIDTH / newWidth;
-												newWidth = MAX_WIDTH;
-											}
-										} else {
-											if (newHeight > MAX_HEIGHT) {
-												newWidth *= MAX_HEIGHT / newHeight;
-												newHeight = MAX_HEIGHT;
-											}
-										}
-										canvas.width = newWidth;
-										canvas.height = newHeight;
-										ctx?.drawImage(img, 0, 0, newWidth, newHeight);
-										quality = 0.7;
-										attemptBlob();
-									} else {
-										resolve(blob);
-									}
-								} else {
-									reject(new Error('Canvas to Blob failed'));
-								}
-							},
-							'image/jpeg',
-							quality
-						);
-					};
-					attemptBlob();
-				};
-				img.onerror = () => reject(new Error('Image load failed'));
-			};
-			reader.onerror = () => reject(new Error('FileReader failed'));
-		});
 	}
 
 	async function handleAvatarChange(e: Event) {
@@ -255,6 +171,7 @@
 							<div class="mb-5 flex flex-col items-center gap-2">
 								<button
 									type="button"
+									aria-label={m.change_avatar()}
 									onclick={() => fileInput?.click()}
 									class="group relative h-20 w-20 overflow-hidden rounded-full border-2 border-border shadow-sm transition-all hover:border-border hover:border-primary"
 									disabled={isSaving || isCompressing}
@@ -284,6 +201,7 @@
 								</button>
 								<input
 									bind:this={fileInput}
+									id="avatar"
 									type="file"
 									accept="image/jpeg,image/png,image/webp"
 									class="hidden"
@@ -354,8 +272,8 @@
 								type="button"
 								onclick={toggleTheme}
 								aria-label={currentTheme === 'dark'
-									? 'Switch to light mode'
-									: 'Switch to dark mode'}
+									? m.theme_switch_light()
+									: m.theme_switch_dark()}
 								class="relative h-7 w-14 rounded-full transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none {currentTheme ===
 								'dark'
 									? 'bg-primary'
@@ -375,7 +293,7 @@
 								</span>
 							</button>
 							<div class="mt-4 flex flex-col gap-2">
-								<span class="text-muted-foreground">Farbschema</span>
+								<span class="text-muted-foreground">{m.color_scheme()}</span>
 								<Select.Root
 									type="single"
 									value={currentPalette}

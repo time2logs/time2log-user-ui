@@ -219,7 +219,7 @@
 			: null
 	);
 
-	const previewDates = $derived(() => {
+	const previewDates = $derived.by(() => {
 		if (!showRecurrenceOptions || !startDate) return [];
 		try {
 			const rruleStr = getRruleString();
@@ -273,7 +273,7 @@
 
 		const otherAbsences = existingAbsences.filter((absence) => absence.id !== absenceToEdit?.id);
 		const affectedDates = isRecurring
-			? Array.from(new Set([startDate, ...previewDates()]))
+			? Array.from(new Set([startDate, ...previewDates]))
 			: getDatesInRange(startDate, endDate);
 
 		for (const date of affectedDates) {
@@ -357,6 +357,7 @@
 			open = false;
 			onAbsenceAdded();
 		} catch (error) {
+			console.error('[AbsenceForm] Failed to delete:', error);
 			deleteError = error instanceof Error ? error.message : m.error_delete_absence_failed();
 		} finally {
 			isDeleting = false;
@@ -535,9 +536,9 @@
 								</div>
 
 								<div class="grid gap-2">
-									<Label>{m.recurring_preview({ count: previewDates().length })}</Label>
+									<Label>{m.recurring_preview({ count: previewDates.length })}</Label>
 									<div class="flex flex-wrap gap-1">
-										{#each previewDates() as date (date)}
+										{#each previewDates as date (date)}
 											<span class="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary">
 												{new Date(`${date}T12:00:00`).toLocaleDateString(dateLocale, {
 													month: 'short',
@@ -545,7 +546,7 @@
 												})}
 											</span>
 										{/each}
-										{#if previewDates().length >= 6}
+										{#if previewDates.length >= 6}
 											<span class="px-2 py-0.5 text-xs text-muted-foreground">...</span>
 										{/if}
 									</div>

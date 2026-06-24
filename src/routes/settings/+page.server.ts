@@ -4,6 +4,7 @@ import * as m from '$lib/paraglide/messages.js';
 import { getRateLimitSeconds } from '$lib/rateLimitError';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
 import { checkRateLimit, rateKey } from '$lib/server/rateLimiter';
+import { validatePassword } from '$lib/passwordValidation';
 
 const WINDOW_10MIN = 10 * 60 * 1000;
 const WINDOW_1HOUR = 60 * 60 * 1000;
@@ -75,9 +76,7 @@ export const actions: Actions = {
 
 		if (profileError) {
 			console.error('[Settings] Failed to update profile:', profileError.message);
-			return fail(500, {
-				profileError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
-			});
+			return fail(500, { profileError: m.error_server() });
 		}
 
 		if (avatarFile && avatarFile.size > 0 && avatarExt) {
@@ -93,10 +92,13 @@ export const actions: Actions = {
 					.getPublicUrl(filePath);
 
 				if (publicUrlData) {
-					await locals.supabase
+					const { error: avatarUrlError } = await locals.supabase
 						.from('profiles')
 						.update({ avatar_url: publicUrlData.publicUrl })
 						.eq('id', session.user.id);
+					if (avatarUrlError) {
+						console.error('Failed to link avatar URL to profile:', avatarUrlError);
+					}
 				}
 			}
 		}
@@ -124,7 +126,7 @@ export const actions: Actions = {
 
 			console.error('[Settings] Failed to send email OTP:', error.message);
 			return fail(500, {
-				emailError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
+				emailError: m.error_server()
 			});
 		}
 
@@ -183,7 +185,7 @@ export const actions: Actions = {
 
 			console.error('[Settings] Failed to update email:', error.message);
 			return fail(500, {
-				emailError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
+				emailError: m.error_server()
 			});
 		}
 
@@ -213,20 +215,15 @@ export const actions: Actions = {
 			return fail(400, { passwordError: m.settings_error_password_mismatch() });
 		}
 
-		if (!password || password.length < 8) {
-			return fail(400, { passwordError: m.onboarding_error_password_length() });
-		}
-
-		if (!/[A-Z]/.test(password)) {
-			return fail(400, { passwordError: m.onboarding_error_password_uppercase() });
-		}
-
-		if (!/[0-9]/.test(password)) {
-			return fail(400, { passwordError: m.onboarding_error_password_number() });
-		}
-
-		if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password)) {
-			return fail(400, { passwordError: m.onboarding_error_password_special() });
+		const pwRule = validatePassword(password);
+		if (pwRule) {
+			const pwMessages = {
+				length: m.onboarding_error_password_length(),
+				uppercase: m.onboarding_error_password_uppercase(),
+				number: m.onboarding_error_password_number(),
+				special: m.onboarding_error_password_special()
+			};
+			return fail(400, { passwordError: pwMessages[pwRule] });
 		}
 
 		const { error } = await locals.supabase.auth.updateUser({ password });
@@ -238,7 +235,7 @@ export const actions: Actions = {
 
 			console.error('[Settings] Failed to update password:', error.message);
 			return fail(500, {
-				passwordError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
+				passwordError: m.error_server()
 			});
 		}
 
