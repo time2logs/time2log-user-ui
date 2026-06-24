@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
 	import * as m from '$lib/paraglide/messages.js';
-	import { Layers } from 'lucide-svelte';
+	import Layers from '@lucide/svelte/icons/layers';
 
 	let { items: activityItems }: { items: { name: string; hours: number }[] } = $props();
 

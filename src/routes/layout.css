@@ -2,11 +2,7 @@
 
 @import 'tw-animate-css';
 
-@custom-variant dark (&:is(.dark *));
-
-@import 'tailwindcss';
-
-@import 'tw-animate-css';
+@plugin '@tailwindcss/typography';
 
 @custom-variant dark (&:is(.dark *));
 
@@ -30,6 +26,10 @@
 	--accent: oklch(0.95 0.005 250);
 	--accent-foreground: oklch(0.216 0.006 250);
 	--destructive: oklch(0.577 0.245 27.325);
+	--success: oklch(0.62 0.17 150);
+	--success-foreground: oklch(0.985 0 0);
+	--warning: oklch(0.72 0.16 70);
+	--warning-foreground: oklch(0.2 0.02 70);
 	--border: oklch(0.92 0.005 250);
 	--input: oklch(0.92 0.005 250);
 	--ring: oklch(0.45 0.16 280);
@@ -67,6 +67,10 @@
 	--accent: oklch(0.25 0.03 255);
 	--accent-foreground: oklch(0.92 0.01 255);
 	--destructive: oklch(0.6 0.2 25);
+	--success: oklch(0.65 0.15 150);
+	--success-foreground: oklch(0.15 0.01 255);
+	--warning: oklch(0.78 0.15 70);
+	--warning-foreground: oklch(0.2 0.02 70);
 	--border: oklch(0.3 0.02 255);
 	--input: oklch(0.25 0.02 255);
 	--ring: oklch(0.65 0.16 280);
@@ -129,6 +133,10 @@
 	--color-accent: var(--accent);
 	--color-accent-foreground: var(--accent-foreground);
 	--color-destructive: var(--destructive);
+	--color-success: var(--success);
+	--color-success-foreground: var(--success-foreground);
+	--color-warning: var(--warning);
+	--color-warning-foreground: var(--warning-foreground);
 	--color-border: var(--border);
 	--color-input: var(--input);
 	--color-ring: var(--ring);
@@ -174,107 +182,4 @@
 .dark div:not([class*='bg-']):not([class*='border-']),
 .dark label {
 	@apply text-foreground;
-}
-
-.dark .text-stone-300 {
-	color: oklch(0.87 0.01 50);
-}
-.dark .text-stone-400 {
-	color: oklch(0.7 0.01 50);
-}
-.dark .text-stone-500 {
-	color: oklch(0.6 0.01 50);
-}
-.dark .text-stone-600 {
-	color: oklch(0.55 0.015 50);
-}
-.dark .text-stone-700 {
-	color: oklch(0.5 0.02 50);
-}
-.dark .text-stone-800 {
-	color: oklch(0.4 0.02 50);
-}
-.dark .text-stone-900 {
-	color: oklch(0.3 0.02 50);
-}
-
-.dark .text-zinc-300 {
-	color: oklch(0.87 0.01 250);
-}
-.dark .text-zinc-400 {
-	color: oklch(0.7 0.01 250);
-}
-.dark .text-zinc-500 {
-	color: oklch(0.6 0.01 250);
-}
-.dark .text-zinc-600 {
-	color: oklch(0.55 0.015 250);
-}
-.dark .text-zinc-700 {
-	color: oklch(0.5 0.02 250);
-}
-.dark .text-zinc-800 {
-	color: oklch(0.4 0.02 250);
-}
-
-.dark .text-slate-300 {
-	color: oklch(0.87 0.01 250);
-}
-.dark .text-slate-400 {
-	color: oklch(0.7 0.01 250);
-}
-.dark .text-slate-500 {
-	color: oklch(0.6 0.01 250);
-}
-.dark .text-slate-600 {
-	color: oklch(0.55 0.015 250);
-}
-.dark .text-slate-700 {
-	color: oklch(0.5 0.02 250);
-}
-.dark .text-slate-800 {
-	color: oklch(0.4 0.02 250);
-}
-
-.dark .bg-stone-50,
-.dark .bg-stone-100,
-.dark .bg-stone-200 {
-	background-color: oklch(0.2 0.015 50);
-}
-
-.dark .bg-stone-300,
-.dark .bg-stone-400 {
-	background-color: oklch(0.3 0.02 50);
-}
-
-.dark .bg-zinc-50,
-.dark .bg-zinc-100,
-.dark .bg-zinc-200 {
-	background-color: oklch(0.2 0.015 250);
-}
-
-.dark .bg-slate-50,
-.dark .bg-slate-100,
-.dark .bg-slate-200 {
-	background-color: oklch(0.2 0.015 250);
-}
-
-.dark .bg-zinc-300,
-.dark .bg-zinc-400 {
-	background-color: oklch(0.3 0.02 250);
-}
-
-.dark .border-stone-200,
-.dark .border-stone-300 {
-	border-color: oklch(0.35 0.02 50);
-}
-
-.dark .border-zinc-200,
-.dark .border-zinc-300 {
-	border-color: oklch(0.35 0.02 250);
-}
-
-.dark .border-slate-200,
-.dark .border-slate-300 {
-	border-color: oklch(0.35 0.02 250);
 }

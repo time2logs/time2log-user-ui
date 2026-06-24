@@ -3,31 +3,15 @@
 	import * as m from '$lib/paraglide/messages.js';
 	import type { AbsenceRecord } from '$lib/types';
 	import { computeAbsencesBySemester } from '$lib/statsUtils';
+	import { getAbsenceTypeLabel } from '$lib/absence-types';
 
 	let { absences }: { absences: AbsenceRecord[] } = $props();
-
-	const TYPE_COLORS: Record<string, string> = {
-		sick: '#ef4444',
-		vacation: '#3b82f6',
-		military: '#10b981',
-		uk: '#f59e0b',
-		berufsschule: '#8b5cf6',
-		custom: '#6b7280'
-	};
-
-	const TYPE_LABELS: Record<string, string> = {
-		sick: m.absence_type_sick(),
-		vacation: m.absence_type_vacation(),
-		military: m.absence_type_military(),
-		uk: m.absence_type_uk(),
-		berufsschule: m.absence_type_berufsschule(),
-		custom: m.absence_type_custom()
-	};
 
 	const rawData = $derived(computeAbsencesBySemester(absences));
 	const types = $derived([...new Set(rawData.map((d) => d.type))].sort());
 	const semesters = $derived([...new Set(rawData.map((d) => d.semester))].sort());
 	const maxDays = $derived(Math.max(...rawData.map((d) => d.days), 5));
+	const CHART_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
 
 	const svgWidth = 1000;
 	const svgHeight = 500;
@@ -90,7 +74,7 @@
 							stroke-width="2"
 						/>
 
-						{#each [0, 1, 2, 3, 4, 5] as tick}
+						{#each [0, 1, 2, 3, 4, 5] as tick (tick)}
 							{@const value = (tick / 5) * maxDays}
 							{@const y = marginTop + chartHeight - (tick / 5) * chartHeight}
 							<line
@@ -112,7 +96,7 @@
 							</text>
 						{/each}
 
-						{#each [0, 1, 2, 3, 4, 5] as tick}
+						{#each [0, 1, 2, 3, 4, 5] as tick (tick)}
 							{@const y = marginTop + chartHeight - (tick / 5) * chartHeight}
 							<line
 								x1={marginLeft}
@@ -125,8 +109,8 @@
 							/>
 						{/each}
 
-						{#each semesters as semester, semesterIndex}
-							{#each types as type, typeIndex}
+						{#each semesters as semester, semesterIndex (semester)}
+							{#each types as type, typeIndex (type)}
 								{@const days = getDaysForSemesterAndType(semester, type)}
 								{@const barHeight = getBarHeight(days)}
 								{@const barY = getBarY(days)}
@@ -137,7 +121,7 @@
 										y={barY}
 										width={barWidth - 2}
 										height={barHeight}
-										fill={TYPE_COLORS[type]}
+										fill={CHART_COLORS[typeIndex % CHART_COLORS.length]}
 										opacity="0.85"
 										stroke="black"
 										stroke-width="1"
@@ -159,13 +143,13 @@
 				</div>
 
 				<ul class="mt-4 flex flex-wrap justify-center gap-x-4 gap-y-2 border-t pt-4 text-sm">
-					{#each types as type}
+					{#each types as type (type)}
 						<li class="flex items-center gap-1.5">
 							<span
 								class="inline-block h-3 w-3 shrink-0 rounded"
-								style="background:{TYPE_COLORS[type] ?? '#a3a3a3'}"
+								style="background:{CHART_COLORS[types.indexOf(type) % CHART_COLORS.length]}"
 							></span>
-							{TYPE_LABELS[type] ?? type}
+							{getAbsenceTypeLabel(type)}
 						</li>
 					{/each}
 				</ul>

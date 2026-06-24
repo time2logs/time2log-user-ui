@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { AlertTriangle, CheckCircle } from 'lucide-svelte';
+	import AlertTriangle from '@lucide/svelte/icons/triangle-alert';
+	import CheckCircle from '@lucide/svelte/icons/circle-check';
 	import type { ActivityRecord, AbsenceRecord } from '$lib/types';
 	import { isDateInAbsence } from '$lib/absenceStorage';
 	import * as m from '$lib/paraglide/messages.js';
@@ -41,14 +42,14 @@
 
 {#if unreportedCount === 0}
 	<div
-		class="mb-4 flex items-center gap-2 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-400"
+		class="mb-4 flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 px-4 py-3 text-sm text-success"
 	>
 		<CheckCircle class="h-4 w-4 shrink-0" />
 		{m.unreported_days_banner_zero()}
 	</div>
 {:else}
 	<div
-		class="mb-4 flex items-center gap-2 rounded-lg border border-orange-500/30 bg-orange-500/10 px-4 py-3 text-sm text-orange-700 dark:text-orange-400"
+		class="mb-4 flex items-center gap-2 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning"
 	>
 		<AlertTriangle class="h-4 w-4 shrink-0" />
 		{unreportedCount === 1

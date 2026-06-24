@@ -1,7 +1,9 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
 	import * as m from '$lib/paraglide/messages.js';
-	import { Trophy, Flame, Star } from 'lucide-svelte';
+	import Trophy from '@lucide/svelte/icons/trophy';
+	import Flame from '@lucide/svelte/icons/flame';
+	import Star from '@lucide/svelte/icons/star';
 	import type { LevelInfo } from '$lib/achievementsUtils';
 
 	let {

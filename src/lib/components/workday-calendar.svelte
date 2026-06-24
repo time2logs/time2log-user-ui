@@ -13,26 +13,10 @@
 		today,
 		type DateValue
 	} from '@internationalized/date';
-	import {
-		ChevronLeft,
-		ChevronRight,
-		Palmtree,
-		HeartPulse,
-		Shield,
-		Presentation,
-		GraduationCap,
-		Tag
-	} from 'lucide-svelte';
+	import { ABSENCE_TYPES } from '$lib/absence-types';
+	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+	import ChevronRight from '@lucide/svelte/icons/chevron-right';
 	import type { AbsenceType } from '$lib/types';
-
-	const ABSENCE_INDICATORS: Record<AbsenceType, { icon: typeof Palmtree; color: string }> = {
-		sick: { icon: HeartPulse, color: 'text-red-500 dark:text-red-400' },
-		vacation: { icon: Palmtree, color: 'text-emerald-500 dark:text-emerald-400' },
-		military: { icon: Shield, color: 'text-green-600 dark:text-green-500' },
-		uk: { icon: Presentation, color: 'text-sky-500 dark:text-sky-400' },
-		berufsschule: { icon: GraduationCap, color: 'text-violet-500 dark:text-violet-400' },
-		custom: { icon: Tag, color: 'text-gray-500 dark:text-gray-400' }
-	};
 
 	type WorkdayCalendarProps = {
 		value?: DateValue;
@@ -203,19 +187,19 @@
 			>
 				<span>{cell.dayNumber}</span>
 				{#if !cell.outsideMonth && !cell.isWeekend && cell.absenceType}
-					{@const indicator = ABSENCE_INDICATORS[cell.absenceType]}
+					{@const indicator = ABSENCE_TYPES[cell.absenceType]}
 					{@const Icon = indicator.icon}
 					<Icon
 						class={cn(
 							'h-3 w-3 sm:h-3.5 sm:w-3.5',
-							cell.selected ? 'text-primary-foreground' : indicator.color
+							cell.selected ? 'text-primary-foreground' : indicator.text
 						)}
 					/>
 				{:else if !cell.outsideMonth && !cell.isWeekend && !cell.disabled && cell.hasActivity}
 					<span
 						class={cn(
 							'h-1 w-1 rounded-full sm:h-1.5 sm:w-1.5',
-							cell.selected ? 'bg-primary-foreground' : 'bg-green-500 dark:bg-green-400'
+							cell.selected ? 'bg-primary-foreground' : 'bg-success'
 						)}
 					></span>
 				{:else}

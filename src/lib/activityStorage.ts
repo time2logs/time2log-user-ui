@@ -3,13 +3,13 @@ import { writable, get } from 'svelte/store';
 import { supabase } from './supabaseClient';
 import * as m from '$lib/paraglide/messages.js';
 import { isWithinEditWindow, EDIT_WINDOW_DAYS } from './utils';
+import { createDebugLogger } from './debug';
+import { unwrapSupabase } from './supabaseUtils';
+import { STORAGE_KEYS } from './storageKeys';
 
-const LAST_ACTIVITY_KEY = 'last_activity_id';
-const LAST_LOCATION_KEY = 'last_location';
-const DEBUG = import.meta.env.DEV ?? false;
+const debug = createDebugLogger('ActivityStorage');
 
-export const MAX_HOURS_PER_ENTRY = 10;
-export const MAX_HOURS_PER_DAY = 10;
+export const DEFAULT_MAX_HOURS_PER_DAY = 10;
 export const MIN_HOURS = 1;
 
 type ActivityRecordSource = Omit<
@@ -19,16 +19,10 @@ type ActivityRecordSource = Omit<
 	location: string | null;
 };
 
-let curriculumNodeSummariesConfigured = false;
-let curriculumNodeSummaryMap = new Map<string, CurriculumNodeSummary>();
-
-function debugLog(message: string, data?: unknown) {
-	if (DEBUG && typeof window !== 'undefined') {
-		console.log(`[ActivityStorage] ${message}`, data || '');
-	}
-}
-
-function validateActivity(activity: { hours: number }): boolean {
+function validateActivity(
+	activity: { hours: number },
+	maxHours: number = DEFAULT_MAX_HOURS_PER_DAY
+): boolean {
 	if (typeof activity.hours !== 'number' || isNaN(activity.hours)) {
 		console.error('[ActivityStorage] Invalid hours value:', activity.hours);
 		return false;
@@ -37,94 +31,91 @@ function validateActivity(activity: { hours: number }): boolean {
 		console.error('[ActivityStorage] Hours below minimum:', activity.hours, '<', MIN_HOURS);
 		return false;
 	}
-	if (activity.hours > MAX_HOURS_PER_ENTRY) {
-		console.error(
-			'[ActivityStorage] Hours exceed maximum:',
-			activity.hours,
-			'>',
-			MAX_HOURS_PER_ENTRY
-		);
+	if (activity.hours > maxHours) {
+		console.error('[ActivityStorage] Hours exceed maximum:', activity.hours, '>', maxHours);
 		return false;
 	}
 	return true;
-}
-
-function reportMissingCurriculumSummaries(context: string) {
-	const message = `[ActivityStorage] Curriculum node summaries were not configured before ${context}.`;
-	console.error(message, { context });
-
-	if (DEBUG) {
-		throw new Error(message);
-	}
-}
-
-function resolveCurriculumNodeSummary(
-	curriculumActivityId: string,
-	context: string
-): CurriculumNodeSummary | undefined {
-	if (!curriculumNodeSummariesConfigured) {
-		reportMissingCurriculumSummaries(context);
-		return undefined;
-	}
-
-	const node = curriculumNodeSummaryMap.get(curriculumActivityId);
-
-	if (!node) {
-		console.error('[ActivityStorage] Missing curriculum node summary for activity record.', {
-			context,
-			curriculumActivityId
-		});
-	}
-
-	return node;
-}
-
-function toActivityRecord(
-	record: ActivityRecordSource,
-	fallback: Partial<Pick<ActivityRecord, 'activity_name' | 'activity_key' | 'activity_label'>> = {}
-): ActivityRecord {
-	const node = resolveCurriculumNodeSummary(record.curriculum_activity_id, 'activity enrichment');
-
-	return {
-		...record,
-		location: record.location || '',
-		activity_name: node?.label || fallback.activity_name || m.unavailable_activity_name(),
-		activity_key: node?.key || fallback.activity_key || m.unavailable_activity_key(),
-		activity_label: fallback.activity_label || ''
-	};
-}
-
-function enrichActivityRecords(records: ActivityRecordSource[]): ActivityRecord[] {
-	return records.map((record) => toActivityRecord(record));
 }
 
 function createActivityStore() {
 	const store = writable<ActivityRecord[]>([]);
 	const { subscribe, set, update: updateStore } = store;
 
+	let curriculumNodeSummariesConfigured = false;
+	let curriculumNodeSummaryMap = new Map<string, CurriculumNodeSummary>();
+
+	function reportMissingCurriculumSummaries(context: string) {
+		const message = `[ActivityStorage] Curriculum node summaries were not configured before ${context}.`;
+		console.error(message, { context });
+
+		if (import.meta.env.DEV) {
+			throw new Error(message);
+		}
+	}
+
+	function resolveCurriculumNodeSummary(
+		curriculumActivityId: string,
+		context: string
+	): CurriculumNodeSummary | undefined {
+		if (!curriculumNodeSummariesConfigured) {
+			reportMissingCurriculumSummaries(context);
+			return undefined;
+		}
+
+		const node = curriculumNodeSummaryMap.get(curriculumActivityId);
+
+		if (!node) {
+			console.error('[ActivityStorage] Missing curriculum node summary for activity record.', {
+				context,
+				curriculumActivityId
+			});
+		}
+
+		return node;
+	}
+
+	function toActivityRecord(
+		record: ActivityRecordSource,
+		fallback: Partial<
+			Pick<ActivityRecord, 'activity_name' | 'activity_key' | 'activity_label'>
+		> = {}
+	): ActivityRecord {
+		const node = resolveCurriculumNodeSummary(record.curriculum_activity_id, 'activity enrichment');
+
+		return {
+			...record,
+			location: record.location || '',
+			activity_name: node?.label || fallback.activity_name || m.unavailable_activity_name(),
+			activity_key: node?.key || fallback.activity_key || m.unavailable_activity_key(),
+			activity_label: fallback.activity_label || ''
+		};
+	}
+
+	function enrichActivityRecords(records: ActivityRecordSource[]): ActivityRecord[] {
+		return records.map((record) => toActivityRecord(record));
+	}
+
 	const load = async () => {
 		if (typeof window === 'undefined') return;
 
-		debugLog('Loading activities from Supabase...');
+		debug.log('Loading activities from Supabase...');
 
-		const { data, error } = await supabase
+		const result = await supabase
 			.from('activity_records')
 			.select('*')
 			.order('created_at', { ascending: false });
 
-		if (error) {
-			console.error('[ActivityStorage] Error loading from Supabase:', error);
+		if (result.error) {
+			console.error('[ActivityStorage] Error loading from Supabase:', result.error);
 			set([]);
 			return;
 		}
 
-		debugLog(`Loaded ${data?.length || 0} activities from Supabase`);
+		debug.log(`Loaded ${result.data?.length || 0} activities from Supabase`);
 
-		if (data && data.length > 0) {
-			set(enrichActivityRecords(data as ActivityRecordSource[]));
-		} else {
-			set([]);
-		}
+		const data = result.data as ActivityRecordSource[] | null;
+		set(data && data.length > 0 ? enrichActivityRecords(data) : []);
 	};
 
 	return {
@@ -154,43 +145,42 @@ function createActivityStore() {
 		},
 		load,
 		add: async (
-			activity: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>
+			activity: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>,
+			maxHours: number = DEFAULT_MAX_HOURS_PER_DAY
 		): Promise<ActivityRecord | null> => {
-			debugLog('Adding new activity via store', activity);
+			debug.log('Adding new activity via store', activity);
 
-			if (!validateActivity(activity)) {
+			if (!validateActivity(activity, maxHours)) {
 				console.warn('[ActivityStorage] Activity validation failed, not adding');
 				return null;
 			}
 
-			const { data, error } = await supabase
-				.from('activity_records')
-				.insert({
-					organization_id: activity.organization_id,
-					profession_id: activity.profession_id,
-					user_id: activity.user_id,
-					team_id: activity.team_id,
-					curriculum_activity_id: activity.curriculum_activity_id,
-					entry_date: activity.entry_date,
-					hours: activity.hours,
-					notes: activity.notes,
-					rating: activity.rating,
-					location: activity.location
-				})
-				.select()
-				.single();
+			const data = unwrapSupabase(
+				await supabase
+					.from('activity_records')
+					.insert({
+						organization_id: activity.organization_id,
+						profession_id: activity.profession_id,
+						user_id: activity.user_id,
+						team_id: activity.team_id,
+						curriculum_activity_id: activity.curriculum_activity_id,
+						entry_date: activity.entry_date,
+						hours: activity.hours,
+						notes: activity.notes,
+						rating: activity.rating,
+						location: activity.location
+					})
+					.select()
+					.single(),
+				'Failed to save activity'
+			);
 
-			if (error) {
-				console.error('[ActivityStorage] Error inserting to Supabase:', error);
-				throw new Error(error.message || 'Failed to save activity');
-			}
-
-			debugLog('Activity saved to Supabase:', data);
+			debug.log('Activity saved to Supabase:', data);
 
 			if (typeof window !== 'undefined') {
-				localStorage.setItem(LAST_ACTIVITY_KEY, activity.curriculum_activity_id);
+				localStorage.setItem(STORAGE_KEYS.lastActivityId, activity.curriculum_activity_id);
 				if (activity.location) {
-					localStorage.setItem(LAST_LOCATION_KEY, activity.location);
+					localStorage.setItem(STORAGE_KEYS.lastLocation, activity.location);
 				}
 			}
 
@@ -205,11 +195,19 @@ function createActivityStore() {
 			return newActivity;
 		},
 		addMany: async (
-			activities: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>[]
+			activities: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>[],
+			maxHours: number = DEFAULT_MAX_HOURS_PER_DAY
 		): Promise<ActivityRecord[]> => {
 			if (activities.length === 0) return [];
 
-			debugLog('Adding multiple activities via store', { count: activities.length });
+			debug.log('Adding multiple activities via store', { count: activities.length });
+
+			if (activities.some((a) => !validateActivity(a, maxHours))) {
+				console.warn('[ActivityStorage] One or more activities failed validation, not adding');
+				throw new Error(
+					'Invalid activity: hours must be a positive number within the allowed range'
+				);
+			}
 
 			const rows = activities.map((a) => ({
 				organization_id: a.organization_id,
@@ -224,19 +222,17 @@ function createActivityStore() {
 				location: a.location
 			}));
 
-			const { data, error } = await supabase.from('activity_records').insert(rows).select();
+			const data = unwrapSupabase(
+				await supabase.from('activity_records').insert(rows).select(),
+				'Failed to save activities'
+			);
 
-			if (error) {
-				console.error('[ActivityStorage] Error bulk inserting to Supabase:', error);
-				throw new Error(error.message || 'Failed to save activities');
-			}
-
-			debugLog('Activities saved to Supabase:', data);
+			debug.log('Activities saved to Supabase:', data);
 
 			const last = activities[activities.length - 1];
 			if (typeof window !== 'undefined') {
-				localStorage.setItem(LAST_ACTIVITY_KEY, last.curriculum_activity_id);
-				if (last.location) localStorage.setItem(LAST_LOCATION_KEY, last.location);
+				localStorage.setItem(STORAGE_KEYS.lastActivityId, last.curriculum_activity_id);
+				if (last.location) localStorage.setItem(STORAGE_KEYS.lastLocation, last.location);
 			}
 
 			const newActivities: ActivityRecord[] = data.map((row, i) => ({
@@ -250,23 +246,19 @@ function createActivityStore() {
 			return newActivities;
 		},
 		delete: async (id: string): Promise<boolean> => {
-			debugLog('Deleting activity via store', { id });
+			debug.log('Deleting activity via store', { id });
 
 			const existing = get(store).find((a) => a.id === id);
 			if (existing && !isWithinEditWindow(existing.entry_date)) {
-				throw new Error(
-					`Einträge können nur innerhalb von ${EDIT_WINDOW_DAYS} Tagen gelöscht werden.`
-				);
+				throw new Error(m.error_edit_window_delete({ days: EDIT_WINDOW_DAYS }));
 			}
 
-			const { error } = await supabase.from('activity_records').delete().eq('id', id);
+			unwrapSupabase(
+				await supabase.from('activity_records').delete().eq('id', id),
+				'Failed to delete activity'
+			);
 
-			if (error) {
-				console.error('[ActivityStorage] Error deleting from Supabase:', error);
-				throw new Error(error.message || 'Failed to delete activity');
-			}
-
-			debugLog('Activity deleted from Supabase:', id);
+			debug.log('Activity deleted from Supabase:', id);
 
 			updateStore((activities) => activities.filter((a) => a.id !== id));
 			return true;
@@ -286,20 +278,19 @@ function createActivityStore() {
 					| 'activity_key'
 					| 'activity_label'
 				>
-			>
+			>,
+			maxHours: number = DEFAULT_MAX_HOURS_PER_DAY
 		): Promise<ActivityRecord | null> => {
-			debugLog('Updating activity via store', { id, activity });
+			debug.log('Updating activity via store', { id, activity });
 
-			if (activity.hours !== undefined && !validateActivity({ hours: activity.hours })) {
+			if (activity.hours !== undefined && !validateActivity({ hours: activity.hours }, maxHours)) {
 				console.warn('[ActivityStorage] Activity validation failed, not updating');
 				return null;
 			}
 
 			const existing = get(store).find((a) => a.id === id);
 			if (existing && !isWithinEditWindow(existing.entry_date)) {
-				throw new Error(
-					`Einträge können nur innerhalb von ${EDIT_WINDOW_DAYS} Tagen bearbeitet werden.`
-				);
+				throw new Error(m.error_edit_window_update({ days: EDIT_WINDOW_DAYS }));
 			}
 
 			const updateData: Record<string, unknown> = {};
@@ -312,22 +303,20 @@ function createActivityStore() {
 			if (activity.rating !== undefined) updateData.rating = activity.rating;
 			if (activity.location !== undefined) updateData.location = activity.location;
 
-			const { data, error } = await supabase
-				.from('activity_records')
-				.update(updateData)
-				.eq('id', id)
-				.select('*')
-				.single();
+			const data = unwrapSupabase(
+				await supabase
+					.from('activity_records')
+					.update(updateData)
+					.eq('id', id)
+					.select('*')
+					.single(),
+				'Failed to update activity'
+			);
 
-			if (error) {
-				console.error('[ActivityStorage] Error updating in Supabase:', error);
-				throw new Error(error.message || 'Failed to update activity');
-			}
-
-			debugLog('Activity updated in Supabase:', data);
+			debug.log('Activity updated in Supabase:', data);
 
 			if (typeof window !== 'undefined' && activity.location) {
-				localStorage.setItem(LAST_LOCATION_KEY, activity.location);
+				localStorage.setItem(STORAGE_KEYS.lastLocation, activity.location);
 			}
 
 			const updatedActivity = toActivityRecord(data as ActivityRecordSource, activity);
@@ -337,7 +326,7 @@ function createActivityStore() {
 			return updatedActivity;
 		},
 		refresh: async () => {
-			debugLog('Refreshing activity store from Supabase');
+			debug.log('Refreshing activity store from Supabase');
 			await load();
 		}
 	};
@@ -345,125 +334,18 @@ function createActivityStore() {
 
 export const activityStore = createActivityStore();
 
-export async function getActivities(): Promise<ActivityRecord[]> {
-	debugLog('Fetching activities from Supabase...');
-
-	const { data, error } = await supabase
-		.from('activity_records')
-		.select('*')
-		.order('created_at', { ascending: false });
-
-	if (error) {
-		console.error('[ActivityStorage] Error fetching from Supabase:', error);
-		return [];
-	}
-
-	if (data && data.length > 0) {
-		return enrichActivityRecords(data as ActivityRecordSource[]);
-	}
-
-	return [];
-}
-
-export async function addActivity(
-	activity: Omit<ActivityRecord, 'id' | 'created_at' | 'updated_at'>
-): Promise<ActivityRecord> {
-	debugLog('Adding new activity', activity);
-
-	if (!validateActivity(activity)) {
-		throw new Error('Invalid activity: hours must be a positive number');
-	}
-
-	const { data, error } = await supabase
-		.from('activity_records')
-		.insert({
-			organization_id: activity.organization_id,
-			profession_id: activity.profession_id,
-			user_id: activity.user_id,
-			team_id: activity.team_id,
-			curriculum_activity_id: activity.curriculum_activity_id,
-			entry_date: activity.entry_date,
-			hours: activity.hours,
-			notes: activity.notes,
-			rating: activity.rating,
-			location: activity.location
-		})
-		.select()
-		.single();
-
-	if (error) {
-		console.error('[ActivityStorage] Error inserting to Supabase:', error);
-		throw new Error(error.message || 'Failed to save activity');
-	}
-
-	if (typeof window !== 'undefined') {
-		localStorage.setItem(LAST_ACTIVITY_KEY, activity.curriculum_activity_id);
-		if (activity.location) {
-			localStorage.setItem(LAST_LOCATION_KEY, activity.location);
-		}
-		debugLog('Stored last activity ID', activity.curriculum_activity_id);
-	}
-
-	debugLog('New activity created', data);
-
-	return {
-		...data,
-		location: data.location || activity.location || '',
-		activity_name: activity.activity_name || '',
-		activity_key: activity.activity_key || '',
-		activity_label: activity.activity_label || ''
-	};
-}
-
-export async function deleteActivity(id: string): Promise<void> {
-	debugLog('Deleting activity', { id });
-
-	const { error } = await supabase.from('activity_records').delete().eq('id', id);
-
-	if (error) {
-		console.error('[ActivityStorage] Error deleting from Supabase:', error);
-		throw new Error(error.message || 'Failed to delete activity');
-	}
-
-	debugLog('Activity deleted successfully', { id });
-}
-
 export function getLastActivityId(): string | null {
 	if (typeof window === 'undefined') return null;
 
-	const lastId = localStorage.getItem(LAST_ACTIVITY_KEY);
-	debugLog('Retrieved last activity ID', lastId);
+	const lastId = localStorage.getItem(STORAGE_KEYS.lastActivityId);
+	debug.log('Retrieved last activity ID', lastId);
 	return lastId;
 }
 
 export function getLastLocation(): string | null {
 	if (typeof window === 'undefined') return null;
 
-	const lastLocation = localStorage.getItem(LAST_LOCATION_KEY);
-	debugLog('Retrieved last location', lastLocation);
+	const lastLocation = localStorage.getItem(STORAGE_KEYS.lastLocation);
+	debug.log('Retrieved last location', lastLocation);
 	return lastLocation;
-}
-
-export async function getActivityById(id: string): Promise<ActivityRecord | undefined> {
-	const {
-		data: { user }
-	} = await supabase.auth.getUser();
-	if (!user) return undefined;
-
-	const { data, error } = await supabase
-		.from('activity_records')
-		.select('*')
-		.eq('id', id)
-		.eq('user_id', user.id)
-		.single();
-
-	if (error) {
-		console.error('[ActivityStorage] Error fetching activity by ID:', error);
-		return undefined;
-	}
-
-	if (!data) return undefined;
-
-	const [activity] = enrichActivityRecords([data as ActivityRecordSource]);
-	return activity;
 }

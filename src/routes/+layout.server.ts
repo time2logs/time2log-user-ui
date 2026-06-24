@@ -1,6 +1,6 @@
 import { redirect, isRedirect, isHttpError } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import type { CurriculumNode, CurriculumNodeSummary, Team } from '$lib/types';
+import type { CurriculumNode, CurriculumNodeSummary, Organization, Team } from '$lib/types';
 
 export const load: LayoutServerLoad = async ({ locals, url }) => {
 	try {
@@ -11,6 +11,10 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				url.pathname === '/' ||
 				url.pathname === '/login' ||
 				url.pathname.startsWith('/login/') ||
+				url.pathname === '/forgot-password' ||
+				url.pathname.startsWith('/forgot-password/') ||
+				url.pathname === '/reset-password' ||
+				url.pathname.startsWith('/reset-password/') ||
 				url.pathname === '/impressum' ||
 				url.pathname.startsWith('/impressum/') ||
 				url.pathname === '/privacy' ||
@@ -25,7 +29,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				teamMember: null,
 				curriculumNodes: [],
 				curriculumNodeSummaries: [],
-				organizationName: null,
+				organization: null,
 				professionLabel: null
 			};
 		}
@@ -43,7 +47,9 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			url.pathname === '/onboarding' ||
 			url.pathname.startsWith('/onboarding/') ||
 			url.pathname === '/login' ||
-			url.pathname.startsWith('/login/');
+			url.pathname.startsWith('/login/') ||
+			url.pathname === '/reset-password' ||
+			url.pathname.startsWith('/reset-password/');
 		if (profile && profile.onboarding_status !== 'completed' && !isAllowedPath) {
 			throw redirect(303, '/onboarding');
 		}
@@ -57,7 +63,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				teamMember: null,
 				curriculumNodes: [],
 				curriculumNodeSummaries: [],
-				organizationName: null,
+				organization: null,
 				professionLabel: null
 			};
 		}
@@ -75,7 +81,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				teamMember: null,
 				curriculumNodes: [],
 				curriculumNodeSummaries: [],
-				organizationName: null,
+				organization: null,
 				professionLabel: null
 			};
 		}
@@ -104,7 +110,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				.order('key'),
 			locals.supabaseAdmin
 				.from('organizations')
-				.select('name')
+				.select('id, name, target_hours')
 				.eq('id', team.organization_id)
 				.single(),
 			locals.supabaseAdmin.from('professions').select('label').eq('id', team.profession_id).single()
@@ -117,7 +123,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				teamMember: enrichedTeamMember,
 				curriculumNodes: [],
 				curriculumNodeSummaries: [],
-				organizationName: null,
+				organization: null,
 				professionLabel: null
 			};
 		}
@@ -131,7 +137,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			teamMember: enrichedTeamMember,
 			curriculumNodes: (nodesResult.data as CurriculumNode[]) ?? [],
 			curriculumNodeSummaries: (summaryResult.data as CurriculumNodeSummary[] | null) ?? [],
-			organizationName: orgResult.data?.name ?? null,
+			organization: (orgResult.data as Organization) ?? null,
 			professionLabel: professionResult.data?.label ?? null
 		};
 	} catch (error) {
@@ -142,7 +148,7 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			teamMember: null,
 			curriculumNodes: [],
 			curriculumNodeSummaries: [],
-			organizationName: null,
+			organization: null,
 			professionLabel: null
 		};
 	}

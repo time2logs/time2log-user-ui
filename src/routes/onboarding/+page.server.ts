@@ -3,7 +3,12 @@ import type { PageServerLoad, Actions } from './$types';
 import type { InviteDetails } from '$lib/types';
 import * as m from '$lib/paraglide/messages.js';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
-import { hashOtp, isSupabaseAuthSecretError, normalizeSwissPhone } from '$lib/server/onboarding';
+import {
+	hashOtp,
+	isSmsEnabled,
+	isSupabaseAuthSecretError,
+	normalizeSwissPhone
+} from '$lib/server/onboarding';
 import { sendSwisscomVerificationSms } from '$lib/server/swisscomSms';
 import { randomInt } from 'node:crypto';
 
@@ -21,9 +26,11 @@ export const load: PageServerLoad = async ({
 	token: string | null;
 	inviteDetails: InviteDetails | null;
 	inviteError: string | null;
+	useSms: boolean;
 }> => {
 	const session = await locals.safeGetSession();
 	const token = url.searchParams.get('invite_token');
+	const useSms = isSmsEnabled();
 
 	// If already logged in and onboarding completed, redirect to dashboard
 	if (session) {
@@ -43,7 +50,8 @@ export const load: PageServerLoad = async ({
 		return {
 			token: null,
 			inviteDetails: null,
-			inviteError: m.onboarding_no_invite_token()
+			inviteError: m.onboarding_no_invite_token(),
+			useSms
 		};
 	}
 
@@ -65,7 +73,8 @@ export const load: PageServerLoad = async ({
 		return {
 			token,
 			inviteDetails: null,
-			inviteError: inviteError.message
+			inviteError: inviteError.message,
+			useSms
 		};
 	}
 
@@ -73,19 +82,25 @@ export const load: PageServerLoad = async ({
 		return {
 			token,
 			inviteDetails: null,
-			inviteError: m.onboarding_invalid_invite()
+			inviteError: m.onboarding_invalid_invite(),
+			useSms
 		};
 	}
 
 	return {
 		token,
 		inviteDetails, // { organization_name, email, role }
-		inviteError: null
+		inviteError: null,
+		useSms
 	};
 };
 
 export const actions: Actions = {
 	sendPhoneCode: async ({ request, locals }) => {
+		if (!isSmsEnabled()) {
+			return fail(404, { error: 'SMS verification is disabled.' });
+		}
+
 		const formData = await request.formData();
 		const token = formData.get('invite_token')?.toString() ?? '';
 		const email = formData.get('email')?.toString().trim().toLowerCase() ?? '';
@@ -211,6 +226,10 @@ export const actions: Actions = {
 		return { phoneSent: true };
 	},
 	verifyPhoneCode: async ({ request, locals }) => {
+		if (!isSmsEnabled()) {
+			return fail(404, { error: 'SMS verification is disabled.' });
+		}
+
 		const formData = await request.formData();
 		const token = formData.get('invite_token')?.toString() ?? '';
 		const email = formData.get('email')?.toString().trim().toLowerCase() ?? '';
@@ -286,6 +305,7 @@ export const actions: Actions = {
 		const email = formData.get('email')?.toString().trim() ?? '';
 		const phoneNumber = formData.get('phone_number')?.toString().trim() ?? '';
 		const avatarFile = formData.get('avatar') as File | null;
+		const useSms = isSmsEnabled();
 
 		let avatarExt: string | null = null;
 		if (avatarFile && avatarFile.size > 0) {
@@ -354,7 +374,7 @@ export const actions: Actions = {
 				values: { firstName, lastName }
 			});
 		}
-		if (!phoneNumber) {
+		if (useSms && !phoneNumber) {
 			return fail(400, {
 				error: m.onboarding_phone_required(),
 				values: { firstName, lastName }
@@ -377,19 +397,22 @@ export const actions: Actions = {
 		}
 		const existingUser = resolved.user;
 
-		const normalizedPhoneNumber = normalizeSwissPhone(phoneNumber);
-		if (!normalizedPhoneNumber) {
-			return fail(400, {
-				error: m.onboarding_phone_invalid(),
-				values: { firstName, lastName }
-			});
+		let normalizedPhoneNumber: string | null = null;
+		if (useSms) {
+			normalizedPhoneNumber = normalizeSwissPhone(phoneNumber);
+			if (!normalizedPhoneNumber) {
+				return fail(400, {
+					error: m.onboarding_phone_invalid(),
+					values: { firstName, lastName }
+				});
+			}
 		}
 
 		// 2. Onboarding-Status prüfen — falls bereits abgeschlossen, abbrechen
 		const { data: profile, error: profileError } = await locals.supabaseSecret
 			.schema('app')
 			.from('profiles')
-			.select('onboarding_status, phone_verified, phone_number')
+			.select(useSms ? 'onboarding_status, phone_verified, phone_number' : 'onboarding_status')
 			.eq('id', existingUser.id)
 			.maybeSingle();
 
@@ -409,7 +432,7 @@ export const actions: Actions = {
 			});
 		}
 
-		if (!profile?.phone_verified || profile.phone_number !== normalizedPhoneNumber) {
+		if (useSms && (!profile?.phone_verified || profile.phone_number !== normalizedPhoneNumber)) {
 			return fail(400, {
 				error: m.onboarding_phone_not_verified(),
 				values: { firstName, lastName }
@@ -421,6 +444,7 @@ export const actions: Actions = {
 			existingUser.id,
 			{
 				password,
+				email_confirm: true,
 				user_metadata: {
 					first_name: firstName,
 					last_name: lastName
@@ -445,7 +469,7 @@ export const actions: Actions = {
 		if (signInError) {
 			console.error('[Onboarding] Sign-in failed:', signInError.message);
 			return fail(500, {
-				error: m.onboarding_error_signin_failed(),
+				error: `${m.onboarding_error_signin_failed()}${signInError.message}`,
 				values: { firstName, lastName }
 			});
 		}
@@ -469,7 +493,7 @@ export const actions: Actions = {
 				id: existingUser.id,
 				first_name: firstName,
 				last_name: lastName,
-				phone_number: normalizedPhoneNumber,
+				...(useSms && normalizedPhoneNumber ? { phone_number: normalizedPhoneNumber } : {}),
 				onboarding_status: 'completed'
 			},
 			{ onConflict: 'id' }

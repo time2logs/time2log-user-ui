@@ -4,8 +4,10 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Label } from '$lib/components/ui/label';
 	import { Button } from '$lib/components/ui/button';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import { Alert } from '$lib/components/ui/alert';
 	import { enhance } from '$app/forms';
-	import { Loader2, Plus } from 'lucide-svelte';
+	import Plus from '@lucide/svelte/icons/plus';
 	import * as m from '$lib/paraglide/messages.js';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import { escapeHtml } from '$lib/htmlUtils';
@@ -218,11 +220,7 @@
 					</Card.Header>
 					<Card.Content class="pt-4">
 						{#if form?.error}
-							<div
-								class="mb-4 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
-							>
-								{form.error}
-							</div>
+							<Alert variant="error" class="mb-4">{form.error}</Alert>
 						{/if}
 
 						<form
@@ -345,61 +343,66 @@
 								/>
 							</div>
 
-							<div class="space-y-2">
-								<Label for="phone_number">{m.onboarding_phone_label()}</Label>
-								<div class="flex gap-2">
-									<Input
-										id="phone_number"
-										name="phone_number"
-										bind:value={phoneNumber}
-										placeholder={m.onboarding_phone_placeholder()}
-										required
-										readonly={isSubmitting || isSendingCode || phoneVerified}
-									/>
-									<Button
-										type="submit"
-										formaction="?/sendPhoneCode"
-										formnovalidate
-										class="shrink-0"
-										variant="outline"
-										disabled={!phoneNumber || isSendingCode || isSubmitting || cooldownSeconds > 0}
-									>
-										{#if isSendingCode}
-											<Loader2 class="h-4 w-4 animate-spin" />
-										{:else if cooldownSeconds > 0}
-											{cooldownSeconds}s
-										{:else}
-											{m.onboarding_phone_send_button()}
-										{/if}
-									</Button>
+							{#if data.useSms}
+								<div class="space-y-2">
+									<Label for="phone_number">{m.onboarding_phone_label()}</Label>
+									<div class="flex gap-2">
+										<Input
+											id="phone_number"
+											name="phone_number"
+											bind:value={phoneNumber}
+											placeholder={m.onboarding_phone_placeholder()}
+											required
+											readonly={isSubmitting || isSendingCode || phoneVerified}
+										/>
+										<Button
+											type="submit"
+											formaction="?/sendPhoneCode"
+											formnovalidate
+											class="shrink-0"
+											variant="outline"
+											disabled={!phoneNumber ||
+												isSendingCode ||
+												isSubmitting ||
+												cooldownSeconds > 0}
+										>
+											{#if isSendingCode}
+												<Spinner size="sm" />
+											{:else if cooldownSeconds > 0}
+												{cooldownSeconds}s
+											{:else}
+												{m.onboarding_phone_send_button()}
+											{/if}
+										</Button>
+									</div>
+									<div class="flex gap-2">
+										<Input
+											id="phone_code"
+											name="phone_code"
+											bind:value={phoneCode}
+											placeholder={m.onboarding_phone_code_placeholder()}
+											maxlength={6}
+											readonly={isSubmitting || isVerifyingCode || phoneVerified}
+										/>
+										<Button
+											type="submit"
+											formaction="?/verifyPhoneCode"
+											formnovalidate
+											class="shrink-0"
+											variant={phoneVerified ? 'secondary' : 'outline'}
+											disabled={!phoneCode || isVerifyingCode || isSubmitting || phoneVerified}
+										>
+											{#if phoneVerified}
+												{m.onboarding_phone_verified_badge()}
+											{:else if isVerifyingCode}
+												<Spinner size="sm" />
+											{:else}
+												{m.onboarding_phone_verify_button()}
+											{/if}
+										</Button>
+									</div>
 								</div>
-								<div class="flex gap-2">
-									<Input
-										id="phone_code"
-										name="phone_code"
-										bind:value={phoneCode}
-										placeholder={m.onboarding_phone_code_placeholder()}
-										maxlength={6}
-										readonly={isSubmitting || isVerifyingCode || phoneVerified}
-									/>
-									<Button
-										type="submit"
-										formaction="?/verifyPhoneCode"
-										formnovalidate
-										class="shrink-0"
-										variant={phoneVerified ? 'secondary' : 'outline'}
-										disabled={!phoneCode || isVerifyingCode || isSubmitting || phoneVerified}
-									>
-										{#if phoneVerified}
-											{m.onboarding_phone_verified_badge()}
-										{:else if isVerifyingCode}
-											<Loader2 class="h-4 w-4 animate-spin" />
-										{:else}
-											{m.onboarding_phone_verify_button()}
-										{/if}
-									</Button>
-								</div>
-							</div>
+							{/if}
 
 							<div>
 								<Label for="first_name">{m.onboarding_first_name_label()}</Label>
@@ -442,13 +445,13 @@
 							<Button
 								type="submit"
 								class="w-full"
-								disabled={isSubmitting || isCompressing || !phoneVerified}
+								disabled={isSubmitting || isCompressing || (data.useSms && !phoneVerified)}
 							>
 								{#if isSubmitting}
-									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+									<Spinner size="sm" class="mr-2" />
 									{m.onboarding_creating_account()}
 								{:else if isCompressing}
-									<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+									<Spinner size="sm" class="mr-2" />
 									Processing image...
 								{:else}
 									{m.onboarding_create_account()}

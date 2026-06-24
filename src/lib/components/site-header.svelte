@@ -5,13 +5,11 @@
 	let { loggedIn = false }: { loggedIn?: boolean } = $props();
 </script>
 
-<header
-	class="border-b border-white/30 bg-white/20 px-8 py-4 backdrop-blur-xl dark:border-slate-700/30 dark:bg-slate-900/40"
->
+<header class="border-b border-border/30 bg-background/60 px-8 py-4 backdrop-blur-xl">
 	<div class="mx-auto flex max-w-6xl items-center justify-between">
 		<div class="flex items-center gap-2">
 			<a
-				class="text-xl font-bold text-stone-800 dark:text-slate-100"
+				class="text-xl font-bold text-foreground"
 				href={loggedIn ? resolve('/dashboard') : resolve('/')}>time2log</a
 			>
 		</div>
