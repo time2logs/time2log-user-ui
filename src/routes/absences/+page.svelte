@@ -226,10 +226,6 @@
 				</Button>
 			</div>
 
-			<div class="mb-4 sm:mb-6">
-				<AbsenceChart {absences} />
-			</div>
-
 			<!-- Absences List -->
 			{#if isLoading}
 				<Card.Root>
@@ -260,36 +256,41 @@
 					</Card.Content>
 				</Card.Root>
 			{:else}
+				<!-- Upcoming absences above the chart -->
 				<div class="grid gap-3 lg:gap-6">
 					{#each upcomingAbsences as absence (absence.id)}
 						{@render absenceCard(absence)}
 					{/each}
-
-					{#if pastAbsences.length > 0}
-						<div class="mt-2">
-							<button
-								type="button"
-								onclick={() => (showPast = !showPast)}
-								class="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-							>
-								<span class="transition-transform duration-200 {showPast ? 'rotate-90' : ''}"
-									>▶</span
-								>
-								{showPast
-									? m.absences_hide_past()
-									: m.absences_show_past({ count: pastAbsences.length })}
-							</button>
-
-							{#if showPast}
-								<div class="mt-3 grid gap-3 opacity-60 lg:gap-4">
-									{#each pastAbsences as absence (absence.id)}
-										{@render absenceCard(absence)}
-									{/each}
-								</div>
-							{/if}
-						</div>
-					{/if}
 				</div>
+
+				<!-- Chart -->
+				<div class="my-4 sm:my-6">
+					<AbsenceChart {absences} />
+				</div>
+
+				<!-- Past absences below the chart -->
+				{#if pastAbsences.length > 0}
+					<div class="mt-2">
+						<button
+							type="button"
+							onclick={() => (showPast = !showPast)}
+							class="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+						>
+							<span class="transition-transform duration-200 {showPast ? 'rotate-90' : ''}">▶</span>
+							{showPast
+								? m.absences_hide_past()
+								: m.absences_show_past({ count: pastAbsences.length })}
+						</button>
+
+						{#if showPast}
+							<div class="mt-3 grid gap-3 opacity-60 lg:gap-4">
+								{#each pastAbsences as absence (absence.id)}
+									{@render absenceCard(absence)}
+								{/each}
+							</div>
+						{/if}
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</main>
