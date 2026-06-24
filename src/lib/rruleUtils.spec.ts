@@ -11,10 +11,6 @@ describe('getFrequencyString', () => {
 		expect(getFrequencyString(Frequency.WEEKLY)).toBe('weekly');
 	});
 
-	it('maps MONTHLY (3) to "monthly"', () => {
-		expect(getFrequencyString(Frequency.MONTHLY)).toBe('monthly');
-	});
-
 	it('defaults to "weekly" for unknown values', () => {
 		expect(getFrequencyString(99)).toBe('weekly');
 	});
@@ -27,10 +23,6 @@ describe('getFrequencyEnum', () => {
 
 	it('maps "weekly" to Frequency.WEEKLY', () => {
 		expect(getFrequencyEnum('weekly')).toBe(Frequency.WEEKLY);
-	});
-
-	it('maps "monthly" to Frequency.MONTHLY', () => {
-		expect(getFrequencyEnum('monthly')).toBe(Frequency.MONTHLY);
 	});
 
 	it('defaults to Frequency.WEEKLY for unknown strings', () => {
@@ -86,17 +78,6 @@ describe('buildRruleString', () => {
 		expect(result).toContain('FREQ=DAILY');
 	});
 
-	it('builds a monthly rrule', () => {
-		const result = buildRruleString({
-			startDate: '2024-03-15',
-			isRecurring: true,
-			recurrenceFrequency: 'monthly',
-			selectedDays: [],
-			recurrenceUntil: ''
-		});
-		expect(result).toContain('FREQ=MONTHLY');
-	});
-
 	it('adds BYDAY for weekly frequency with selected days', () => {
 		const result = buildRruleString({
 			startDate: '2024-01-01',
@@ -114,17 +95,6 @@ describe('buildRruleString', () => {
 			isRecurring: true,
 			recurrenceFrequency: 'weekly',
 			selectedDays: [],
-			recurrenceUntil: ''
-		});
-		expect(result).not.toContain('BYDAY');
-	});
-
-	it('does not add BYDAY for monthly frequency even with selected days', () => {
-		const result = buildRruleString({
-			startDate: '2024-01-01',
-			isRecurring: true,
-			recurrenceFrequency: 'monthly',
-			selectedDays: [1, 2],
 			recurrenceUntil: ''
 		});
 		expect(result).not.toContain('BYDAY');

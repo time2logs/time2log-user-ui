@@ -16,7 +16,7 @@
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
 	import { rrulestr, Frequency } from 'rrule';
-	import { getFrequencyString, buildRruleString } from '$lib/rruleUtils';
+	import { getFrequencyString, buildRruleString, byweekdayToIndex } from '$lib/rruleUtils';
 	import { getAbsenceTypeLabel } from '$lib/absence-types';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import { SegmentedControl } from '$lib/components/ui/segmented-control';
@@ -69,13 +69,14 @@
 	let startDate = $state<string>('');
 	let endDate = $state<string>('');
 	let dayFraction = $state<number>(1);
-	let recurrenceFrequency = $state<'daily' | 'weekly' | 'monthly'>('weekly');
+	let recurrenceFrequency = $state<'daily' | 'weekly'>('weekly');
 	let selectedDays = $state<number[]>([]);
 	let recurrenceUntil = $state<string>('');
 	let notes = $state<string>('');
 	let isSubmitting = $state(false);
 	let hasInitialized = $state(false);
 	let submitError = $state<string | null>(null);
+	let lastSyncedStart = $state<string>('');
 	let deleteDialogOpen = $state(false);
 	let deleteChoice = $state<'all' | null>(null);
 	let isDeleting = $state(false);
@@ -119,6 +120,12 @@
 		return dates;
 	}
 
+	function weekdayIndexOf(dateStr: string): number | null {
+		if (!dateStr) return null;
+		const day = new Date(`${dateStr}T12:00:00`).getDay();
+		return Number.isNaN(day) ? null : day;
+	}
+
 	$effect(() => {
 		if (open && !hasInitialized) {
 			if (absenceToEdit) {
@@ -147,11 +154,7 @@
 									? byweekdayRaw
 									: [byweekdayRaw];
 						selectedDays = byweekday
-							.map((d) => {
-								if (typeof d === 'number') return d;
-								if (typeof d === 'string') return weekdays.find((day) => day.short === d)?.value;
-								return d.weekday;
-							})
+							.map((d) => byweekdayToIndex(d))
 							.filter((value): value is number => value !== undefined);
 					} catch (e) {
 						console.error('Failed to parse rrule:', e);
@@ -170,6 +173,7 @@
 			}
 			submitError = null;
 			deleteError = null;
+			lastSyncedStart = startDate;
 			hasInitialized = true;
 		} else if (!open) {
 			hasInitialized = false;
@@ -183,6 +187,16 @@
 		}
 	});
 
+	$effect(() => {
+		if (hasInitialized && startDate && startDate !== lastSyncedStart) {
+			const wd = weekdayIndexOf(startDate);
+			if (wd !== null) {
+				selectedDays = [wd];
+			}
+			lastSyncedStart = startDate;
+		}
+	});
+
 	function getRruleString(): string {
 		return buildRruleString({
 			startDate,
@@ -191,6 +205,24 @@
 			selectedDays,
 			recurrenceUntil
 		});
+	}
+
+	function toggleRecurring(checked: boolean) {
+		isRecurring = checked;
+		if (checked) {
+			if (endDate && endDate !== startDate) {
+				recurrenceUntil = endDate;
+			}
+			endDate = startDate;
+			const wd = weekdayIndexOf(startDate);
+			if (wd !== null) {
+				selectedDays = [wd];
+			}
+			lastSyncedStart = startDate;
+		} else if (recurrenceUntil) {
+			endDate = recurrenceUntil;
+			recurrenceUntil = '';
+		}
 	}
 
 	function toggleDay(day: number) {
@@ -204,7 +236,7 @@
 	const isValid = $derived(selectedAbsenceType !== null && startDate && endDate && !isSubmitting);
 	const showRecurrenceOptions = $derived(isRecurring && selectedAbsenceType !== null);
 	const canSubmitRecurring = $derived(
-		!isRecurring || recurrenceFrequency === 'monthly' || selectedDays.length > 0
+		!isRecurring || recurrenceFrequency === 'daily' || selectedDays.length > 0
 	);
 	const isLocked = $derived(!!absenceToEdit && !isAbsenceWithinEditWindow(absenceToEdit));
 
@@ -304,12 +336,13 @@
 			}
 
 			const rrule = isRecurring ? getRruleString() : null;
+			const effectiveEndDate = isRecurring ? recurrenceUntil || startDate : endDate;
 
 			if (absenceToEdit) {
 				await absenceStore.update(absenceToEdit.id, {
 					absence_type_id: selectedAbsenceType,
 					start_date: startDate,
-					end_date: endDate,
+					end_date: effectiveEndDate,
 					day_fraction: dayFraction,
 					is_recurring: isRecurring,
 					rrule,
@@ -322,7 +355,7 @@
 					team_id: teamMember.team_id || null,
 					absence_type_id: selectedAbsenceType,
 					start_date: startDate,
-					end_date: endDate,
+					end_date: effectiveEndDate,
 					day_fraction: dayFraction,
 					is_recurring: isRecurring,
 					rrule,
@@ -414,8 +447,8 @@
 							type="button"
 							onclick={() => {
 								selectedAbsenceType = type.id;
-								if (!type.recurring) {
-									isRecurring = false;
+								if (!type.recurring && isRecurring) {
+									toggleRecurring(false);
 								}
 							}}
 							class="flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors {selectedAbsenceType ===
@@ -431,15 +464,21 @@
 
 			{#if selectedAbsenceType}
 				<div class="grid gap-3 rounded-lg border border-border bg-muted/20 p-4">
-					<div class="grid gap-3 sm:grid-cols-3">
+					<div class="grid gap-3 {isRecurring ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}">
 						<div class="grid gap-2">
-							<Label for="startDate">{m.absence_start_date_label()}</Label>
-							<Input id="startDate" type="date" lang={dateLocale} bind:value={startDate} />
+							<Label for="startDate"
+								>{m.absence_start_date_label()} <span class="text-destructive">*</span></Label
+							>
+							<Input id="startDate" type="date" lang={dateLocale} bind:value={startDate} required />
 						</div>
-						<div class="grid gap-2">
-							<Label for="endDate">{m.absence_end_date_label()}</Label>
-							<Input id="endDate" type="date" lang={dateLocale} bind:value={endDate} />
-						</div>
+						{#if !isRecurring}
+							<div class="grid gap-2">
+								<Label for="endDate"
+									>{m.absence_end_date_label()} <span class="text-destructive">*</span></Label
+								>
+								<Input id="endDate" type="date" lang={dateLocale} bind:value={endDate} required />
+							</div>
+						{/if}
 						<div
 							class="relative grid gap-2"
 							role="presentation"
@@ -486,7 +525,8 @@
 							<input
 								id="recurring"
 								type="checkbox"
-								bind:checked={isRecurring}
+								checked={isRecurring}
+								onchange={(e) => toggleRecurring(e.currentTarget.checked)}
 								class="h-4 w-4 rounded border-border accent-primary"
 							/>
 							<Label for="recurring" class="cursor-pointer font-medium">{m.recurring_label()}</Label
@@ -501,15 +541,14 @@
 									<SegmentedControl
 										items={[
 											{ value: 'daily', label: m.recurring_frequency_daily() },
-											{ value: 'weekly', label: m.recurring_frequency_weekly() },
-											{ value: 'monthly', label: m.recurring_frequency_monthly() }
+											{ value: 'weekly', label: m.recurring_frequency_weekly() }
 										]}
 										value={recurrenceFrequency}
 										onSelect={(v) => (recurrenceFrequency = v as typeof recurrenceFrequency)}
 									/>
 								</div>
 
-								{#if recurrenceFrequency !== 'monthly'}
+								{#if recurrenceFrequency === 'weekly'}
 									<div class="grid gap-2">
 										<Label>{m.recurring_days_of_week()}</Label>
 										<SegmentedControl

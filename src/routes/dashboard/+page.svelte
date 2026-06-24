@@ -106,9 +106,7 @@
 	);
 	const loggedAbsenceTimeInDays = $derived(
 		absences
-			.filter(
-				(absence) => selectedDateIso >= absence.start_date && selectedDateIso <= absence.end_date
-			)
+			.filter((absence) => isDateInAbsence(selectedDateIso, absence))
 			.reduce((sum, absence) => sum + absence.day_fraction, 0)
 	);
 

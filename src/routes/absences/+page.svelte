@@ -20,6 +20,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { EmptyState } from '$lib/components/ui/empty-state';
 	import { isAbsenceWithinEditWindow, EDIT_WINDOW_DAYS } from '$lib/utils';
+	import { byweekdayToIndex, getRruleUntil } from '$lib/rruleUtils';
 
 	const dateLocale = $derived(getDateLocale());
 
@@ -32,16 +33,18 @@
 
 	const todayStr = new Date().toISOString().split('T')[0];
 
+	function isUpcoming(absence: AbsenceRecord): boolean {
+		if (absence.end_date >= todayStr) return true;
+		// Open-ended recurring absences (no UNTIL) are always upcoming
+		return absence.is_recurring && absence.rrule ? !absence.rrule.includes('UNTIL=') : false;
+	}
+
 	const upcomingAbsences = $derived(
-		absences
-			.filter((a) => a.end_date >= todayStr)
-			.sort((a, b) => a.start_date.localeCompare(b.start_date))
+		absences.filter(isUpcoming).sort((a, b) => a.start_date.localeCompare(b.start_date))
 	);
 
 	const pastAbsences = $derived(
-		absences
-			.filter((a) => a.end_date < todayStr)
-			.sort((a, b) => b.start_date.localeCompare(a.start_date))
+		absences.filter((a) => !isUpcoming(a)).sort((a, b) => b.start_date.localeCompare(a.start_date))
 	);
 
 	onMount(async () => {
@@ -103,13 +106,8 @@
 				if (weekdayArray.length > 0) {
 					const days = weekdayArray
 						.map((d) => {
-							const dayNum =
-								typeof d === 'number'
-									? d
-									: typeof d === 'string'
-										? ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].indexOf(d)
-										: d.weekday;
-							if (dayNum < 0) return '';
+							const dayNum = byweekdayToIndex(d);
+							if (dayNum == null) return '';
 							return getWeekdayName(dayNum);
 						})
 						.filter(Boolean)
@@ -118,22 +116,21 @@
 				} else {
 					desc += m.recurrence_week();
 				}
-			} else if (freq === 3) {
-				// MONTHLY
-				desc += m.recurrence_month();
 			} else if (freq === 1) {
 				// DAILY
 				desc += m.recurrence_day();
 			}
 
 			if (options.until) {
-				const until = options.until instanceof Date ? options.until : new Date(options.until);
-				const untilStr = new Intl.DateTimeFormat(dateLocale, {
-					month: 'short',
-					day: 'numeric',
-					year: 'numeric'
-				}).format(until);
-				desc += ` ${m.recurrence_until_prefix()} ${untilStr}`;
+				const rawUntil = getRruleUntil(absence.rrule);
+				if (rawUntil) {
+					const untilStr = new Intl.DateTimeFormat(dateLocale, {
+						month: 'short',
+						day: 'numeric',
+						year: 'numeric'
+					}).format(new Date(`${rawUntil}T12:00:00`));
+					desc += ` ${m.recurrence_until_prefix()} ${untilStr}`;
+				}
 			}
 
 			return desc;
@@ -229,10 +226,6 @@
 				</Button>
 			</div>
 
-			<div class="mb-4 sm:mb-6">
-				<AbsenceChart {absences} />
-			</div>
-
 			<!-- Absences List -->
 			{#if isLoading}
 				<Card.Root>
@@ -263,36 +256,41 @@
 					</Card.Content>
 				</Card.Root>
 			{:else}
+				<!-- Upcoming absences above the chart -->
 				<div class="grid gap-3 lg:gap-6">
 					{#each upcomingAbsences as absence (absence.id)}
 						{@render absenceCard(absence)}
 					{/each}
-
-					{#if pastAbsences.length > 0}
-						<div class="mt-2">
-							<button
-								type="button"
-								onclick={() => (showPast = !showPast)}
-								class="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-							>
-								<span class="transition-transform duration-200 {showPast ? 'rotate-90' : ''}"
-									>▶</span
-								>
-								{showPast
-									? m.absences_hide_past()
-									: m.absences_show_past({ count: pastAbsences.length })}
-							</button>
-
-							{#if showPast}
-								<div class="mt-3 grid gap-3 opacity-60 lg:gap-4">
-									{#each pastAbsences as absence (absence.id)}
-										{@render absenceCard(absence)}
-									{/each}
-								</div>
-							{/if}
-						</div>
-					{/if}
 				</div>
+
+				<!-- Chart -->
+				<div class="my-4 sm:my-6">
+					<AbsenceChart {absences} />
+				</div>
+
+				<!-- Past absences below the chart -->
+				{#if pastAbsences.length > 0}
+					<div class="mt-2">
+						<button
+							type="button"
+							onclick={() => (showPast = !showPast)}
+							class="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+						>
+							<span class="transition-transform duration-200 {showPast ? 'rotate-90' : ''}">▶</span>
+							{showPast
+								? m.absences_hide_past()
+								: m.absences_show_past({ count: pastAbsences.length })}
+						</button>
+
+						{#if showPast}
+							<div class="mt-3 grid gap-3 opacity-60 lg:gap-4">
+								{#each pastAbsences as absence (absence.id)}
+									{@render absenceCard(absence)}
+								{/each}
+							</div>
+						{/if}
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</main>

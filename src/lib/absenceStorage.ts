@@ -36,12 +36,8 @@ function toAbsenceRecord(record: AbsenceRow): AbsenceRecord {
  * Check if a date falls within an absence period (handles both fixed ranges and recurring rules)
  */
 export function isDateInAbsence(date: string, absence: AbsenceRow | AbsenceRecord): boolean {
-	// Check if date is within the start_date and end_date range
-	if (date >= absence.start_date && date <= absence.end_date) {
-		return true;
-	}
-
-	// If recurring with rrule, check if the date matches the recurrence rule
+	// Recurring absences are matched solely by their rrule — the stored
+	// start_date/end_date range is not used for day-level matching.
 	if (absence.is_recurring && absence.rrule) {
 		try {
 			const rule = rrulestr(absence.rrule, {
@@ -59,7 +55,8 @@ export function isDateInAbsence(date: string, absence: AbsenceRow | AbsenceRecor
 		}
 	}
 
-	return false;
+	// Non-recurring: simple start_date/end_date range check
+	return date >= absence.start_date && date <= absence.end_date;
 }
 
 export function getAbsenceFractionForDate(
