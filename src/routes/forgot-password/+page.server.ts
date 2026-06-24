@@ -29,16 +29,29 @@ export const actions: Actions = {
 		// Rate limit by email and by client to stop reset-mail flooding.
 		const clientIp = getClientId(event);
 		const emailHash = hashId(email);
-		const cooldownLimit = checkRateLimit(rateKey('resetpw:email:cooldown', emailHash), 1, WINDOW_1MIN);
+		const cooldownLimit = checkRateLimit(
+			rateKey('resetpw:email:cooldown', emailHash),
+			1,
+			WINDOW_1MIN
+		);
+		if (!cooldownLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: cooldownLimit.retryAfterSeconds.toString() })
+			});
+		}
+
 		const emailLimit = checkRateLimit(rateKey('resetpw:email', emailHash), 5, WINDOW_15MIN);
+		if (!emailLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: emailLimit.retryAfterSeconds.toString() })
+			});
+		}
+
 		const ipLimit = checkRateLimit(rateKey('resetpw:ip', clientIp), 10, WINDOW_15MIN);
-		if (!cooldownLimit.allowed || !emailLimit.allowed || !ipLimit.allowed) {
-			const seconds = Math.max(
-				cooldownLimit.retryAfterSeconds,
-				emailLimit.retryAfterSeconds,
-				ipLimit.retryAfterSeconds
-			);
-			return fail(429, { error: m.rate_limited({ seconds: seconds.toString() }) });
+		if (!ipLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: ipLimit.retryAfterSeconds.toString() })
+			});
 		}
 
 		const { error } = await locals.supabase.auth.resetPasswordForEmail(email, {

@@ -30,15 +30,13 @@ type ResolvedInviteUser =
 			reason: 'invite_invalid' | 'email_mismatch' | 'auth_misconfigured';
 	  };
 
-export const load: PageServerLoad = async ({
-	url,
-	locals
-}): Promise<{
+export const load: PageServerLoad = async (event): Promise<{
 	token: string | null;
 	inviteDetails: InviteDetails | null;
 	inviteError: string | null;
 	useSms: boolean;
 }> => {
+	const { url, locals } = event;
 	const session = await locals.safeGetSession();
 	const token = url.searchParams.get('invite_token');
 	const useSms = isSmsEnabled();
@@ -62,6 +60,34 @@ export const load: PageServerLoad = async ({
 			token: null,
 			inviteDetails: null,
 			inviteError: m.onboarding_no_invite_token(),
+			useSms
+		};
+	}
+
+	const loadIpLimit = checkRateLimit(
+		rateKey('onboard:load:ip', getClientId(event)),
+		30,
+		WINDOW_15MIN
+	);
+	if (!loadIpLimit.allowed) {
+		return {
+			token,
+			inviteDetails: null,
+			inviteError: m.rate_limited({ seconds: loadIpLimit.retryAfterSeconds.toString() }),
+			useSms
+		};
+	}
+
+	const loadTokenLimit = checkRateLimit(
+		rateKey('onboard:load:token', hashId(token)),
+		20,
+		WINDOW_15MIN
+	);
+	if (!loadTokenLimit.allowed) {
+		return {
+			token,
+			inviteDetails: null,
+			inviteError: m.rate_limited({ seconds: loadTokenLimit.retryAfterSeconds.toString() }),
 			useSms
 		};
 	}
@@ -132,7 +158,11 @@ export const actions: Actions = {
 		}
 
 		// Rate limit by client to blunt SMS-flooding attempts before they reach the provider.
-		const ipSmsLimit = checkRateLimit(rateKey('onboard:sms:ip', getClientId(event)), 10, WINDOW_15MIN);
+		const ipSmsLimit = checkRateLimit(
+			rateKey('onboard:sms:ip', getClientId(event)),
+			10,
+			WINDOW_15MIN
+		);
 		if (!ipSmsLimit.allowed) {
 			return fail(429, {
 				error: m.rate_limited({ seconds: ipSmsLimit.retryAfterSeconds.toString() })
@@ -147,6 +177,17 @@ export const actions: Actions = {
 			return fail(400, { error: 'Kein Benutzer mit dieser E-Mail-Adresse gefunden.' });
 		}
 		const existingUser = resolved.user;
+
+		const phoneSmsLimit = checkRateLimit(
+			rateKey('onboard:sms:phone', hashId(phoneNumber)),
+			5,
+			WINDOW_1HOUR
+		);
+		if (!phoneSmsLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: phoneSmsLimit.retryAfterSeconds.toString() })
+			});
+		}
 
 		const { data: profileData, error: profileError } = await locals.supabaseSecret
 			.schema('app')
@@ -267,18 +308,26 @@ export const actions: Actions = {
 		}
 
 		// Throttle OTP guessing: 5 attempts per 10 min per invite token + per client.
+		const verifyIpLimit = checkRateLimit(
+			rateKey('onboard:verify:ip', getClientId(event)),
+			20,
+			WINDOW_10MIN
+		);
+		if (!verifyIpLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: verifyIpLimit.retryAfterSeconds.toString() })
+			});
+		}
+
 		const verifyTokenLimit = checkRateLimit(
 			rateKey('onboard:verify:token', hashId(token)),
 			5,
 			WINDOW_10MIN
 		);
-		const verifyIpLimit = checkRateLimit(rateKey('onboard:verify:ip', getClientId(event)), 20, WINDOW_10MIN);
-		if (!verifyTokenLimit.allowed || !verifyIpLimit.allowed) {
-			const seconds = Math.max(
-				verifyTokenLimit.retryAfterSeconds,
-				verifyIpLimit.retryAfterSeconds
-			);
-			return fail(429, { error: m.rate_limited({ seconds: seconds.toString() }) });
+		if (!verifyTokenLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: verifyTokenLimit.retryAfterSeconds.toString() })
+			});
 		}
 
 		const resolved = await resolveInvitedUser(locals, token, email);
@@ -419,23 +468,26 @@ export const actions: Actions = {
 		}
 
 		// Rate limit completion attempts to stop token probing / account-provisioning spam.
-		const completeTokenLimit = checkRateLimit(
-			rateKey('onboard:complete:token', hashId(token)),
-			5,
-			WINDOW_1HOUR
-		);
 		const completeIpLimit = checkRateLimit(
 			rateKey('onboard:complete:ip', getClientId(event)),
 			10,
 			WINDOW_1HOUR
 		);
-		if (!completeTokenLimit.allowed || !completeIpLimit.allowed) {
-			const seconds = Math.max(
-				completeTokenLimit.retryAfterSeconds,
-				completeIpLimit.retryAfterSeconds
-			);
+		if (!completeIpLimit.allowed) {
 			return fail(429, {
-				error: m.rate_limited({ seconds: seconds.toString() }),
+				error: m.rate_limited({ seconds: completeIpLimit.retryAfterSeconds.toString() }),
+				values: { firstName, lastName }
+			});
+		}
+
+		const completeTokenLimit = checkRateLimit(
+			rateKey('onboard:complete:token', hashId(token)),
+			5,
+			WINDOW_1HOUR
+		);
+		if (!completeTokenLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: completeTokenLimit.retryAfterSeconds.toString() }),
 				values: { firstName, lastName }
 			});
 		}
