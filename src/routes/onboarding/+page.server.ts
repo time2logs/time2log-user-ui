@@ -4,22 +4,9 @@ import type { InviteDetails } from '$lib/types';
 import * as m from '$lib/paraglide/messages.js';
 import { getRateLimitSeconds } from '$lib/rateLimitError';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
-import {
-	hashOtp,
-	isSmsEnabled,
-	isSupabaseAuthSecretError,
-	normalizeSwissPhone
-} from '$lib/server/onboarding';
-import { sendSwisscomVerificationSms } from '$lib/server/swisscomSms';
-import { randomInt } from 'node:crypto';
-import {
-	checkRateLimit,
-	getClientId,
-	hashId,
-	rateKey
-} from '$lib/server/rateLimiter';
+import { isSupabaseAuthSecretError } from '$lib/server/onboarding';
+import { checkRateLimit, getClientId, hashId, rateKey } from '$lib/server/rateLimiter';
 
-const WINDOW_10MIN = 10 * 60 * 1000;
 const WINDOW_15MIN = 15 * 60 * 1000;
 const WINDOW_1HOUR = 60 * 60 * 1000;
 
@@ -30,7 +17,9 @@ type ResolvedInviteUser =
 			reason: 'invite_invalid' | 'email_mismatch' | 'auth_misconfigured';
 	  };
 
-export const load: PageServerLoad = async (event): Promise<{
+export const load: PageServerLoad = async (
+	event
+): Promise<{
 	token: string | null;
 	inviteDetails: InviteDetails | null;
 	inviteError: string | null;
@@ -70,8 +59,7 @@ export const load: PageServerLoad = async (event): Promise<{
 		return {
 			token,
 			inviteDetails: null,
-			inviteError: m.rate_limited({ seconds: loadIpLimit.retryAfterSeconds.toString() }),
-			useSms
+			inviteError: m.rate_limited({ seconds: loadIpLimit.retryAfterSeconds.toString() })
 		};
 	}
 
@@ -84,8 +72,7 @@ export const load: PageServerLoad = async (event): Promise<{
 		return {
 			token,
 			inviteDetails: null,
-			inviteError: m.rate_limited({ seconds: loadTokenLimit.retryAfterSeconds.toString() }),
-			useSms
+			inviteError: m.rate_limited({ seconds: loadTokenLimit.retryAfterSeconds.toString() })
 		};
 	}
 
@@ -128,7 +115,7 @@ export const load: PageServerLoad = async (event): Promise<{
 };
 
 export const actions: Actions = {
-	complete: async ({ request, locals }) => {
+	complete: async ({ request, locals, getClientAddress }) => {
 		const formData = await request.formData();
 		const firstName = formData.get('first_name')?.toString().trim() ?? '';
 		const lastName = formData.get('last_name')?.toString().trim() ?? '';
@@ -207,7 +194,7 @@ export const actions: Actions = {
 
 		// Rate limit completion attempts to stop token probing / account-provisioning spam.
 		const completeIpLimit = checkRateLimit(
-			rateKey('onboard:complete:ip', getClientId(event)),
+			rateKey('onboard:complete:ip', getClientId({ getClientAddress })),
 			10,
 			WINDOW_1HOUR
 		);

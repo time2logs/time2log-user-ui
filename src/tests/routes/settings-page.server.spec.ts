@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
-
-type FailResult = { status: number; data: Record<string, unknown> };
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import type { RequestEvent } from '@sveltejs/kit';
+import { resetRateLimiter } from '$lib/server/rateLimiter';
 
 vi.mock('$lib/paraglide/messages.js', () => ({
 	settings_error_name_required: () => 'name_required',
@@ -44,46 +44,46 @@ function makeRequest(data: Record<string, string>): Request {
 
 describe('updatePassword action', () => {
 	it('fails 400 when passwords do not match', async () => {
-		const result = (await actions.updatePassword({
+		const result = await actions.updatePassword({
 			request: makeRequest({ password: 'Secret1!', confirm_password: 'Different1!' }),
 			locals: makeLocals()
-		} as never)) as FailResult;
+		} as RequestEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.passwordError).toBe('password_mismatch');
 	});
 
 	it('fails 400 when password is shorter than 8 characters', async () => {
-		const result = (await actions.updatePassword({
+		const result = await actions.updatePassword({
 			request: makeRequest({ password: 'S1!', confirm_password: 'S1!' }),
 			locals: makeLocals()
-		} as never)) as FailResult;
+		} as RequestEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.passwordError).toBe('password_length');
 	});
 
 	it('fails 400 when password has no uppercase letter', async () => {
-		const result = (await actions.updatePassword({
+		const result = await actions.updatePassword({
 			request: makeRequest({ password: 'secret1!', confirm_password: 'secret1!' }),
 			locals: makeLocals()
-		} as never)) as FailResult;
+		} as RequestEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.passwordError).toBe('password_uppercase');
 	});
 
 	it('fails 400 when password has no digit', async () => {
-		const result = (await actions.updatePassword({
+		const result = await actions.updatePassword({
 			request: makeRequest({ password: 'SecretA!', confirm_password: 'SecretA!' }),
 			locals: makeLocals()
-		} as never)) as FailResult;
+		} as RequestEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.passwordError).toBe('password_number');
 	});
 
 	it('fails 400 when password has no special character', async () => {
-		const result = (await actions.updatePassword({
+		const result = await actions.updatePassword({
 			request: makeRequest({ password: 'Secret123', confirm_password: 'Secret123' }),
 			locals: makeLocals()
-		} as never)) as FailResult;
+		} as RequestEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.passwordError).toBe('password_special');
 	});
@@ -119,19 +119,23 @@ describe('updateEmail action', () => {
 	});
 
 	it('fails 400 when email is empty', async () => {
-		const result = (await actions.updateEmail({
-			request: makeRequest({ email: '' }),
+		const result = await actions.updateEmail({
+			request: makeRequest({ current_email: 'current@example.com', email: '', otp: '123456' }),
 			locals: makeLocals()
-		} as never)) as FailResult;
+		} as RequestEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.emailError).toBe('email_missing');
 	});
 
 	it('fails 400 when email is the same as the current one', async () => {
-		const result = (await actions.updateEmail({
-			request: makeRequest({ email: 'current@example.com' }),
+		const result = await actions.updateEmail({
+			request: makeRequest({
+				current_email: 'current@example.com',
+				email: 'current@example.com',
+				otp: '123456'
+			}),
 			locals: makeLocals('current@example.com')
-		} as never)) as FailResult;
+		} as RequestEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.emailError).toBe('email_unchanged');
 	});
@@ -141,19 +145,19 @@ describe('updateEmail action', () => {
 
 describe('updateProfile action', () => {
 	it('fails 400 when first_name is missing', async () => {
-		const result = (await actions.updateProfile({
+		const result = await actions.updateProfile({
 			request: makeRequest({ first_name: '', last_name: 'Meier' }),
 			locals: makeLocals()
-		} as never)) as FailResult;
+		} as RequestEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.profileError).toBe('name_required');
 	});
 
 	it('fails 400 when last_name is missing', async () => {
-		const result = (await actions.updateProfile({
+		const result = await actions.updateProfile({
 			request: makeRequest({ first_name: 'Anna', last_name: '' }),
 			locals: makeLocals()
-		} as never)) as FailResult;
+		} as RequestEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.profileError).toBe('name_required');
 	});
@@ -164,10 +168,10 @@ describe('updateProfile action', () => {
 		fd.append('first_name', 'Anna');
 		fd.append('last_name', 'Meier');
 		fd.append('avatar', largeFile);
-		const result = (await actions.updateProfile({
+		const result = await actions.updateProfile({
 			request: { formData: () => Promise.resolve(fd) } as unknown as Request,
 			locals: makeLocals()
-		} as never)) as FailResult;
+		} as RequestEvent);
 		expect(result.status).toBe(400);
 		expect(result.data.profileError).toBe('file_too_large');
 	});
