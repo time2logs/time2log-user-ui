@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
+import { resetRateLimiter } from '$lib/server/rateLimiter';
 
 vi.mock('$lib/paraglide/messages.js', () => ({
 	settings_error_name_required: () => 'name_required',
@@ -21,6 +22,10 @@ vi.mock('$lib/server/avatarValidation', () => ({
 }));
 
 import { actions } from '../../routes/settings/+page.server';
+
+beforeEach(() => {
+	resetRateLimiter();
+});
 
 function makeLocals(email = 'current@example.com'): App.Locals {
 	return {

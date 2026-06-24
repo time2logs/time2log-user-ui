@@ -6,6 +6,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import * as Card from '$lib/components/ui/card';
 	import { supabase } from '$lib/supabaseClient';
+	import { getRateLimitSeconds } from '$lib/rateLimitError';
 	import { cn } from '$lib/utils';
 	import * as m from '$lib/paraglide/messages.js';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
@@ -17,14 +18,20 @@
 	let password = $state('');
 	let errorMessage = $state('');
 	let isLoading = $state(false);
+	let lastSubmitAt = 0;
 
 	async function signInWithEmail() {
+		// ponytail: client-side cooldown only; real protection is Supabase auth rate limits.
+		const now = Date.now();
+		if (now - lastSubmitAt < 1000) return;
+		lastSubmitAt = now;
 		isLoading = true;
 		const { error } = await supabase.auth.signInWithPassword({
 			email: email,
 			password: password
 		});
-		errorMessage = error ? error.message : '';
+		const seconds = getRateLimitSeconds(error);
+		errorMessage = seconds ? m.rate_limited({ seconds }) : error?.message || '';
 		isLoading = false;
 
 		if (!error) {

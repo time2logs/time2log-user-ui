@@ -2,6 +2,7 @@ import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { InviteDetails } from '$lib/types';
 import * as m from '$lib/paraglide/messages.js';
+import { getRateLimitSeconds } from '$lib/rateLimitError';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
 import {
 	hashOtp,
@@ -11,6 +12,16 @@ import {
 } from '$lib/server/onboarding';
 import { sendSwisscomVerificationSms } from '$lib/server/swisscomSms';
 import { randomInt } from 'node:crypto';
+import {
+	checkRateLimit,
+	getClientId,
+	hashId,
+	rateKey
+} from '$lib/server/rateLimiter';
+
+const WINDOW_10MIN = 10 * 60 * 1000;
+const WINDOW_15MIN = 15 * 60 * 1000;
+const WINDOW_1HOUR = 60 * 60 * 1000;
 
 type ResolvedInviteUser =
 	| { ok: true; user: { id: string; email?: string } }
@@ -19,15 +30,13 @@ type ResolvedInviteUser =
 			reason: 'invite_invalid' | 'email_mismatch' | 'auth_misconfigured';
 	  };
 
-export const load: PageServerLoad = async ({
-	url,
-	locals
-}): Promise<{
+export const load: PageServerLoad = async (event): Promise<{
 	token: string | null;
 	inviteDetails: InviteDetails | null;
 	inviteError: string | null;
 	useSms: boolean;
 }> => {
+	const { url, locals } = event;
 	const session = await locals.safeGetSession();
 	const token = url.searchParams.get('invite_token');
 	const useSms = isSmsEnabled();
@@ -51,6 +60,34 @@ export const load: PageServerLoad = async ({
 			token: null,
 			inviteDetails: null,
 			inviteError: m.onboarding_no_invite_token(),
+			useSms
+		};
+	}
+
+	const loadIpLimit = checkRateLimit(
+		rateKey('onboard:load:ip', getClientId(event)),
+		30,
+		WINDOW_15MIN
+	);
+	if (!loadIpLimit.allowed) {
+		return {
+			token,
+			inviteDetails: null,
+			inviteError: m.rate_limited({ seconds: loadIpLimit.retryAfterSeconds.toString() }),
+			useSms
+		};
+	}
+
+	const loadTokenLimit = checkRateLimit(
+		rateKey('onboard:load:token', hashId(token)),
+		20,
+		WINDOW_15MIN
+	);
+	if (!loadTokenLimit.allowed) {
+		return {
+			token,
+			inviteDetails: null,
+			inviteError: m.rate_limited({ seconds: loadTokenLimit.retryAfterSeconds.toString() }),
 			useSms
 		};
 	}
@@ -96,7 +133,8 @@ export const load: PageServerLoad = async ({
 };
 
 export const actions: Actions = {
-	sendPhoneCode: async ({ request, locals }) => {
+	sendPhoneCode: async (event) => {
+		const { request, locals } = event;
 		if (!isSmsEnabled()) {
 			return fail(404, { error: 'SMS verification is disabled.' });
 		}
@@ -119,6 +157,18 @@ export const actions: Actions = {
 			});
 		}
 
+		// Rate limit by client to blunt SMS-flooding attempts before they reach the provider.
+		const ipSmsLimit = checkRateLimit(
+			rateKey('onboard:sms:ip', getClientId(event)),
+			10,
+			WINDOW_15MIN
+		);
+		if (!ipSmsLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: ipSmsLimit.retryAfterSeconds.toString() })
+			});
+		}
+
 		const resolved = await resolveInvitedUser(locals, token, email);
 		if (resolved.ok === false) {
 			if (resolved.reason === 'auth_misconfigured') {
@@ -127,6 +177,17 @@ export const actions: Actions = {
 			return fail(400, { error: 'Kein Benutzer mit dieser E-Mail-Adresse gefunden.' });
 		}
 		const existingUser = resolved.user;
+
+		const phoneSmsLimit = checkRateLimit(
+			rateKey('onboard:sms:phone', hashId(phoneNumber)),
+			5,
+			WINDOW_1HOUR
+		);
+		if (!phoneSmsLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: phoneSmsLimit.retryAfterSeconds.toString() })
+			});
+		}
 
 		const { data: profileData, error: profileError } = await locals.supabaseSecret
 			.schema('app')
@@ -225,7 +286,8 @@ export const actions: Actions = {
 
 		return { phoneSent: true };
 	},
-	verifyPhoneCode: async ({ request, locals }) => {
+	verifyPhoneCode: async (event) => {
+		const { request, locals } = event;
 		if (!isSmsEnabled()) {
 			return fail(404, { error: 'SMS verification is disabled.' });
 		}
@@ -243,6 +305,29 @@ export const actions: Actions = {
 		}
 		if (!/^\d{6}$/.test(code)) {
 			return fail(400, { error: m.onboarding_phone_code_invalid() });
+		}
+
+		// Throttle OTP guessing: 5 attempts per 10 min per invite token + per client.
+		const verifyIpLimit = checkRateLimit(
+			rateKey('onboard:verify:ip', getClientId(event)),
+			20,
+			WINDOW_10MIN
+		);
+		if (!verifyIpLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: verifyIpLimit.retryAfterSeconds.toString() })
+			});
+		}
+
+		const verifyTokenLimit = checkRateLimit(
+			rateKey('onboard:verify:token', hashId(token)),
+			5,
+			WINDOW_10MIN
+		);
+		if (!verifyTokenLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: verifyTokenLimit.retryAfterSeconds.toString() })
+			});
 		}
 
 		const resolved = await resolveInvitedUser(locals, token, email);
@@ -296,7 +381,8 @@ export const actions: Actions = {
 
 		return { phoneVerified: true };
 	},
-	complete: async ({ request, locals }) => {
+	complete: async (event) => {
+		const { request, locals } = event;
 		const formData = await request.formData();
 		const firstName = formData.get('first_name')?.toString().trim() ?? '';
 		const lastName = formData.get('last_name')?.toString().trim() ?? '';
@@ -381,6 +467,31 @@ export const actions: Actions = {
 			});
 		}
 
+		// Rate limit completion attempts to stop token probing / account-provisioning spam.
+		const completeIpLimit = checkRateLimit(
+			rateKey('onboard:complete:ip', getClientId(event)),
+			10,
+			WINDOW_1HOUR
+		);
+		if (!completeIpLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: completeIpLimit.retryAfterSeconds.toString() }),
+				values: { firstName, lastName }
+			});
+		}
+
+		const completeTokenLimit = checkRateLimit(
+			rateKey('onboard:complete:token', hashId(token)),
+			5,
+			WINDOW_1HOUR
+		);
+		if (!completeTokenLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: completeTokenLimit.retryAfterSeconds.toString() }),
+				values: { firstName, lastName }
+			});
+		}
+
 		const resolved = await resolveInvitedUser(locals, token, email.toLowerCase());
 
 		if (resolved.ok === false) {
@@ -453,6 +564,14 @@ export const actions: Actions = {
 		);
 
 		if (updateError) {
+			const seconds = getRateLimitSeconds(updateError);
+			if (seconds) {
+				return fail(429, {
+					error: m.rate_limited({ seconds }),
+					values: { firstName, lastName }
+				});
+			}
+
 			console.error('[Onboarding] Failed to update user:', updateError.message);
 			return fail(500, {
 				error: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.',
@@ -467,6 +586,14 @@ export const actions: Actions = {
 		});
 
 		if (signInError) {
+			const seconds = getRateLimitSeconds(signInError);
+			if (seconds) {
+				return fail(429, {
+					error: m.rate_limited({ seconds }),
+					values: { firstName, lastName }
+				});
+			}
+
 			console.error('[Onboarding] Sign-in failed:', signInError.message);
 			return fail(500, {
 				error: `${m.onboarding_error_signin_failed()}${signInError.message}`,

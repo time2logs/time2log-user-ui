@@ -294,6 +294,7 @@
 	"forgot_password_send_link": "Envoyer le lien",
 	"forgot_password_email_sent": "Si un compte existe avec cet e-mail, un lien de réinitialisation a été envoyé.",
 	"forgot_password_error_email_missing": "Veuillez saisir votre adresse e-mail.",
+	"rate_limited": "Trop de requêtes. Veuillez réessayer dans {seconds}s.",
 	"forgot_password_back_to_login": "Retour à la connexion",
 	"back_to_login": "Retour à la connexion",
 	"reset_password_title": "Définir un nouveau mot de passe",

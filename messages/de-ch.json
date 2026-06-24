@@ -294,6 +294,7 @@
 	"forgot_password_send_link": "Link senden",
 	"forgot_password_email_sent": "Falls ein Konto mit dieser E-Mail existiert, wurde ein Link zum Zurücksetzen des Passworts gesendet.",
 	"forgot_password_error_email_missing": "Bitte gib deine E-Mail-Adresse ein.",
+	"rate_limited": "Zu viele Anfragen. Bitte versuche es in {seconds}s erneut.",
 	"forgot_password_back_to_login": "Zurück zur Anmeldung",
 	"back_to_login": "Zurück zur Anmeldung",
 	"reset_password_title": "Neues Passwort festlegen",
