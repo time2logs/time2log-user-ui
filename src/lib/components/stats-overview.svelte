@@ -5,6 +5,7 @@
 	import { browser } from '$app/environment';
 	import { Chart, Bars, Svg, Axis, Tooltip } from 'layerchart';
 	import { scaleBand, pie, arc as d3Arc } from 'd3';
+	import type { PieArcDatum } from 'd3-shape';
 	import { formatHoursMinutes } from '$lib/utils';
 
 	import {
@@ -50,6 +51,10 @@
 		const slices = computeActivityBreakdown(activities, 5, m.stats_other());
 		return slices.map((s, i) => ({ ...s, color: CHART_COLORS[i % CHART_COLORS.length] }));
 	});
+
+	type BreakdownSlice = { name: string; hours: number; color: string };
+	const breakdownPie = pie<BreakdownSlice>().value((d) => d.hours);
+	const breakdownArc = d3Arc<PieArcDatum<BreakdownSlice>>();
 </script>
 
 <!-- stat cards row -->
@@ -127,9 +132,9 @@
 				{:else}
 					<div class="flex h-56 w-full items-center justify-center">
 						<svg viewBox="-100 -100 200 200" class="h-full w-full max-w-xs">
-							{#each pie().value((d) => d.hours)(activityBreakdown) as slice (slice.data.name)}
+							{#each breakdownPie(activityBreakdown) as slice (slice.data.name)}
 								<path
-									d={d3Arc().innerRadius(40).outerRadius(80).padAngle(0.02)(slice) ?? ''}
+									d={breakdownArc.innerRadius(40).outerRadius(80).padAngle(0.02)(slice) ?? ''}
 									fill={slice.data.color}
 									opacity="0.85"
 								/>

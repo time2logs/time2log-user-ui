@@ -8,6 +8,7 @@ ENV PUBLIC_SUPABASE_URL=$PUBLIC_SUPABASE_URL
 ENV PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
 COPY package.json bun.lock ./
+COPY patches/ ./patches/
 RUN bun install --frozen-lockfile
 
 COPY . .
@@ -18,13 +19,13 @@ RUN bunx --bun vite build
 FROM oven/bun:1 AS deps
 WORKDIR /app
 COPY package.json bun.lock ./
+COPY patches/ ./patches/
 RUN bun install --frozen-lockfile --production
 
 # Stage 3: Node runtime (adapter-node outputs a Node.js HTTP server)
 FROM node:22-slim
 WORKDIR /app
 ENV NODE_ENV=production
-ENV USE_SMS=0
 
 # package.json required — "type": "module" tells Node to use ESM
 COPY --from=builder /app/package.json ./

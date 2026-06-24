@@ -4,22 +4,9 @@ import type { InviteDetails } from '$lib/types';
 import * as m from '$lib/paraglide/messages.js';
 import { getRateLimitSeconds } from '$lib/rateLimitError';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
-import {
-	hashOtp,
-	isSmsEnabled,
-	isSupabaseAuthSecretError,
-	normalizeSwissPhone
-} from '$lib/server/onboarding';
-import { sendSwisscomVerificationSms } from '$lib/server/swisscomSms';
-import { randomInt } from 'node:crypto';
-import {
-	checkRateLimit,
-	getClientId,
-	hashId,
-	rateKey
-} from '$lib/server/rateLimiter';
+import { isSupabaseAuthSecretError } from '$lib/server/onboarding';
+import { checkRateLimit, getClientId, hashId, rateKey } from '$lib/server/rateLimiter';
 
-const WINDOW_10MIN = 10 * 60 * 1000;
 const WINDOW_15MIN = 15 * 60 * 1000;
 const WINDOW_1HOUR = 60 * 60 * 1000;
 
@@ -30,16 +17,16 @@ type ResolvedInviteUser =
 			reason: 'invite_invalid' | 'email_mismatch' | 'auth_misconfigured';
 	  };
 
-export const load: PageServerLoad = async (event): Promise<{
+export const load: PageServerLoad = async (
+	event
+): Promise<{
 	token: string | null;
 	inviteDetails: InviteDetails | null;
 	inviteError: string | null;
-	useSms: boolean;
 }> => {
 	const { url, locals } = event;
 	const session = await locals.safeGetSession();
 	const token = url.searchParams.get('invite_token');
-	const useSms = isSmsEnabled();
 
 	// If already logged in and onboarding completed, redirect to dashboard
 	if (session) {
@@ -59,8 +46,7 @@ export const load: PageServerLoad = async (event): Promise<{
 		return {
 			token: null,
 			inviteDetails: null,
-			inviteError: m.onboarding_no_invite_token(),
-			useSms
+			inviteError: m.onboarding_no_invite_token()
 		};
 	}
 
@@ -73,8 +59,7 @@ export const load: PageServerLoad = async (event): Promise<{
 		return {
 			token,
 			inviteDetails: null,
-			inviteError: m.rate_limited({ seconds: loadIpLimit.retryAfterSeconds.toString() }),
-			useSms
+			inviteError: m.rate_limited({ seconds: loadIpLimit.retryAfterSeconds.toString() })
 		};
 	}
 
@@ -87,8 +72,7 @@ export const load: PageServerLoad = async (event): Promise<{
 		return {
 			token,
 			inviteDetails: null,
-			inviteError: m.rate_limited({ seconds: loadTokenLimit.retryAfterSeconds.toString() }),
-			useSms
+			inviteError: m.rate_limited({ seconds: loadTokenLimit.retryAfterSeconds.toString() })
 		};
 	}
 
@@ -102,7 +86,8 @@ export const load: PageServerLoad = async (event): Promise<{
 		? {
 				organization_name: inviteDetailsRaw.organization_name,
 				email: inviteDetailsRaw.email,
-				role: inviteDetailsRaw.role
+				role: inviteDetailsRaw.role,
+				current_semester: inviteDetailsRaw.current_semester ?? null
 			}
 		: null;
 
@@ -110,8 +95,7 @@ export const load: PageServerLoad = async (event): Promise<{
 		return {
 			token,
 			inviteDetails: null,
-			inviteError: inviteError.message,
-			useSms
+			inviteError: inviteError.message
 		};
 	}
 
@@ -119,279 +103,26 @@ export const load: PageServerLoad = async (event): Promise<{
 		return {
 			token,
 			inviteDetails: null,
-			inviteError: m.onboarding_invalid_invite(),
-			useSms
+			inviteError: m.onboarding_invalid_invite()
 		};
 	}
 
 	return {
 		token,
 		inviteDetails, // { organization_name, email, role }
-		inviteError: null,
-		useSms
+		inviteError: null
 	};
 };
 
 export const actions: Actions = {
-	sendPhoneCode: async (event) => {
-		const { request, locals } = event;
-		if (!isSmsEnabled()) {
-			return fail(404, { error: 'SMS verification is disabled.' });
-		}
-
-		const formData = await request.formData();
-		const token = formData.get('invite_token')?.toString() ?? '';
-		const email = formData.get('email')?.toString().trim().toLowerCase() ?? '';
-		const phoneNumberRaw = formData.get('phone_number')?.toString().trim() ?? '';
-
-		if (!token || !email) {
-			return fail(400, {
-				error: m.onboarding_error_token_missing()
-			});
-		}
-
-		const phoneNumber = normalizeSwissPhone(phoneNumberRaw);
-		if (!phoneNumber) {
-			return fail(400, {
-				error: m.onboarding_phone_invalid()
-			});
-		}
-
-		// Rate limit by client to blunt SMS-flooding attempts before they reach the provider.
-		const ipSmsLimit = checkRateLimit(
-			rateKey('onboard:sms:ip', getClientId(event)),
-			10,
-			WINDOW_15MIN
-		);
-		if (!ipSmsLimit.allowed) {
-			return fail(429, {
-				error: m.rate_limited({ seconds: ipSmsLimit.retryAfterSeconds.toString() })
-			});
-		}
-
-		const resolved = await resolveInvitedUser(locals, token, email);
-		if (resolved.ok === false) {
-			if (resolved.reason === 'auth_misconfigured') {
-				return fail(500, { error: m.onboarding_error_auth_secret_mismatch() });
-			}
-			return fail(400, { error: 'Kein Benutzer mit dieser E-Mail-Adresse gefunden.' });
-		}
-		const existingUser = resolved.user;
-
-		const phoneSmsLimit = checkRateLimit(
-			rateKey('onboard:sms:phone', hashId(phoneNumber)),
-			5,
-			WINDOW_1HOUR
-		);
-		if (!phoneSmsLimit.allowed) {
-			return fail(429, {
-				error: m.rate_limited({ seconds: phoneSmsLimit.retryAfterSeconds.toString() })
-			});
-		}
-
-		const { data: profileData, error: profileError } = await locals.supabaseSecret
-			.schema('app')
-			.from('profiles')
-			.select('last_time_sent')
-			.eq('id', existingUser.id)
-			.maybeSingle();
-
-		if (profileError) {
-			console.error('[Onboarding] Failed reading profile before SMS send:', profileError.message);
-			return fail(500, { error: m.onboarding_phone_send_failed() });
-		}
-
-		if (!profileData) {
-			return fail(400, { error: m.onboarding_phone_profile_missing() });
-		}
-
-		const now = Date.now();
-		if (profileData.last_time_sent) {
-			const remainingSeconds = Math.ceil(
-				(30_000 - (now - new Date(profileData.last_time_sent).getTime())) / 1000
-			);
-			if (remainingSeconds > 0) {
-				return fail(429, {
-					error: m.onboarding_phone_cooldown({ seconds: remainingSeconds.toString() }),
-					cooldownSeconds: remainingSeconds
-				});
-			}
-		}
-
-		const oneHourAgo = new Date(now - 60 * 60 * 1000).toISOString();
-		const { count: sendsInLastHour, error: eventsError } = await locals.supabaseSecret
-			.schema('admin')
-			.from('sms_verification_events')
-			.select('id', { count: 'exact', head: true })
-			.eq('user_id', existingUser.id)
-			.eq('status', 'sent')
-			.gte('sent_at', oneHourAgo);
-
-		if (eventsError) {
-			console.error('[Onboarding] Failed counting SMS sends:', eventsError.message);
-			return fail(500, { error: m.onboarding_phone_send_failed() });
-		}
-
-		if ((sendsInLastHour ?? 0) >= 3) {
-			return fail(429, { error: m.onboarding_phone_hour_limit() });
-		}
-
-		const code = randomInt(100000, 1000000).toString();
-		const codeHash = hashOtp(code);
-		const expiresAt = new Date(now + 10 * 60 * 1000).toISOString();
-		try {
-			const smsResult = await sendSwisscomVerificationSms({ to: phoneNumber, code });
-
-			const { error: profileUpdateError } = await locals.supabaseSecret
-				.schema('app')
-				.from('profiles')
-				.update({
-					phone_number: phoneNumber,
-					phone_verified: false,
-					phone_verified_at: null,
-					phone_verification_code_hash: codeHash,
-					phone_verification_code_expires_at: expiresAt,
-					last_time_sent: new Date(now).toISOString()
-				})
-				.eq('id', existingUser.id);
-			if (profileUpdateError) {
-				throw new Error(profileUpdateError.message);
-			}
-
-			const { error: eventInsertError } = await locals.supabaseSecret
-				.schema('admin')
-				.from('sms_verification_events')
-				.insert({
-					user_id: existingUser.id,
-					phone_number: phoneNumber,
-					status: 'sent',
-					provider_message_id: smsResult.messageId
-				});
-			if (eventInsertError) {
-				console.error('[Onboarding] Failed inserting SMS event:', eventInsertError.message);
-			}
-		} catch (err) {
-			const message = err instanceof Error ? err.message : 'Unknown SMS error';
-			console.error('[Onboarding] SMS send failed:', message);
-
-			await locals.supabaseSecret.schema('admin').from('sms_verification_events').insert({
-				user_id: existingUser.id,
-				phone_number: phoneNumber,
-				status: 'failed',
-				error_message: message
-			});
-
-			return fail(500, { error: m.onboarding_phone_send_failed() });
-		}
-
-		return { phoneSent: true };
-	},
-	verifyPhoneCode: async (event) => {
-		const { request, locals } = event;
-		if (!isSmsEnabled()) {
-			return fail(404, { error: 'SMS verification is disabled.' });
-		}
-
-		const formData = await request.formData();
-		const token = formData.get('invite_token')?.toString() ?? '';
-		const email = formData.get('email')?.toString().trim().toLowerCase() ?? '';
-		const code = formData.get('phone_code')?.toString().trim() ?? '';
-
-		if (!token) {
-			return fail(400, { error: m.onboarding_error_token_missing() });
-		}
-		if (!email) {
-			return fail(400, { error: m.onboarding_error_email_missing() });
-		}
-		if (!/^\d{6}$/.test(code)) {
-			return fail(400, { error: m.onboarding_phone_code_invalid() });
-		}
-
-		// Throttle OTP guessing: 5 attempts per 10 min per invite token + per client.
-		const verifyIpLimit = checkRateLimit(
-			rateKey('onboard:verify:ip', getClientId(event)),
-			20,
-			WINDOW_10MIN
-		);
-		if (!verifyIpLimit.allowed) {
-			return fail(429, {
-				error: m.rate_limited({ seconds: verifyIpLimit.retryAfterSeconds.toString() })
-			});
-		}
-
-		const verifyTokenLimit = checkRateLimit(
-			rateKey('onboard:verify:token', hashId(token)),
-			5,
-			WINDOW_10MIN
-		);
-		if (!verifyTokenLimit.allowed) {
-			return fail(429, {
-				error: m.rate_limited({ seconds: verifyTokenLimit.retryAfterSeconds.toString() })
-			});
-		}
-
-		const resolved = await resolveInvitedUser(locals, token, email);
-		if (resolved.ok === false) {
-			if (resolved.reason === 'auth_misconfigured') {
-				return fail(500, { error: m.onboarding_error_auth_secret_mismatch() });
-			}
-			return fail(400, { error: 'Kein Benutzer mit dieser E-Mail-Adresse gefunden.' });
-		}
-		const existingUser = resolved.user;
-
-		const { data: profileData, error: profileError } = await locals.supabaseSecret
-			.schema('app')
-			.from('profiles')
-			.select('phone_verification_code_hash, phone_verification_code_expires_at')
-			.eq('id', existingUser.id)
-			.maybeSingle();
-
-		if (profileError) {
-			console.error('[Onboarding] Failed reading verification code:', profileError.message);
-			return fail(500, { error: m.onboarding_phone_verify_failed() });
-		}
-		if (
-			!profileData?.phone_verification_code_hash ||
-			!profileData.phone_verification_code_expires_at
-		) {
-			return fail(400, { error: m.onboarding_phone_code_missing() });
-		}
-		if (new Date(profileData.phone_verification_code_expires_at).getTime() < Date.now()) {
-			return fail(400, { error: m.onboarding_phone_code_expired() });
-		}
-		if (hashOtp(code) !== profileData.phone_verification_code_hash) {
-			return fail(400, { error: m.onboarding_phone_code_invalid() });
-		}
-
-		const { error: verifyError } = await locals.supabaseSecret
-			.schema('app')
-			.from('profiles')
-			.update({
-				phone_verified: true,
-				phone_verified_at: new Date().toISOString(),
-				phone_verification_code_hash: null,
-				phone_verification_code_expires_at: null
-			})
-			.eq('id', existingUser.id);
-
-		if (verifyError) {
-			console.error('[Onboarding] Failed marking phone as verified:', verifyError.message);
-			return fail(500, { error: m.onboarding_phone_verify_failed() });
-		}
-
-		return { phoneVerified: true };
-	},
-	complete: async (event) => {
-		const { request, locals } = event;
+	complete: async ({ request, locals, getClientAddress }) => {
 		const formData = await request.formData();
 		const firstName = formData.get('first_name')?.toString().trim() ?? '';
 		const lastName = formData.get('last_name')?.toString().trim() ?? '';
 		const password = formData.get('password')?.toString() ?? '';
 		const token = formData.get('invite_token')?.toString() ?? '';
 		const email = formData.get('email')?.toString().trim() ?? '';
-		const phoneNumber = formData.get('phone_number')?.toString().trim() ?? '';
 		const avatarFile = formData.get('avatar') as File | null;
-		const useSms = isSmsEnabled();
 
 		let avatarExt: string | null = null;
 		if (avatarFile && avatarFile.size > 0) {
@@ -460,16 +191,10 @@ export const actions: Actions = {
 				values: { firstName, lastName }
 			});
 		}
-		if (useSms && !phoneNumber) {
-			return fail(400, {
-				error: m.onboarding_phone_required(),
-				values: { firstName, lastName }
-			});
-		}
 
 		// Rate limit completion attempts to stop token probing / account-provisioning spam.
 		const completeIpLimit = checkRateLimit(
-			rateKey('onboard:complete:ip', getClientId(event)),
+			rateKey('onboard:complete:ip', getClientId({ getClientAddress })),
 			10,
 			WINDOW_1HOUR
 		);
@@ -508,24 +233,17 @@ export const actions: Actions = {
 		}
 		const existingUser = resolved.user;
 
-		let normalizedPhoneNumber: string | null = null;
-		if (useSms) {
-			normalizedPhoneNumber = normalizeSwissPhone(phoneNumber);
-			if (!normalizedPhoneNumber) {
-				return fail(400, {
-					error: m.onboarding_phone_invalid(),
-					values: { firstName, lastName }
-				});
-			}
-		}
-
 		// 2. Onboarding-Status prüfen — falls bereits abgeschlossen, abbrechen
 		const { data: profile, error: profileError } = await locals.supabaseSecret
 			.schema('app')
 			.from('profiles')
-			.select(useSms ? 'onboarding_status, phone_verified, phone_number' : 'onboarding_status')
+			.select('onboarding_status')
 			.eq('id', existingUser.id)
 			.maybeSingle();
+
+		const profileData = profile as {
+			onboarding_status?: string;
+		} | null;
 
 		if (profileError) {
 			console.error('[Onboarding] Failed to check profile status:', profileError.message);
@@ -535,17 +253,10 @@ export const actions: Actions = {
 			});
 		}
 
-		if (profile?.onboarding_status === 'completed') {
+		if (profileData?.onboarding_status === 'completed') {
 			return fail(400, {
 				error:
 					'Dieser Benutzer hat das Onboarding bereits abgeschlossen. Bitte melde dich direkt an.',
-				values: { firstName, lastName }
-			});
-		}
-
-		if (useSms && (!profile?.phone_verified || profile.phone_number !== normalizedPhoneNumber)) {
-			return fail(400, {
-				error: m.onboarding_phone_not_verified(),
 				values: { firstName, lastName }
 			});
 		}
@@ -620,7 +331,6 @@ export const actions: Actions = {
 				id: existingUser.id,
 				first_name: firstName,
 				last_name: lastName,
-				...(useSms && normalizedPhoneNumber ? { phone_number: normalizedPhoneNumber } : {}),
 				onboarding_status: 'completed'
 			},
 			{ onConflict: 'id' }

@@ -8,11 +8,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const cookieOptions = {
 		getAll: () => event.cookies.getAll(),
 		setAll: (
-			cookiesToSet: {
-				name: string;
-				value: string;
-				options: Parameters<typeof event.cookies.set>[2];
-			}[]
+			cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]
 		) => {
 			cookiesToSet.forEach(({ name, value, options }) => {
 				event.cookies.set(name, value, { ...options, path: '/' });

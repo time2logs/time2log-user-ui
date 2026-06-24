@@ -26,6 +26,40 @@ export function isWithinEditWindow(entryDate: string, now: Date = new Date()): b
 	return diffDays <= EDIT_WINDOW_DAYS;
 }
 
+/**
+ * Returns the date that should be used to evaluate the edit window for an
+ * absence spanning a date range. Today is clamped into `[start_date, end_date]`:
+ *  - today inside range  -> today (closest day to now)
+ *  - today after range   -> end_date (closest past day to now)
+ *  - today before range  -> start_date (future absence, stays editable)
+ *
+ * For multi-day absences this is the "day that matters" — the closest day to
+ * today, which matches how single-entry activities are gated.
+ */
+export function getAbsenceReferenceDate(
+	absence: { start_date: string; end_date: string },
+	now: Date = new Date()
+): string {
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(
+		today.getDate()
+	).padStart(2, '0')}`;
+	if (todayStr <= absence.start_date) return absence.start_date;
+	if (todayStr >= absence.end_date) return absence.end_date;
+	return todayStr;
+}
+
+/**
+ * Whether an absence is still within the edit window, evaluated against the
+ * reference date returned by {@link getAbsenceReferenceDate}.
+ */
+export function isAbsenceWithinEditWindow(
+	absence: { start_date: string; end_date: string },
+	now: Date = new Date()
+): boolean {
+	return isWithinEditWindow(getAbsenceReferenceDate(absence, now), now);
+}
+
 export function formatHoursMinutes(hours: number): string {
 	const wholeHours = Math.floor(hours);
 	const minutes = Math.round((hours - wholeHours) * 60);

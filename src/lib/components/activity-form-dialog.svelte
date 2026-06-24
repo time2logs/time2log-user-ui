@@ -14,6 +14,7 @@
 		getLastActivityId,
 		getLastLocation,
 		DEFAULT_MAX_HOURS_PER_DAY,
+		MAX_HOURS_PER_ENTRY,
 		MIN_HOURS
 	} from '$lib/activityStorage';
 	import { getAbsenceFractionForDate } from '$lib/absenceStorage';

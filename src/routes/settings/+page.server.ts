@@ -37,7 +37,11 @@ export const actions: Actions = {
 		const session = await locals.safeGetSession();
 		if (!session) throw redirect(302, '/login');
 
-		const profileLimit = checkRateLimit(rateKey('settings:profile', session.user.id), 10, WINDOW_1HOUR);
+		const profileLimit = checkRateLimit(
+			rateKey('settings:profile', session.user.id),
+			10,
+			WINDOW_1HOUR
+		);
 		if (!profileLimit.allowed) {
 			return fail(429, {
 				profileError: m.rate_limited({ seconds: profileLimit.retryAfterSeconds.toString() })
@@ -168,8 +172,8 @@ export const actions: Actions = {
 		}
 
 		const { error } = await locals.supabase.auth.updateUser(
-			{ email },
-			{ nonce: otp, emailRedirectTo: `${url.origin}/settings` }
+			{ email, nonce: otp },
+			{ emailRedirectTo: `${url.origin}/settings` }
 		);
 		if (error) {
 			const seconds = getRateLimitSeconds(error);
@@ -190,7 +194,11 @@ export const actions: Actions = {
 		const session = await locals.safeGetSession();
 		if (!session) throw redirect(302, '/login');
 
-		const pwLimit = checkRateLimit(rateKey('settings:updatePassword', session.user.id), 5, WINDOW_1HOUR);
+		const pwLimit = checkRateLimit(
+			rateKey('settings:updatePassword', session.user.id),
+			5,
+			WINDOW_1HOUR
+		);
 		if (!pwLimit.allowed) {
 			return fail(429, {
 				passwordError: m.rate_limited({ seconds: pwLimit.retryAfterSeconds.toString() })
