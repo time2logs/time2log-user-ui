@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import * as m from '$lib/paraglide/messages.js';
+import { getRateLimitSeconds } from '$lib/rateLimitError';
 import {
 	checkRateLimit,
 	getClientId,
@@ -8,6 +9,7 @@ import {
 	rateKey
 } from '$lib/server/rateLimiter';
 
+const WINDOW_1MIN = 60 * 1000;
 const WINDOW_15MIN = 15 * 60 * 1000;
 
 export const load: PageServerLoad = async () => {
@@ -26,10 +28,16 @@ export const actions: Actions = {
 
 		// Rate limit by email and by client to stop reset-mail flooding.
 		const clientIp = getClientId(event);
-		const emailLimit = checkRateLimit(rateKey('resetpw:email', hashId(email)), 5, WINDOW_15MIN);
+		const emailHash = hashId(email);
+		const cooldownLimit = checkRateLimit(rateKey('resetpw:email:cooldown', emailHash), 1, WINDOW_1MIN);
+		const emailLimit = checkRateLimit(rateKey('resetpw:email', emailHash), 5, WINDOW_15MIN);
 		const ipLimit = checkRateLimit(rateKey('resetpw:ip', clientIp), 10, WINDOW_15MIN);
-		if (!emailLimit.allowed || !ipLimit.allowed) {
-			const seconds = Math.max(emailLimit.retryAfterSeconds, ipLimit.retryAfterSeconds);
+		if (!cooldownLimit.allowed || !emailLimit.allowed || !ipLimit.allowed) {
+			const seconds = Math.max(
+				cooldownLimit.retryAfterSeconds,
+				emailLimit.retryAfterSeconds,
+				ipLimit.retryAfterSeconds
+			);
 			return fail(429, { error: m.rate_limited({ seconds: seconds.toString() }) });
 		}
 
@@ -38,6 +46,9 @@ export const actions: Actions = {
 		});
 
 		if (error) {
+			const seconds = getRateLimitSeconds(error);
+			if (seconds) return fail(429, { error: m.rate_limited({ seconds }) });
+
 			console.error('[ForgotPassword] resetPasswordForEmail failed:', error);
 			return fail(500, { error: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.' });
 		}

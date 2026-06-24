@@ -1,6 +1,7 @@
 import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import * as m from '$lib/paraglide/messages.js';
+import { getRateLimitSeconds } from '$lib/rateLimitError';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
 import { checkRateLimit, rateKey } from '$lib/server/rateLimiter';
 
@@ -112,6 +113,11 @@ export const actions: Actions = {
 
 		const { error } = await locals.supabase.auth.reauthenticate();
 		if (error) {
+			const seconds = getRateLimitSeconds(error);
+			if (seconds) {
+				return fail(429, { emailError: m.rate_limited({ seconds }) });
+			}
+
 			console.error('[Settings] Failed to send email OTP:', error.message);
 			return fail(500, {
 				emailError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
@@ -166,6 +172,11 @@ export const actions: Actions = {
 			{ nonce: otp, emailRedirectTo: `${url.origin}/settings` }
 		);
 		if (error) {
+			const seconds = getRateLimitSeconds(error);
+			if (seconds) {
+				return fail(429, { emailError: m.rate_limited({ seconds }) });
+			}
+
 			console.error('[Settings] Failed to update email:', error.message);
 			return fail(500, {
 				emailError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
@@ -212,6 +223,11 @@ export const actions: Actions = {
 
 		const { error } = await locals.supabase.auth.updateUser({ password });
 		if (error) {
+			const seconds = getRateLimitSeconds(error);
+			if (seconds) {
+				return fail(429, { passwordError: m.rate_limited({ seconds }) });
+			}
+
 			console.error('[Settings] Failed to update password:', error.message);
 			return fail(500, {
 				passwordError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'

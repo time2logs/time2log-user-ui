@@ -6,6 +6,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import * as Card from '$lib/components/ui/card';
 	import { supabase } from '$lib/supabaseClient';
+	import { getRateLimitSeconds } from '$lib/rateLimitError';
 	import { cn } from '$lib/utils';
 	import * as m from '$lib/paraglide/messages.js';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
@@ -29,7 +30,8 @@
 			email: email,
 			password: password
 		});
-		errorMessage = error ? error.message : '';
+		const seconds = getRateLimitSeconds(error);
+		errorMessage = seconds ? m.rate_limited({ seconds }) : error?.message || '';
 		isLoading = false;
 
 		if (!error) {

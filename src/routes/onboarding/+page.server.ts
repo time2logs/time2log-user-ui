@@ -2,6 +2,7 @@ import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import type { InviteDetails } from '$lib/types';
 import * as m from '$lib/paraglide/messages.js';
+import { getRateLimitSeconds } from '$lib/rateLimitError';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
 import {
 	hashOtp,
@@ -511,6 +512,14 @@ export const actions: Actions = {
 		);
 
 		if (updateError) {
+			const seconds = getRateLimitSeconds(updateError);
+			if (seconds) {
+				return fail(429, {
+					error: m.rate_limited({ seconds }),
+					values: { firstName, lastName }
+				});
+			}
+
 			console.error('[Onboarding] Failed to update user:', updateError.message);
 			return fail(500, {
 				error: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.',
@@ -525,6 +534,14 @@ export const actions: Actions = {
 		});
 
 		if (signInError) {
+			const seconds = getRateLimitSeconds(signInError);
+			if (seconds) {
+				return fail(429, {
+					error: m.rate_limited({ seconds }),
+					values: { firstName, lastName }
+				});
+			}
+
 			console.error('[Onboarding] Sign-in failed:', signInError.message);
 			return fail(500, {
 				error: `${m.onboarding_error_signin_failed()}${signInError.message}`,
