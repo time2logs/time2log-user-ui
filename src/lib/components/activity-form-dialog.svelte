@@ -637,88 +637,94 @@
 					</p>
 				{/if}
 			</div>
-		</div>
 
-		<!-- Location -->
-		<div class="grid gap-2">
-			<Label>{m.location_label()}</Label>
+			<!-- Location -->
+			<div class="grid gap-2">
+				<Label>{m.location_label()}</Label>
 
-			{#if isAddingLocation}
-				<!-- Inline creation: text input + save/cancel -->
-				<div class="flex flex-wrap gap-2">
-					<Input
-						bind:value={newLocationInput}
-						placeholder={m.add_location_placeholder()}
-						onkeydown={(e) => {
-							if (e.key === 'Enter') {
-								e.preventDefault();
-								if (!isSavingLocation) saveNewLocation();
-							} else if (e.key === 'Escape') {
-								cancelAddLocation();
-							}
-						}}
-						class="min-w-40 flex-1"
-						disabled={isSavingLocation}
-					/>
-					<Button type="button" size="sm" onclick={saveNewLocation} disabled={isSavingLocation}>
-						{m.save()}
-					</Button>
+				{#if isAddingLocation}
+					<!-- Inline creation: text input + save/cancel -->
+					<div class="flex flex-wrap gap-2">
+						<Input
+							bind:value={newLocationInput}
+							placeholder={m.add_location_placeholder()}
+							onkeydown={(e) => {
+								if (e.key === 'Enter') {
+									e.preventDefault();
+									if (!isSavingLocation) saveNewLocation();
+								} else if (e.key === 'Escape') {
+									cancelAddLocation();
+								}
+							}}
+							class="min-w-40 flex-1"
+							disabled={isSavingLocation}
+						/>
+						<Button type="button" size="sm" onclick={saveNewLocation} disabled={isSavingLocation}>
+							{m.save()}
+						</Button>
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							onclick={cancelAddLocation}
+							disabled={isSavingLocation}
+						>
+							{m.cancel()}
+						</Button>
+					</div>
+				{:else if locationsList.length === 0}
+					<!-- No saved locations: prompt + add button -->
+					<p class="text-sm text-muted-foreground">
+						{m.no_locations_for_activity()}
+					</p>
 					<Button
 						type="button"
 						size="sm"
 						variant="outline"
-						onclick={cancelAddLocation}
-						disabled={isSavingLocation}
-					>
-						{m.cancel()}
-					</Button>
-				</div>
-			{:else if locationsList.length === 0}
-				<!-- No saved locations: prompt + add button -->
-				<p class="text-sm text-muted-foreground">
-					{m.no_locations_for_activity()}
-				</p>
-				<Button type="button" size="sm" variant="outline" class="w-fit" onclick={startAddLocation}>
-					<Plus class="mr-2 h-4 w-4" />
-					{m.add_location_action()}
-				</Button>
-			{:else}
-				<!-- Existing locations dropdown + add-new trigger -->
-				<div class="flex gap-2">
-					<Select.Root bind:value={location} type="single">
-						<Select.Trigger class="flex-1">
-							{location || m.location_placeholder()}
-						</Select.Trigger>
-						<Select.Content>
-							{#each locationsList as loc (loc)}
-								<Select.Item value={loc} label={loc}>{loc}</Select.Item>
-							{/each}
-						</Select.Content>
-					</Select.Root>
-					<Button
-						type="button"
-						size="sm"
-						variant="outline"
+						class="w-fit"
 						onclick={startAddLocation}
-						title={m.add_location_action()}
 					>
-						<Plus class="h-4 w-4" />
+						<Plus class="mr-2 h-4 w-4" />
+						{m.add_location_action()}
 					</Button>
-				</div>
-			{/if}
+				{:else}
+					<!-- Existing locations dropdown + add-new trigger -->
+					<div class="flex gap-2">
+						<Select.Root bind:value={location} type="single">
+							<Select.Trigger class="flex-1">
+								{location || m.location_placeholder()}
+							</Select.Trigger>
+							<Select.Content>
+								{#each locationsList as loc (loc)}
+									<Select.Item value={loc} label={loc}>{loc}</Select.Item>
+								{/each}
+							</Select.Content>
+						</Select.Root>
+						<Button
+							type="button"
+							size="sm"
+							variant="outline"
+							onclick={startAddLocation}
+							title={m.add_location_action()}
+						>
+							<Plus class="h-4 w-4" />
+						</Button>
+					</div>
+				{/if}
 
-			{#if locationError}
-				<p class="text-sm text-destructive">{locationError}</p>
-			{/if}
+				{#if locationError}
+					<p class="text-sm text-destructive">{locationError}</p>
+				{/if}
+			</div>
+
+			<!-- Notes (Optional) -->
+			<div class="grid gap-2">
+				<Label for="notes">{m.notes_optional()}</Label>
+				<Textarea id="notes" bind:value={notes} placeholder={m.notes_placeholder()} />
+			</div>
 		</div>
 
-		<!-- Notes (Optional) -->
-		<div class="grid gap-2">
-			<Label for="notes">{m.notes_optional()}</Label>
-			<Textarea id="notes" bind:value={notes} placeholder={m.notes_placeholder()} />
-		</div>
-
-		<Dialog.Footer class={activityToEdit ? 'flex gap-2' : ''}>
+		<Dialog.Footer>
 			{#if activityToEdit}
 				<Button
 					variant="destructive"
@@ -730,7 +736,7 @@
 					{m.delete_activity_confirm_button()}
 				</Button>
 			{/if}
-			<div class="flex gap-2">
+			<div class="flex flex-wrap justify-end gap-2">
 				<Button
 					variant="outline"
 					onclick={() => {
