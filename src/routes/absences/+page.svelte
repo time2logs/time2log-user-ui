@@ -5,6 +5,7 @@
 	import AlertCircle from '@lucide/svelte/icons/circle-alert';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import Edit2 from '@lucide/svelte/icons/pencil';
+	import Lock from '@lucide/svelte/icons/lock';
 	import Plus from '@lucide/svelte/icons/plus';
 	import * as m from '$lib/paraglide/messages.js';
 	import { absenceStore } from '$lib/absenceStorage';
@@ -18,6 +19,7 @@
 	import { Spinner } from '$lib/components/ui/spinner';
 	import { Badge } from '$lib/components/ui/badge';
 	import { EmptyState } from '$lib/components/ui/empty-state';
+	import { isAbsenceWithinEditWindow, EDIT_WINDOW_DAYS } from '$lib/utils';
 
 	const dateLocale = getDateLocale();
 
@@ -74,8 +76,6 @@
 		}
 		return `${formatter.format(start)} - ${formatter.format(end)}`;
 	}
-
-	const targetHours = $derived(data.organization?.target_hours ?? 8);
 
 	function getWeekdayName(dayNum: number): string {
 		// Jan 7 2024 is Sunday (dayNum 0), Jan 8 is Monday (1), etc.
@@ -173,14 +173,27 @@
 						<p class="mt-3 text-sm text-foreground">{absence.notes}</p>
 					{/if}
 				</div>
-				<Button
-					variant="outline"
-					size="sm"
-					class="mt-3 flex-shrink-0 self-start sm:mt-0"
-					onclick={() => handleEditAbsence(absence)}
-				>
-					<Edit2 class="h-4 w-4" />
-				</Button>
+				{#if isAbsenceWithinEditWindow(absence)}
+					<Button
+						variant="outline"
+						size="sm"
+						class="mt-3 flex-shrink-0 self-start sm:mt-0"
+						onclick={() => handleEditAbsence(absence)}
+					>
+						<Edit2 class="h-4 w-4" />
+					</Button>
+				{:else}
+					<Button
+						variant="outline"
+						size="sm"
+						disabled
+						title={m.entry_locked_tooltip({ days: EDIT_WINDOW_DAYS })}
+						aria-label={m.entry_locked_tooltip({ days: EDIT_WINDOW_DAYS })}
+						class="mt-3 flex-shrink-0 self-start text-muted-foreground sm:mt-0"
+					>
+						<Lock class="h-4 w-4" />
+					</Button>
+				{/if}
 			</div>
 		</Card.Content>
 	</Card.Root>
@@ -291,6 +304,5 @@
 		teamMember={data.teamMember}
 		onAbsenceAdded={handleAbsenceAdded}
 		absenceToEdit={editingAbsence}
-		{targetHours}
 	/>
 {/if}

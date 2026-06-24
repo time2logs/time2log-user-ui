@@ -20,6 +20,8 @@
 	import { getAbsenceTypeLabel } from '$lib/absence-types';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import { SegmentedControl } from '$lib/components/ui/segmented-control';
+	import { isAbsenceWithinEditWindow, EDIT_WINDOW_DAYS } from '$lib/utils';
+	import Lock from '@lucide/svelte/icons/lock';
 
 	const dateLocale = $derived(getDateLocale());
 
@@ -204,6 +206,7 @@
 	const canSubmitRecurring = $derived(
 		!isRecurring || recurrenceFrequency === 'monthly' || selectedDays.length > 0
 	);
+	const isLocked = $derived(!!absenceToEdit && !isAbsenceWithinEditWindow(absenceToEdit));
 
 	const selectedDateLabel = $derived(
 		selectedDate
@@ -382,6 +385,16 @@
 			</Alert>
 		{/if}
 
+		{#if isLocked}
+			<Alert variant="warning" class="mb-4">
+				<Lock class="mt-0.5 h-5 w-5 shrink-0" />
+				<div class="flex-1">
+					<p class="text-sm font-medium">{m.entry_locked_title()}</p>
+					<p class="text-sm">{m.entry_locked_tooltip({ days: EDIT_WINDOW_DAYS })}</p>
+				</div>
+			</Alert>
+		{/if}
+
 		<div class="grid gap-4 py-4">
 			{#if selectedDateLabel && !absenceToEdit}
 				<div
@@ -554,7 +567,7 @@
 				<Button
 					variant="destructive"
 					onclick={handleDelete}
-					disabled={isSubmitting || isDeleting}
+					disabled={isSubmitting || isDeleting || isLocked}
 					class="flex-1"
 				>
 					<Trash2 class="mr-2 h-4 w-4" />
@@ -575,7 +588,7 @@
 				<Button
 					variant="default"
 					onclick={handleSubmit}
-					disabled={!isValid || !canSubmitRecurring || isSubmitting}
+					disabled={!isValid || !canSubmitRecurring || isSubmitting || isLocked}
 				>
 					{#if isSubmitting}
 						<span class="flex items-center gap-2">

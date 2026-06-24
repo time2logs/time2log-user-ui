@@ -14,6 +14,7 @@
 		getLastActivityId,
 		getLastLocation,
 		DEFAULT_MAX_HOURS_PER_DAY,
+		MAX_HOURS_PER_ENTRY,
 		MIN_HOURS
 	} from '$lib/activityStorage';
 	import { getAbsenceFractionForDate } from '$lib/absenceStorage';
@@ -107,7 +108,7 @@
 	}
 
 	function handleHoursInput(event: Event) {
-		inputHours = cleanNumberInput(event.currentTarget as HTMLInputElement, 0, MAX_HOURS_PER_ENTRY);
+		inputHours = cleanNumberInput(event.currentTarget as HTMLInputElement, 0, maxHoursPerDay);
 	}
 
 	function handleMinutesInput(event: Event) {

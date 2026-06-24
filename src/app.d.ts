@@ -1,4 +1,7 @@
+/// <reference types="vite-plugin-pwa/client" />
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
+// See https://svelte.dev/docs/kit/types#app
 import type { SupabaseClient, Session } from '@supabase/supabase-js';
 
 declare global {

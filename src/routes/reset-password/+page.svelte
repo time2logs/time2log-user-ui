@@ -11,6 +11,7 @@
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import { supabase } from '$lib/supabaseClient';
+	import { getRateLimitSeconds } from '$lib/rateLimitError';
 
 	let password = $state('');
 	let confirmPassword = $state('');
@@ -68,7 +69,8 @@
 		isLoading = false;
 
 		if (error) {
-			errorMessage = error.message || m.reset_password_failed();
+			const seconds = getRateLimitSeconds(error);
+			errorMessage = seconds ? m.rate_limited({ seconds }) : error.message || m.reset_password_failed();
 			return;
 		}
 

@@ -10,6 +10,7 @@ import { STORAGE_KEYS } from './storageKeys';
 const debug = createDebugLogger('ActivityStorage');
 
 export const DEFAULT_MAX_HOURS_PER_DAY = 10;
+export const MAX_HOURS_PER_ENTRY = 10;
 export const MIN_HOURS = 1;
 
 type ActivityRecordSource = Omit<
@@ -155,7 +156,7 @@ function createActivityStore() {
 				return null;
 			}
 
-			const data = unwrapSupabase(
+			const data = unwrapSupabase<ActivityRecordSource>(
 				await supabase
 					.from('activity_records')
 					.insert({
@@ -186,6 +187,7 @@ function createActivityStore() {
 
 			const newActivity: ActivityRecord = {
 				...data,
+				location: data.location ?? '',
 				activity_name: activity.activity_name || '',
 				activity_key: activity.activity_key || '',
 				activity_label: activity.activity_label || ''
@@ -303,7 +305,7 @@ function createActivityStore() {
 			if (activity.rating !== undefined) updateData.rating = activity.rating;
 			if (activity.location !== undefined) updateData.location = activity.location;
 
-			const data = unwrapSupabase(
+			const data = unwrapSupabase<ActivityRecordSource>(
 				await supabase
 					.from('activity_records')
 					.update(updateData)
