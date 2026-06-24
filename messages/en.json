@@ -269,8 +269,8 @@
 	"achievement_streak_15_desc": "Log 15 workdays in a row",
 	"achievement_thousand_hours": "Quadruple digits",
 	"achievement_thousand_hours_desc": "Reach 1000 logged hours",
-	"settings_send_email_otp": "Send code to current email",
-	"settings_email_otp_sent": "A verification code has been sent to your current email.",
+	"settings_send_email_otp": "Send verification code",
+	"settings_email_otp_sent": "A verification code has been sent to your new email address.",
 	"settings_current_email_label": "Confirm current email",
 	"settings_new_email_label": "New email",
 	"settings_email_otp_label": "Verification code",
@@ -315,5 +315,9 @@
 	"avatar_process_failed": "Failed to process image. Please try another one.",
 	"remove": "Remove",
 	"theme_switch_light": "Switch to light mode",
-	"theme_switch_dark": "Switch to dark mode"
+	"theme_switch_dark": "Switch to dark mode",
+	"security_check_description": "Please enter your current password to continue.",
+	"current_password_label": "Current Password",
+	"security_check_verify": "Verify",
+	"close": "Close"
 }

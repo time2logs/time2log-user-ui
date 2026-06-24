@@ -269,8 +269,8 @@
 	"achievement_streak_15_desc": "Registra 15 giorni lavorativi consecutivi",
 	"achievement_thousand_hours": "Quattro cifre",
 	"achievement_thousand_hours_desc": "Raggiungi 1000 ore registrate",
-	"settings_send_email_otp": "Invia codice all’email attuale",
-	"settings_email_otp_sent": "Un codice di verifica è stato inviato alla tua email attuale.",
+	"settings_send_email_otp": "Invia codice di verifica",
+	"settings_email_otp_sent": "Un codice di verifica è stato inviato alla tua nuova email.",
 	"settings_current_email_label": "Conferma email attuale",
 	"settings_new_email_label": "Nuova email",
 	"settings_email_otp_label": "Codice di verifica",
@@ -315,5 +315,9 @@
 	"avatar_process_failed": "Impossibile elaborare l'immagine. Prova con un'altra.",
 	"remove": "Rimuovi",
 	"theme_switch_light": "Passa alla modalità chiara",
-	"theme_switch_dark": "Passa alla modalità scura"
+	"theme_switch_dark": "Passa alla modalità scura",
+	"security_check_description": "Inserisci la tua password attuale per continuare.",
+	"current_password_label": "Password attuale",
+	"security_check_verify": "Verifica",
+	"close": "Chiudi"
 }
