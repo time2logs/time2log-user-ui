@@ -23,6 +23,7 @@
 	>
 		<div class="mx-auto flex max-w-6xl items-center justify-between">
 			<div class="flex items-center gap-2">
+				<img src="/icon.png" alt="" class="h-7 w-7" />
 				<a class="text-xl font-bold" href="/">time2log</a>
 			</div>
 			<LanguageSwitcher />

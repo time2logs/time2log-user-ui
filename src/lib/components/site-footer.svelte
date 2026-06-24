@@ -2,7 +2,10 @@
 	<div class="mx-auto max-w-6xl">
 		<div class="mb-8 grid gap-8 text-center sm:grid-cols-3">
 			<div>
-				<span class="font-semibold text-foreground">time2log</span>
+				<div class="flex items-center justify-center gap-2">
+					<img src="/icon.png" alt="" class="h-7 w-7" />
+					<span class="font-semibold text-foreground">time2log</span>
+				</div>
 				<p class="mt-2 text-sm text-muted-foreground">Track your learning journey with ease.</p>
 			</div>
 

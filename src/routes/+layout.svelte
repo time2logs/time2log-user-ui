@@ -1,6 +1,5 @@
 <script lang="ts">
 	import './layout.css';
-	import favicon from '$lib/assets/favicon.svg';
 	import { theme } from '$lib/themeStore';
 	import { onMount } from 'svelte';
 	import { palette } from '$lib/paletteStore';
@@ -15,5 +14,5 @@
 	let { children } = $props();
 </script>
 
-<svelte:head><link rel="icon" href={favicon} /></svelte:head>
+<svelte:head><link rel="icon" type="image/png" href="/icon.png" /></svelte:head>
 {@render children()}
