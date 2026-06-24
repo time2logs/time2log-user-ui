@@ -2,20 +2,30 @@
 	import { onMount } from 'svelte';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
-	import { AlertCircle, ArrowLeft, Edit2, Plus } from 'lucide-svelte';
+	import AlertCircle from '@lucide/svelte/icons/circle-alert';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+	import Edit2 from '@lucide/svelte/icons/pencil';
+	import Lock from '@lucide/svelte/icons/lock';
+	import Plus from '@lucide/svelte/icons/plus';
 	import * as m from '$lib/paraglide/messages.js';
-	import { getAbsences } from '$lib/absenceStorage';
+	import { absenceStore } from '$lib/absenceStorage';
 	import type { AbsenceRecord } from '$lib/types';
 	import AbsenceFormDialog from '$lib/components/absence-form-dialog.svelte';
 	import { resolve } from '$app/paths';
 	import { getDateLocale } from '$lib/dateLocale';
 	import { rrulestr } from 'rrule';
 	import AbsenceChart from '$lib/components/absence-chart.svelte';
+	import { getAbsenceTypeLabel } from '$lib/absence-types';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import { Badge } from '$lib/components/ui/badge';
+	import { EmptyState } from '$lib/components/ui/empty-state';
+	import { isAbsenceWithinEditWindow, EDIT_WINDOW_DAYS } from '$lib/utils';
+	import { byweekdayToIndex, getRruleUntil } from '$lib/rruleUtils';
 
-	const dateLocale = getDateLocale();
+	const dateLocale = $derived(getDateLocale());
 
 	let { data } = $props();
-	let absences = $state<AbsenceRecord[]>([]);
+	const absences = $derived($absenceStore);
 	let isLoading = $state(true);
 	let formDialogOpen = $state(false);
 	let editingAbsence = $state<AbsenceRecord | null>(null);
@@ -23,43 +33,35 @@
 
 	const todayStr = new Date().toISOString().split('T')[0];
 
+	function isUpcoming(absence: AbsenceRecord): boolean {
+		if (absence.end_date >= todayStr) return true;
+		// Open-ended recurring absences (no UNTIL) are always upcoming
+		return absence.is_recurring && absence.rrule ? !absence.rrule.includes('UNTIL=') : false;
+	}
+
 	const upcomingAbsences = $derived(
-		absences
-			.filter((a) => a.end_date >= todayStr)
-			.sort((a, b) => a.start_date.localeCompare(b.start_date))
+		absences.filter(isUpcoming).sort((a, b) => a.start_date.localeCompare(b.start_date))
 	);
 
 	const pastAbsences = $derived(
-		absences
-			.filter((a) => a.end_date < todayStr)
-			.sort((a, b) => b.start_date.localeCompare(a.start_date))
+		absences.filter((a) => !isUpcoming(a)).sort((a, b) => b.start_date.localeCompare(a.start_date))
 	);
 
 	onMount(async () => {
-		await loadAbsences();
-	});
-
-	async function loadAbsences() {
-		isLoading = true;
 		try {
-			absences = await getAbsences();
-		} catch (error) {
-			console.error('Failed to load absences:', error);
+			await absenceStore.load();
 		} finally {
 			isLoading = false;
 		}
+	});
+
+	function handleEditAbsence(absence: AbsenceRecord) {
+		editingAbsence = absence;
+		formDialogOpen = true;
 	}
 
-	function getAbsenceTypeLabel(typeId: string): string {
-		const typeMap: Record<string, string> = {
-			sick: m.absence_type_sick(),
-			vacation: m.absence_type_vacation(),
-			military: m.absence_type_military(),
-			uk: m.absence_type_uk(),
-			berufsschule: m.absence_type_berufsschule(),
-			custom: m.absence_type_custom()
-		};
-		return typeMap[typeId] || typeId;
+	function handleAbsenceAdded() {
+		editingAbsence = null;
 	}
 
 	function formatDateRange(startDate: string, endDate: string): string {
@@ -76,11 +78,6 @@
 			return formatter.format(start);
 		}
 		return `${formatter.format(start)} - ${formatter.format(end)}`;
-	}
-
-	function formatBlockedHours(dayFraction: number): string {
-		const blockedHours = Math.round(dayFraction * 10 * 10) / 10;
-		return Number.isInteger(blockedHours) ? `${blockedHours}h` : `${blockedHours.toFixed(1)}h`;
 	}
 
 	function getWeekdayName(dayNum: number): string {
@@ -109,13 +106,8 @@
 				if (weekdayArray.length > 0) {
 					const days = weekdayArray
 						.map((d) => {
-							const dayNum =
-								typeof d === 'number'
-									? d
-									: typeof d === 'string'
-										? ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'].indexOf(d)
-										: d.weekday;
-							if (dayNum < 0) return '';
+							const dayNum = byweekdayToIndex(d);
+							if (dayNum == null) return '';
 							return getWeekdayName(dayNum);
 						})
 						.filter(Boolean)
@@ -124,22 +116,21 @@
 				} else {
 					desc += m.recurrence_week();
 				}
-			} else if (freq === 3) {
-				// MONTHLY
-				desc += m.recurrence_month();
 			} else if (freq === 1) {
 				// DAILY
 				desc += m.recurrence_day();
 			}
 
 			if (options.until) {
-				const until = options.until instanceof Date ? options.until : new Date(options.until);
-				const untilStr = new Intl.DateTimeFormat(dateLocale, {
-					month: 'short',
-					day: 'numeric',
-					year: 'numeric'
-				}).format(until);
-				desc += ` ${m.recurrence_until_prefix()} ${untilStr}`;
+				const rawUntil = getRruleUntil(absence.rrule);
+				if (rawUntil) {
+					const untilStr = new Intl.DateTimeFormat(dateLocale, {
+						month: 'short',
+						day: 'numeric',
+						year: 'numeric'
+					}).format(new Date(`${rawUntil}T12:00:00`));
+					desc += ` ${m.recurrence_until_prefix()} ${untilStr}`;
+				}
 			}
 
 			return desc;
@@ -147,16 +138,6 @@
 			console.error('Failed to parse rrule:', e);
 			return '';
 		}
-	}
-
-	function handleEditAbsence(absence: AbsenceRecord) {
-		editingAbsence = absence;
-		formDialogOpen = true;
-	}
-
-	function handleAbsenceAdded() {
-		editingAbsence = null;
-		loadAbsences();
 	}
 </script>
 
@@ -169,28 +150,16 @@
 						<h3 class="text-base font-semibold text-foreground sm:text-lg">
 							{getAbsenceTypeLabel(absence.absence_type_id)}
 						</h3>
-						<span
-							class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-						>
+						<Badge variant="warning">
 							{absence.day_fraction}
 							{m.absence_day_fraction_short()}
-						</span>
+						</Badge>
 						{#if absence.is_recurring}
-							<span
-								class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-							>
-								{m.recurring_label()}
-							</span>
+							<Badge variant="secondary">{m.recurring_label()}</Badge>
 						{/if}
 					</div>
 					<p class="mt-2 text-sm text-muted-foreground">
 						{formatDateRange(absence.start_date, absence.end_date)}
-					</p>
-					<p class="mt-1 text-xs text-muted-foreground">
-						{m.absence_hours_consumed({
-							hours: formatBlockedHours(Number(absence.day_fraction ?? 1)),
-							max: '10h'
-						})}
 					</p>
 					{#if absence.is_recurring}
 						<p class="mt-1 text-xs text-muted-foreground">
@@ -201,14 +170,27 @@
 						<p class="mt-3 text-sm text-foreground">{absence.notes}</p>
 					{/if}
 				</div>
-				<Button
-					variant="outline"
-					size="sm"
-					class="mt-3 flex-shrink-0 self-start sm:mt-0"
-					onclick={() => handleEditAbsence(absence)}
-				>
-					<Edit2 class="h-4 w-4" />
-				</Button>
+				{#if isAbsenceWithinEditWindow(absence)}
+					<Button
+						variant="outline"
+						size="sm"
+						class="mt-3 flex-shrink-0 self-start sm:mt-0"
+						onclick={() => handleEditAbsence(absence)}
+					>
+						<Edit2 class="h-4 w-4" />
+					</Button>
+				{:else}
+					<Button
+						variant="outline"
+						size="sm"
+						disabled
+						title={m.entry_locked_tooltip({ days: EDIT_WINDOW_DAYS })}
+						aria-label={m.entry_locked_tooltip({ days: EDIT_WINDOW_DAYS })}
+						class="mt-3 flex-shrink-0 self-start text-muted-foreground sm:mt-0"
+					>
+						<Lock class="h-4 w-4" />
+					</Button>
+				{/if}
 			</div>
 		</Card.Content>
 	</Card.Root>
@@ -244,18 +226,14 @@
 				</Button>
 			</div>
 
-			<div class="mb-4 sm:mb-6">
-				<AbsenceChart {absences} />
-			</div>
-
 			<!-- Absences List -->
 			{#if isLoading}
 				<Card.Root>
 					<Card.Content class="flex items-center justify-center py-12">
 						<div class="text-center">
-							<div
-								class="mb-2 inline-flex h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-primary"
-							></div>
+							<div class="mb-2 flex justify-center text-primary">
+								<Spinner size="lg" />
+							</div>
 							<p class="text-sm text-muted-foreground">{m.absences_loading()}</p>
 						</div>
 					</Card.Content>
@@ -263,48 +241,56 @@
 			{:else if absences.length === 0}
 				<Card.Root>
 					<Card.Content class="flex flex-col items-center justify-center py-12">
-						<AlertCircle class="mb-2 h-12 w-12 text-muted-foreground/50" />
-						<h3 class="mb-1 text-lg font-medium">{m.no_absences_found()}</h3>
-						<p class="mb-4 text-sm text-muted-foreground">
-							{m.absences_empty_hint()}
-						</p>
-						<Button onclick={() => (formDialogOpen = true)} variant="outline">
-							<Plus class="mr-2 h-4 w-4" />
-							{m.absence_add_button()}
-						</Button>
+						<EmptyState
+							icon={AlertCircle}
+							title={m.no_absences_found()}
+							hint={m.absences_empty_hint()}
+						>
+							<div class="mt-3">
+								<Button onclick={() => (formDialogOpen = true)} variant="outline">
+									<Plus class="mr-2 h-4 w-4" />
+									{m.absence_add_button()}
+								</Button>
+							</div>
+						</EmptyState>
 					</Card.Content>
 				</Card.Root>
 			{:else}
+				<!-- Upcoming absences above the chart -->
 				<div class="grid gap-3 lg:gap-6">
 					{#each upcomingAbsences as absence (absence.id)}
 						{@render absenceCard(absence)}
 					{/each}
-
-					{#if pastAbsences.length > 0}
-						<div class="mt-2">
-							<button
-								type="button"
-								onclick={() => (showPast = !showPast)}
-								class="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-							>
-								<span class="transition-transform duration-200 {showPast ? 'rotate-90' : ''}"
-									>▶</span
-								>
-								{showPast
-									? m.absences_hide_past()
-									: m.absences_show_past({ count: pastAbsences.length })}
-							</button>
-
-							{#if showPast}
-								<div class="mt-3 grid gap-3 opacity-60 lg:gap-4">
-									{#each pastAbsences as absence (absence.id)}
-										{@render absenceCard(absence)}
-									{/each}
-								</div>
-							{/if}
-						</div>
-					{/if}
 				</div>
+
+				<!-- Chart -->
+				<div class="my-4 sm:my-6">
+					<AbsenceChart {absences} />
+				</div>
+
+				<!-- Past absences below the chart -->
+				{#if pastAbsences.length > 0}
+					<div class="mt-2">
+						<button
+							type="button"
+							onclick={() => (showPast = !showPast)}
+							class="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+						>
+							<span class="transition-transform duration-200 {showPast ? 'rotate-90' : ''}">▶</span>
+							{showPast
+								? m.absences_hide_past()
+								: m.absences_show_past({ count: pastAbsences.length })}
+						</button>
+
+						{#if showPast}
+							<div class="mt-3 grid gap-3 opacity-60 lg:gap-4">
+								{#each pastAbsences as absence (absence.id)}
+									{@render absenceCard(absence)}
+								{/each}
+							</div>
+						{/if}
+					</div>
+				{/if}
 			{/if}
 		</div>
 	</main>

@@ -6,7 +6,7 @@ if [ "$1" == "--ignore-tests" ]; then
 fi
 
 echo "RUNNING CLEAN INSTALL"
-bun ci
+bun install --frozen-lockfile
 
 if [ "$IGNORE_TESTS" = true ]; then
     echo "SKIPPING TESTS"

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { ConfirmDialog } from '$lib/components/ui/confirm-dialog';
+	import { IconButton } from '$lib/components/ui/icon-button';
 	import * as Sheet from '$lib/components/ui/sheet';
 	import { Button } from '$lib/components/ui/button';
 	import ActivityList from '$lib/components/activity-list.svelte';
@@ -9,23 +10,32 @@
 	import WorkdayCalendar from '$lib/components/workday-calendar.svelte';
 	import * as m from '$lib/paraglide/messages.js';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
-	import { activityStore } from '$lib/activityStorage';
-	import { absenceStore, isDateInAbsence } from '$lib/absenceStorage';
+	import { activityStore, activityLoading, activityError } from '$lib/activityStorage';
+	import { absenceStore, isDateInAbsence, absenceLoading, absenceError } from '$lib/absenceStorage';
 	import type {
 		ActivityRecord,
 		AbsenceRecord,
 		CurriculumNode,
 		CurriculumNodeSummary,
-		TeamMember
+		TeamMember,
+		Organization
 	} from '$lib/types';
 	import { resolve } from '$app/paths';
-	import { LogOut, Loader2, Plus, Menu, Settings, Calendar, Trophy } from 'lucide-svelte';
+	import LogOut from '@lucide/svelte/icons/log-out';
+	import Plus from '@lucide/svelte/icons/plus';
+	import Menu from '@lucide/svelte/icons/menu';
+	import Settings from '@lucide/svelte/icons/settings';
+	import Calendar from '@lucide/svelte/icons/calendar';
+	import Trophy from '@lucide/svelte/icons/trophy';
 	import { DateFormatter, getLocalTimeZone, today, type DateValue } from '@internationalized/date';
 	import { getDateLocale } from '$lib/dateLocale';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import StatsOverview from '$lib/components/stats-overview.svelte';
 	import UnreportedDaysBanner from '$lib/components/unreported-days-banner.svelte';
 	import DailyHoursProgress from '$lib/components/daily-hours-progress.svelte';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import { Alert } from '$lib/components/ui/alert';
+	import { getInitials } from '$lib/userUtils';
 
 	const dateLocale = $derived(getDateLocale());
 	type DashboardPageData = {
@@ -33,14 +43,13 @@
 			first_name: string;
 			last_name: string;
 			avatar_url: string | null;
-			target_hours?: number | null;
 		} | null;
 		teamMember: TeamMember | null;
 		curriculumNodes: CurriculumNode[];
 		curriculumNodeSummaries: CurriculumNodeSummary[];
-		organizationName: string | null;
 		professionLabel: string | null;
 		userLocations: string[];
+		organization: Organization | null;
 	};
 
 	let { data }: { data: DashboardPageData } = $props();
@@ -68,11 +77,9 @@
 	let selectedDate = $state<DateValue>(getDefaultSelectedDate());
 
 	const activities = $derived($activityStore);
-
-	let absences = $state<AbsenceRecord[]>([]);
-	absenceStore.subscribe((data) => {
-		absences = data;
-	});
+	const absences = $derived($absenceStore);
+	const isLoading = $derived($activityLoading || $absenceLoading);
+	const loadError = $derived($activityError || $absenceError);
 
 	$effect(() => {
 		activityStore.setCurriculumNodeSummaries(data.curriculumNodeSummaries);
@@ -80,7 +87,7 @@
 	});
 
 	$effect(() => {
-		absenceStore.load();
+		void absenceStore.load();
 	});
 
 	function isDateDisabled(date: DateValue) {
@@ -97,7 +104,13 @@
 	const selectedDateLoggedHours = $derived(
 		activities.filter((a) => a.entry_date === selectedDateIso).reduce((sum, a) => sum + a.hours, 0)
 	);
-	const targetHours = $derived(data.profile?.target_hours ?? 8);
+	const loggedAbsenceTimeInDays = $derived(
+		absences
+			.filter((absence) => isDateInAbsence(selectedDateIso, absence))
+			.reduce((sum, absence) => sum + absence.day_fraction, 0)
+	);
+
+	const targetHours = $derived(data.organization?.target_hours ?? 8);
 	const selectedDateLabel = $derived(
 		new DateFormatter(dateLocale, {
 			weekday: 'long',
@@ -133,16 +146,13 @@
 	}
 
 	const initials = $derived(
-		data.profile
-			? `${data.profile.first_name?.[0] ?? ''}${data.profile.last_name?.[0] ?? ''}`.toUpperCase() ||
-					'?'
-			: '?'
+		data.profile ? getInitials(data.profile.first_name, data.profile.last_name) : '?'
 	);
 
-	const firstName = $derived(data.profile?.first_name ?? 'Guest');
+	const firstName = $derived(data.profile?.first_name ?? m.guest());
 
 	const fullName = $derived(
-		data.profile ? `${data.profile.first_name} ${data.profile.last_name}` : 'Guest'
+		data.profile ? `${data.profile.first_name} ${data.profile.last_name}` : m.guest()
 	);
 </script>
 
@@ -178,9 +188,9 @@
 						<p class="text-xs text-muted-foreground sm:text-sm lg:text-base">
 							{m.dashboard_subtitle()}
 						</p>
-						{#if data.professionLabel || data.organizationName}
+						{#if data.professionLabel || data.organization?.name}
 							<p class="mt-0.5 truncate text-xs text-muted-foreground/70 sm:text-sm">
-								{[data.professionLabel, data.organizationName].filter(Boolean).join(' · ')}
+								{[data.professionLabel, data.organization?.name].filter(Boolean).join(' · ')}
 							</p>
 						{/if}
 					</div>
@@ -188,30 +198,27 @@
 				<div class="hidden items-center gap-2 sm:flex">
 					<LanguageSwitcher />
 
-					<a
+					<IconButton
+						icon={Calendar}
 						href="/absences"
-						aria-label={m.absences_title()}
-						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						label={m.absences_title()}
+						iconClass="h-4 w-4"
 						title={m.absences_title()}
-					>
-						<Calendar class="h-4 w-4" />
-					</a>
-					<a
+					/>
+					<IconButton
+						icon={Trophy}
 						href="/achievements"
-						aria-label={m.achievements_title()}
-						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+						label={m.achievements_title()}
+						iconClass="h-4 w-4"
 						title={m.achievements_title()}
-					>
-						<Trophy class="h-4 w-4" />
-					</a>
-					<a
-						href={resolve('/settings')}
+					/>
+					<IconButton
+						icon={Settings}
+						href="/settings"
+						label={m.settings_title()}
+						iconClass="h-4 w-4"
 						data-sveltekit-reload
-						aria-label={m.settings_title()}
-						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-					>
-						<Settings class="h-4 w-4" />
-					</a>
+					/>
 					<Button
 						variant="ghost"
 						onclick={() => (logoutDialogOpen = true)}
@@ -223,28 +230,28 @@
 					</Button>
 				</div>
 				<div class="flex items-center gap-1 sm:hidden">
-					<a
+					<IconButton
+						icon={Calendar}
+						size="icon-sm"
 						href="/absences"
-						aria-label={m.absences_title()}
-						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-					>
-						<Calendar class="h-4 w-4" />
-					</a>
-					<a
+						label={m.absences_title()}
+						iconClass="h-4 w-4"
+					/>
+					<IconButton
+						icon={Trophy}
+						size="icon-sm"
 						href="/achievements"
-						aria-label={m.achievements_title()}
-						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-					>
-						<Trophy class="h-4 w-4" />
-					</a>
-					<a
-						href={resolve('/settings')}
+						label={m.achievements_title()}
+						iconClass="h-4 w-4"
+					/>
+					<IconButton
+						icon={Settings}
+						size="icon-sm"
+						href="/settings"
+						label={m.settings_title()}
+						iconClass="h-4 w-4"
 						data-sveltekit-reload
-						aria-label={m.settings_title()}
-						class="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-					>
-						<Settings class="h-4 w-4" />
-					</a>
+					/>
 					<Button
 						variant="outline"
 						onclick={() => (mobileMenuOpen = true)}
@@ -265,7 +272,10 @@
 						{isDateDisabled}
 						locale={dateLocale}
 						{activityDates}
-						isAbsenceDate={(dateStr) => absences.some((a) => isDateInAbsence(dateStr, a))}
+						isAbsenceDate={(dateStr) => {
+							const matching = absences.find((a) => isDateInAbsence(dateStr, a));
+							return matching?.absence_type_id ?? null;
+						}}
 					/>
 				</div>
 
@@ -292,16 +302,41 @@
 							</Button>
 						</div>
 					</Card.Header>
-					<DailyHoursProgress loggedHours={selectedDateLoggedHours} {targetHours} />
+					<DailyHoursProgress
+						loggedHours={selectedDateLoggedHours}
+						{targetHours}
+						{loggedAbsenceTimeInDays}
+					/>
 					<Card.Content class="flex flex-1 flex-col p-0">
-						<ActivityList
-							onRefresh={handleActivityAdded}
-							onAbsenceRefresh={handleAbsenceAdded}
-							selectedDate={selectedDateIso}
-							existingAbsences={absences}
-							onEdit={handleEditActivity}
-							onEditAbsence={handleEditAbsence}
-						/>
+						{#if loadError}
+							<div class="flex flex-col items-center gap-3 p-6 text-center">
+								<Alert variant="error">{m.error_loading_data()}</Alert>
+								<Button
+									variant="outline"
+									size="sm"
+									onclick={() => {
+										void activityStore.load();
+										void absenceStore.load();
+									}}
+								>
+									{m.retry()}
+								</Button>
+							</div>
+						{:else if isLoading && activities.length === 0 && absences.length === 0}
+							<div class="flex items-center justify-center gap-2 py-12">
+								<Spinner size="sm" />
+								<span class="text-sm text-muted-foreground">{m.loading_data()}</span>
+							</div>
+						{:else}
+							<ActivityList
+								onRefresh={handleActivityAdded}
+								onAbsenceRefresh={handleAbsenceAdded}
+								selectedDate={selectedDateIso}
+								existingAbsences={absences}
+								onEdit={handleEditActivity}
+								onEditAbsence={handleEditAbsence}
+							/>
+						{/if}
 					</Card.Content>
 				</Card.Root>
 			</div>
@@ -351,28 +386,16 @@
 	</div>
 </div>
 
-<AlertDialog.Root bind:open={logoutDialogOpen}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>{m.logout_confirm_title()}</AlertDialog.Title>
-			<AlertDialog.Description>{m.logout_confirm_description()}</AlertDialog.Description>
-		</AlertDialog.Header>
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel>{m.cancel()}</AlertDialog.Cancel>
-			<AlertDialog.Action
-				onclick={handleLogout}
-				disabled={isLoggingOut}
-				class="bg-red-500 hover:bg-red-600"
-			>
-				{#if isLoggingOut}
-					<Loader2 class="mr-2 h-4 w-4 animate-spin" /> {m.logging_out()}
-				{:else}
-					{m.logout()}
-				{/if}
-			</AlertDialog.Action>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<ConfirmDialog
+	bind:open={logoutDialogOpen}
+	title={m.logout_confirm_title()}
+	description={m.logout_confirm_description()}
+	confirmLabel={m.logout()}
+	cancelLabel={m.cancel()}
+	variant="destructive"
+	loading={isLoggingOut}
+	onConfirm={handleLogout}
+/>
 
 <Sheet.Root bind:open={mobileMenuOpen}>
 	<Sheet.Content
@@ -437,7 +460,9 @@
 
 		<!-- Language Switcher -->
 		<div class="border-t border-border px-4 py-3">
-			<p class="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">Sprache</p>
+			<p class="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
+				{m.language_settings()}
+			</p>
 			<LanguageSwitcher />
 		</div>
 

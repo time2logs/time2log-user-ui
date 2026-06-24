@@ -1,35 +1,16 @@
-import { writable } from 'svelte/store';
-import { browser } from '$app/environment';
+import { createPersistentStore } from './persistentStore';
+import { STORAGE_KEYS } from './storageKeys';
 
 export type Palette = 'default' | 'deuteranopia' | 'protanopia' | 'monochrome';
 
 const PALETTES: Palette[] = ['default', 'deuteranopia', 'protanopia', 'monochrome'];
 
-function createPaletteStore() {
-	const getInitial = (): Palette => {
-		if (!browser) return 'default';
-		return (localStorage.getItem('palette') as Palette) ?? 'default';
-	};
+const applyPalette = (p: Palette) => {
+	PALETTES.forEach((name) => document.documentElement.classList.remove(`palette-${name}`));
+	if (p !== 'default') document.documentElement.classList.add(`palette-${p}`);
+};
 
-	const { subscribe, set } = writable<Palette>(getInitial());
-
-	return {
-		subscribe,
-		set: (p: Palette) => {
-			if (browser) {
-				localStorage.setItem('palette', p);
-				PALETTES.forEach((name) => document.documentElement.classList.remove(`palette-${name}`));
-				if (p !== 'default') document.documentElement.classList.add(`palette-${p}`);
-			}
-			set(p);
-		},
-		initialize: () => {
-			if (!browser) return;
-			const p = (localStorage.getItem('palette') as Palette) ?? 'default';
-			if (p !== 'default') document.documentElement.classList.add(`palette-${p}`);
-			set(p);
-		}
-	};
-}
-
-export const palette = createPaletteStore();
+export const palette = createPersistentStore<Palette>(STORAGE_KEYS.palette, 'default', {
+	apply: applyPalette,
+	validate: (value) => (PALETTES.includes(value as Palette) ? (value as Palette) : undefined)
+});

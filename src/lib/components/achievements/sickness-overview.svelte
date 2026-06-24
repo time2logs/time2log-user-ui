@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as Card from '$lib/components/ui/card';
 	import * as m from '$lib/paraglide/messages.js';
-	import { HeartPulse } from 'lucide-svelte';
+	import HeartPulse from '@lucide/svelte/icons/heart-pulse';
 
 	let {
 		sickThisYear,

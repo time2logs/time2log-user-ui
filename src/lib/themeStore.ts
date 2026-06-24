@@ -1,45 +1,23 @@
-import { writable } from 'svelte/store';
-import { browser } from '$app/environment';
+import { createPersistentStore } from './persistentStore';
+import { STORAGE_KEYS } from './storageKeys';
 
-type Theme = 'light' | 'dark';
+export type Theme = 'light' | 'dark';
 
-function createThemeStore() {
-	const getInitialTheme = (): Theme => {
-		if (!browser) return 'light';
-		const stored = localStorage.getItem('theme') as Theme | null;
-		if (stored === 'light' || stored === 'dark') return stored;
-		return 'light';
-	};
+const THEMES: Theme[] = ['light', 'dark'];
 
-	const { subscribe, set, update } = writable<Theme>(getInitialTheme());
+const applyTheme = (theme: Theme) => {
+	document.documentElement.classList.toggle('dark', theme === 'dark');
+};
 
-	return {
-		subscribe,
-		toggle: () => {
-			update((current) => {
-				const newTheme = current === 'light' ? 'dark' : 'light';
-				if (browser) {
-					localStorage.setItem('theme', newTheme);
-					document.documentElement.classList.toggle('dark', newTheme === 'dark');
-				}
-				return newTheme;
-			});
-		},
-		set: (theme: Theme) => {
-			if (browser) {
-				localStorage.setItem('theme', theme);
-				document.documentElement.classList.toggle('dark', theme === 'dark');
-			}
-			set(theme);
-		},
-		initialize: () => {
-			if (browser) {
-				const theme = getInitialTheme();
-				document.documentElement.classList.toggle('dark', theme === 'dark');
-				set(theme);
-			}
-		}
-	};
-}
+const store = createPersistentStore<Theme>(STORAGE_KEYS.theme, 'light', {
+	apply: applyTheme,
+	validate: (value) => (THEMES.includes(value as Theme) ? (value as Theme) : undefined)
+});
 
-export const theme = createThemeStore();
+export const theme = {
+	subscribe: store.subscribe,
+	set: store.set,
+	update: store.update,
+	initialize: store.initialize,
+	toggle: () => store.update((current) => (current === 'light' ? 'dark' : 'light'))
+};

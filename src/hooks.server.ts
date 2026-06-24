@@ -8,11 +8,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const cookieOptions = {
 		getAll: () => event.cookies.getAll(),
 		setAll: (
-			cookiesToSet: {
-				name: string;
-				value: string;
-				options: Parameters<typeof event.cookies.set>[2];
-			}[]
+			cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]
 		) => {
 			cookiesToSet.forEach(({ name, value, options }) => {
 				event.cookies.set(name, value, { ...options, path: '/' });
@@ -52,8 +48,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 		if (error || !user) return null;
 
 		const {
-			data: { session }
+			data: { session },
+			error: sessionError
 		} = await event.locals.supabase.auth.getSession();
+		if (sessionError) return null;
 		return session;
 	};
 
@@ -64,7 +62,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	});
 
 	if (response.status === 404) {
-		throw redirect(302, '/login');
+		const session = await event.locals.safeGetSession();
+		if (!session) {
+			throw redirect(302, '/login');
+		}
 	}
 
 	// Security headers

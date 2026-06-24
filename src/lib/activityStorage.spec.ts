@@ -1,345 +1,340 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ActivityRecord } from './types';
+import { createQueryChain } from '../tests/helpers/supabaseMock';
+import { get } from 'svelte/store';
 
-const supabaseMock = { from: vi.fn() };
+const { supabaseMock } = vi.hoisted(() => ({
+	supabaseMock: { from: vi.fn() }
+}));
 
 vi.mock('./supabaseClient', () => ({ supabase: supabaseMock }));
 
-function makeRecord(overrides: Partial<ActivityRecord> = {}): ActivityRecord {
-	return {
-		id: 'rec-1',
-		organization_id: 'org-1',
-		profession_id: 'prof-1',
-		user_id: 'user-1',
-		team_id: null,
-		curriculum_activity_id: 'act-1',
-		entry_date: '2024-01-15',
-		hours: 4,
-		notes: null,
-		rating: null,
-		location: 'Berlin',
-		created_at: '2024-01-15T10:00:00Z',
-		updated_at: '2024-01-15T10:00:00Z',
-		activity_name: 'Diagnose',
-		activity_key: 'diagnosis',
-		activity_label: '',
-		...overrides
-	};
-}
-
-function makeInsertMock(result: { data: unknown; error: unknown }) {
-	const singleMock = vi.fn().mockResolvedValue(result);
-	const selectMock = vi.fn().mockReturnValue({ single: singleMock });
-	const insertMock = vi.fn().mockReturnValue({ select: selectMock });
-	return { insertMock, selectMock, singleMock };
-}
+import {
+	activityStore,
+	activityError,
+	DEFAULT_MAX_HOURS_PER_DAY,
+	MAX_HOURS_PER_ENTRY,
+	MIN_HOURS,
+	getLastActivityId,
+	getLastLocation
+} from './activityStorage';
 
 beforeEach(() => {
 	localStorage.clear();
 	vi.clearAllMocks();
+	supabaseMock.from.mockReturnValue(createQueryChain());
+	activityStore.setCurriculumNodeSummaries([
+		{ id: 'ca-1', key: 'coding', label: 'Coding', is_active: true },
+		{ id: 'ca-2', key: 'meeting', label: 'Meeting', is_active: true }
+	]);
 });
 
 afterEach(() => {
 	vi.restoreAllMocks();
 });
 
+// ── Helpers ──────────────────────────────────────────────────────────────
+
+function makeActivityInput(overrides: Record<string, unknown> = {}) {
+	const today = new Date().toISOString().slice(0, 10);
+	return {
+		organization_id: 'org-1',
+		profession_id: 'prof-1',
+		user_id: 'user-1',
+		team_id: null,
+		curriculum_activity_id: 'ca-1',
+		entry_date: today,
+		hours: 5,
+		notes: null,
+		rating: null,
+		location: 'Office',
+		activity_name: 'Coding',
+		activity_key: 'coding',
+		activity_label: '',
+		...overrides
+	};
+}
+
+function makeActivityRow(overrides: Record<string, unknown> = {}) {
+	const today = new Date().toISOString().slice(0, 10);
+	return {
+		id: 'rec-1',
+		organization_id: 'org-1',
+		profession_id: 'prof-1',
+		user_id: 'user-1',
+		team_id: null,
+		curriculum_activity_id: 'ca-1',
+		entry_date: today,
+		hours: 5,
+		notes: null,
+		rating: null,
+		location: 'Office',
+		created_at: `${today}T10:00:00Z`,
+		updated_at: `${today}T10:00:00Z`,
+		...overrides
+	};
+}
+
+// ── Exported constants ────────────────────────────────────────────────────
+
 describe('exported constants', () => {
-	it('MIN_HOURS equals 1', async () => {
-		// Arrange
-		const { MIN_HOURS } = await import('./activityStorage');
-
-		// Act
-
-		// Assert
+	it('MIN_HOURS equals 1', () => {
 		expect(MIN_HOURS).toBe(1);
 	});
 
-	it('MAX_HOURS_PER_ENTRY equals 10', async () => {
-		// Arrange
-		const { MAX_HOURS_PER_ENTRY } = await import('./activityStorage');
+	it('DEFAULT_MAX_HOURS_PER_DAY equals 10', () => {
+		expect(DEFAULT_MAX_HOURS_PER_DAY).toBe(10);
+	});
 
-		// Act
-
-		// Assert
+	it('MAX_HOURS_PER_ENTRY equals 10', () => {
 		expect(MAX_HOURS_PER_ENTRY).toBe(10);
 	});
 });
 
-describe('addActivity — validation', () => {
-	it('throws when hours is 0', async () => {
-		// Arrange
-		const { addActivity } = await import('./activityStorage');
-		const activity = { ...makeRecord(), hours: 0 };
+// ── getLastActivityId / getLastLocation ──────────────────────────────────
 
-		// Act und Assert
-		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
+describe('getLastActivityId', () => {
+	it('returns null when nothing is stored', () => {
+		expect(getLastActivityId()).toBeNull();
 	});
 
-	it('throws when hours is negative', async () => {
-		// Arrange
-		const { addActivity } = await import('./activityStorage');
-		const activity = { ...makeRecord(), hours: -2 };
-
-		// Act und  Assert
-		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
-	});
-
-	it('throws when hours is NaN', async () => {
-		// Arrange
-		const { addActivity } = await import('./activityStorage');
-		const activity = { ...makeRecord(), hours: NaN };
-
-		// Act und Assert
-		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
-	});
-
-	it('throws when hours are below MIN_HOURS (0.9 < 1)', async () => {
-		// Arrange
-		const { addActivity } = await import('./activityStorage');
-		const activity = { ...makeRecord(), hours: 0.9 };
-
-		// Act und Assert
-		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
-	});
-
-	it('throws when hours exceed MAX_HOURS_PER_ENTRY (11 > 10)', async () => {
-		// Arrange
-		const { addActivity } = await import('./activityStorage');
-		const activity = { ...makeRecord(), hours: 11 };
-
-		// Act und Assert
-		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
-	});
-
-	it('accepts hours exactly at the MIN_HOURS lower boundary (1)', async () => {
-		// Arrange
-		const insertedRow = { ...makeRecord(), id: 'new-id', hours: 1 };
-		const { insertMock } = makeInsertMock({ data: insertedRow, error: null });
-		supabaseMock.from.mockReturnValue({ insert: insertMock });
-		const { addActivity } = await import('./activityStorage');
-
-		// Act
-		const result = await addActivity({ ...makeRecord(), hours: 1 });
-
-		// Assert
-		expect(result.hours).toBe(1);
-	});
-
-	it('accepts hours exactly at the MAX_HOURS_PER_ENTRY upper boundary (10)', async () => {
-		// Arrange
-		const insertedRow = { ...makeRecord(), id: 'new-id', hours: 10 };
-		const { insertMock } = makeInsertMock({ data: insertedRow, error: null });
-		supabaseMock.from.mockReturnValue({ insert: insertMock });
-		const { addActivity } = await import('./activityStorage');
-
-		// Act
-		const result = await addActivity({ ...makeRecord(), hours: 10 });
-
-		// Assert
-		expect(result.hours).toBe(10);
-	});
-
-	it('throws when hours are 0.5 (below new MIN_HOURS of 1)', async () => {
-		// Arrange
-		const { addActivity } = await import('./activityStorage');
-		const activity = { ...makeRecord(), hours: 0.5 };
-
-		// Act und Assert
-		await expect(addActivity(activity)).rejects.toThrow(/hours must be a positive number/i);
+	it('returns the stored activity id from localStorage', () => {
+		localStorage.setItem('last_activity_id', 'act-99');
+		expect(getLastActivityId()).toBe('act-99');
 	});
 });
 
-describe('getLastActivityId', () => {
-	it('returns null when nothing is stored', async () => {
-		// Arrange
-		const { getLastActivityId } = await import('./activityStorage');
+describe('getLastLocation', () => {
+	it('returns null when nothing is stored', () => {
+		expect(getLastLocation()).toBeNull();
+	});
 
-		// Act
-		const result = getLastActivityId();
+	it('returns the stored location from localStorage', () => {
+		localStorage.setItem('last_location', 'Zurich');
+		expect(getLastLocation()).toBe('Zurich');
+	});
+});
 
-		// Assert
+// ── add ──────────────────────────────────────────────────────────────────
+
+describe('add', () => {
+	it('returns null when hours < MIN_HOURS', async () => {
+		const result = await activityStore.add(makeActivityInput({ hours: 0.5 }));
 		expect(result).toBeNull();
 	});
 
-	it('returns the stored activity id from localStorage', async () => {
-		// Arrange
-		localStorage.setItem('last_activity_id', 'act-99');
-		const { getLastActivityId } = await import('./activityStorage');
+	it('returns null when hours > maxHours', async () => {
+		const result = await activityStore.add(makeActivityInput({ hours: 11 }));
+		expect(result).toBeNull();
+	});
 
-		// Act
-		const result = getLastActivityId();
+	it('returns null when hours is NaN', async () => {
+		const result = await activityStore.add(makeActivityInput({ hours: NaN }));
+		expect(result).toBeNull();
+	});
 
-		// Assert
-		expect(result).toBe('act-99');
+	it('respects a custom maxHours parameter', async () => {
+		const result = await activityStore.add(makeActivityInput({ hours: 7 }), 6);
+		expect(result).toBeNull();
+	});
+
+	it('inserts and returns the new activity on success', async () => {
+		const row = makeActivityRow({ id: 'new-1' });
+		supabaseMock.from.mockReturnValue(createQueryChain({ data: row, error: null }));
+
+		const result = await activityStore.add(makeActivityInput());
+
+		expect(result).not.toBeNull();
+		expect(result!.id).toBe('new-1');
+		expect(result!.activity_name).toBe('Coding');
+		expect(result!.location).toBe('Office');
+	});
+
+	it('throws when supabase returns an error', async () => {
+		supabaseMock.from.mockReturnValue(
+			createQueryChain({ data: null, error: { message: 'DB error' } })
+		);
+
+		await expect(activityStore.add(makeActivityInput())).rejects.toThrow('DB error');
+	});
+
+	it('saves curriculum_activity_id to localStorage', async () => {
+		supabaseMock.from.mockReturnValue(createQueryChain({ data: makeActivityRow(), error: null }));
+
+		await activityStore.add(makeActivityInput({ curriculum_activity_id: 'ca-42' }));
+
+		expect(localStorage.getItem('last_activity_id')).toBe('ca-42');
+	});
+
+	it('saves location to localStorage when provided', async () => {
+		supabaseMock.from.mockReturnValue(createQueryChain({ data: makeActivityRow(), error: null }));
+
+		await activityStore.add(makeActivityInput({ location: 'Bern' }));
+
+		expect(localStorage.getItem('last_location')).toBe('Bern');
+	});
+
+	it('does not save location when empty', async () => {
+		supabaseMock.from.mockReturnValue(
+			createQueryChain({ data: makeActivityRow({ location: '' }), error: null })
+		);
+
+		await activityStore.add(makeActivityInput({ location: '' }));
+
+		expect(localStorage.getItem('last_location')).toBeNull();
+	});
+
+	it('prepends the new activity to the store', async () => {
+		supabaseMock.from.mockReturnValue(
+			createQueryChain({ data: makeActivityRow({ id: 'prepend-1' }), error: null })
+		);
+
+		await activityStore.add(makeActivityInput());
+
+		const activities = get(activityStore);
+		expect(activities.find((a) => a.id === 'prepend-1')).toBeDefined();
 	});
 });
 
-describe('getActivities', () => {
-	it('returns an empty array when Supabase reports an error', async () => {
-		// Arrange
-		const queryChain = {
-			select: vi.fn().mockReturnThis(),
-			order: vi.fn().mockResolvedValue({ data: null, error: { message: 'DB error' } })
-		};
-		supabaseMock.from.mockReturnValue(queryChain);
-		const { getActivities } = await import('./activityStorage');
+// ── addMany ──────────────────────────────────────────────────────────────
 
-		// Act
-		const result = await getActivities();
-
-		// Assert
+describe('addMany', () => {
+	it('returns empty array when input is empty', async () => {
+		const result = await activityStore.addMany([]);
 		expect(result).toEqual([]);
 	});
 
-	it('returns an empty array when Supabase returns no rows', async () => {
-		// Arrange
-		const queryChain = {
-			select: vi.fn().mockReturnThis(),
-			order: vi.fn().mockResolvedValue({ data: [], error: null })
-		};
-		supabaseMock.from.mockReturnValue(queryChain);
-		const { getActivities } = await import('./activityStorage');
-
-		// Act
-		const result = await getActivities();
-
-		// Assert
-		expect(result).toEqual([]);
+	it('throws when any activity has invalid hours', async () => {
+		await expect(activityStore.addMany([makeActivityInput({ hours: 0.5 })])).rejects.toThrow();
 	});
 
-	it('maps Supabase rows to the ActivityRecord shape', async () => {
-		// Arrange
-		const row = {
-			id: 'r1',
-			organization_id: 'org-1',
-			profession_id: 'prof-1',
-			user_id: 'user-1',
-			team_id: null,
-			curriculum_activity_id: 'act-1',
-			entry_date: '2024-01-15',
-			hours: 3,
-			notes: 'Test note',
-			rating: 5,
-			location: 'München',
-			created_at: '2024-01-15T10:00:00Z',
-			updated_at: '2024-01-15T10:00:00Z'
-		};
-		const queryChain = {
-			select: vi.fn().mockReturnThis(),
-			order: vi.fn().mockResolvedValue({ data: [row], error: null })
-		};
-		supabaseMock.from.mockReturnValue(queryChain);
-		const { getActivities, activityStore } = await import('./activityStorage');
-		activityStore.setCurriculumNodeSummaries([
-			{ id: 'act-1', key: 'diagnosis', label: 'Diagnose', is_active: true }
+	it('inserts all activities and returns them', async () => {
+		const rows = [makeActivityRow({ id: 'm-1' }), makeActivityRow({ id: 'm-2' })];
+		supabaseMock.from.mockReturnValue(createQueryChain({ data: rows, error: null }));
+
+		const result = await activityStore.addMany([
+			makeActivityInput({ curriculum_activity_id: 'ca-1' }),
+			makeActivityInput({ curriculum_activity_id: 'ca-2' })
 		]);
 
-		// Act
-		const [activity] = await getActivities();
-
-		// Assert
-		expect(activity.id).toBe('r1');
-		expect(activity.hours).toBe(3);
-		expect(activity.activity_name).toBe('Diagnose');
-		expect(activity.activity_key).toBe('diagnosis');
-		expect(activity.location).toBe('München');
-	});
-
-	it('falls back to an empty string when location is null', async () => {
-		// Arrange
-		const row = {
-			id: 'r2',
-			organization_id: 'org-1',
-			profession_id: 'prof-1',
-			user_id: 'user-1',
-			team_id: null,
-			curriculum_activity_id: 'act-1',
-			entry_date: '2024-01-15',
-			hours: 1,
-			notes: null,
-			rating: null,
-			location: null,
-			created_at: '2024-01-15T10:00:00Z',
-			updated_at: '2024-01-15T10:00:00Z'
-		};
-		const queryChain = {
-			select: vi.fn().mockReturnThis(),
-			order: vi.fn().mockResolvedValue({ data: [row], error: null })
-		};
-		supabaseMock.from.mockReturnValue(queryChain);
-		const { getActivities, activityStore } = await import('./activityStorage');
-		activityStore.setCurriculumNodeSummaries([
-			{ id: 'act-1', key: 'k', label: 'L', is_active: true }
-		]);
-
-		// Act
-		const [activity] = await getActivities();
-
-		// Assert
-		expect(activity.location).toBe('');
+		expect(result).toHaveLength(2);
+		expect(result[0].id).toBe('m-1');
+		expect(result[1].id).toBe('m-2');
 	});
 });
 
-describe('deleteActivity', () => {
-	it('calls supabase.delete with the correct record id', async () => {
-		// Arrange
-		const eqMock = vi.fn().mockResolvedValue({ error: null });
-		const deleteMock = vi.fn().mockReturnValue({ eq: eqMock });
-		supabaseMock.from.mockReturnValue({ delete: deleteMock });
-		const { deleteActivity } = await import('./activityStorage');
+// ── delete ───────────────────────────────────────────────────────────────
 
-		// Act
-		await deleteActivity('rec-1');
+describe('delete', () => {
+	it('returns true on successful delete', async () => {
+		supabaseMock.from.mockReturnValue(createQueryChain({ data: null, error: null }));
 
-		// Assert
-		expect(deleteMock).toHaveBeenCalled();
-		expect(eqMock).toHaveBeenCalledWith('id', 'rec-1');
+		const result = await activityStore.delete('nonexistent-id');
+		expect(result).toBe(true);
 	});
 
-	it('throws when Supabase returns an error', async () => {
-		// Arrange
-		const eqMock = vi.fn().mockResolvedValue({ error: { message: 'Delete failed' } });
-		const deleteMock = vi.fn().mockReturnValue({ eq: eqMock });
-		supabaseMock.from.mockReturnValue({ delete: deleteMock });
-		const { deleteActivity } = await import('./activityStorage');
+	it('throws edit window error when entry is older than 14 days', async () => {
+		const oldRow = makeActivityRow({ id: 'old-delete', entry_date: '2020-01-01' });
+		supabaseMock.from.mockReturnValue(createQueryChain({ data: oldRow, error: null }));
+		await activityStore.add(makeActivityInput({ entry_date: '2020-01-01' }));
 
-		// Actu nnd Assert
-		await expect(deleteActivity('rec-1')).rejects.toThrow('Delete failed');
+		await expect(activityStore.delete('old-delete')).rejects.toThrow();
+	});
+
+	it('throws when supabase returns an error', async () => {
+		supabaseMock.from.mockReturnValue(
+			createQueryChain({ data: null, error: { message: 'Delete failed' } })
+		);
+
+		await expect(activityStore.delete('some-id')).rejects.toThrow('Delete failed');
 	});
 });
 
-describe('addActivity — success path', () => {
-	it('persists the last activity id in localStorage after a successful insert', async () => {
-		// Arrange
-		const insertedRow = { ...makeRecord(), id: 'new-id' };
-		const { insertMock } = makeInsertMock({ data: insertedRow, error: null });
-		supabaseMock.from.mockReturnValue({ insert: insertMock });
-		const { addActivity } = await import('./activityStorage');
-		const activity = makeRecord({
-			id: undefined as never,
-			created_at: undefined as never,
-			updated_at: undefined as never
-		});
+// ── update ───────────────────────────────────────────────────────────────
 
-		// Act
-		await addActivity(activity);
-
-		// Assert
-		expect(localStorage.getItem('last_activity_id')).toBe(activity.curriculum_activity_id);
+describe('update', () => {
+	it('returns null when hours < MIN_HOURS', async () => {
+		const result = await activityStore.update('rec-1', { hours: 0.5 });
+		expect(result).toBeNull();
 	});
 
-	it('throws when Supabase returns an insert error', async () => {
-		// Arrange
-		const { insertMock } = makeInsertMock({ data: null, error: { message: 'Insert failed' } });
-		supabaseMock.from.mockReturnValue({ insert: insertMock });
-		const { addActivity } = await import('./activityStorage');
-		const activity = makeRecord({
-			id: undefined as never,
-			created_at: undefined as never,
-			updated_at: undefined as never
-		});
+	it('returns null when hours > maxHours', async () => {
+		const result = await activityStore.update('rec-1', { hours: 11 });
+		expect(result).toBeNull();
+	});
 
-		// Act und  Assert
-		await expect(addActivity(activity)).rejects.toThrow('Insert failed');
+	it('returns updated activity on success', async () => {
+		const row = makeActivityRow({ id: 'upd-1', hours: 8 });
+		supabaseMock.from.mockReturnValue(createQueryChain({ data: row, error: null }));
+
+		const result = await activityStore.update('upd-1', { hours: 8 });
+
+		expect(result).not.toBeNull();
+		expect(result!.id).toBe('upd-1');
+		expect(result!.hours).toBe(8);
+	});
+
+	it('throws when supabase returns an error', async () => {
+		supabaseMock.from.mockReturnValue(
+			createQueryChain({ data: null, error: { message: 'Update failed' } })
+		);
+
+		await expect(activityStore.update('rec-1', { notes: 'test' })).rejects.toThrow('Update failed');
+	});
+
+	it('saves location to localStorage when updated', async () => {
+		supabaseMock.from.mockReturnValue(
+			createQueryChain({ data: makeActivityRow({ id: 'loc-1' }), error: null })
+		);
+
+		await activityStore.update('loc-1', { location: 'Geneva' });
+
+		expect(localStorage.getItem('last_location')).toBe('Geneva');
+	});
+});
+
+// ── load ─────────────────────────────────────────────────────────────────
+
+describe('load', () => {
+	beforeEach(() => {
+		activityStore.setCurriculumNodeSummaries([
+			{ id: 'ca-1', key: 'coding', label: 'Coding', is_active: true }
+		]);
+	});
+
+	it('loads activities from supabase into store', async () => {
+		const rows = [makeActivityRow({ id: 'l-1' }), makeActivityRow({ id: 'l-2' })];
+		supabaseMock.from.mockReturnValue(createQueryChain({ data: rows, error: null }));
+
+		await activityStore.load();
+
+		const activities = get(activityStore);
+		expect(activities).toHaveLength(2);
+		expect(activities[0].id).toBe('l-1');
+	});
+
+	it('handles empty data from supabase', async () => {
+		supabaseMock.from.mockReturnValue(createQueryChain({ data: [], error: null }));
+
+		await activityStore.load();
+
+		expect(get(activityStore)).toEqual([]);
+	});
+
+	it('sets error store when supabase returns an error', async () => {
+		supabaseMock.from.mockReturnValue(
+			createQueryChain({ data: null, error: { message: 'Load failed' } })
+		);
+
+		await activityStore.load();
+
+		expect(get(activityError)).toBe('Load failed');
+	});
+
+	it('skips when loadInFlight is already true (concurrent guard)', async () => {
+		supabaseMock.from.mockReturnValue(createQueryChain({ data: [], error: null }));
+
+		await Promise.all([activityStore.load(), activityStore.load()]);
+
+		expect(supabaseMock.from).toHaveBeenCalledTimes(1);
 	});
 });

@@ -1,0 +1,41 @@
+diff --git a/dist/components/TransformContext.svelte b/dist/components/TransformContext.svelte
+index 710f7bd59e195eaa901732c1115f56d715f52a48..59e89f35390583b29050e34dfde318eb7fcb3d44 100644
+--- a/dist/components/TransformContext.svelte
++++ b/dist/components/TransformContext.svelte
+@@ -128,7 +128,7 @@
+ 
+   export function zoomTo(
+     center: { x: number; y: number },
+-    rect?: { width: number; height: number }
++    rect: { width: number; height: number } | undefined
+   ) {
+     const newScale = rect ? ($width < $height ? $width / rect.width : $height / rect.height) : 1;
+ 
+@@ -261,12 +261,12 @@
+     [dragging, translating, scaling],
+     ([dragging, translating, scaling]) => dragging || translating || scaling
+   );
+-  export function setTranslate(point: { x: number; y: number }, options?: MotionOptions) {
++  export function setTranslate(point: { x: number; y: number }, options: MotionOptions | undefined) {
+     // @ts-expect-error
+     translating.handle(translate.set(point, options));
+   }
+ 
+-  export function setScale(value: number, options?: MotionOptions) {
++  export function setScale(value: number, options: MotionOptions | undefined) {
+     // @ts-expect-error
+     scaling.handle(scale.set(value, options));
+   }
+diff --git a/dist/components/tooltip/TooltipContext.svelte b/dist/components/tooltip/TooltipContext.svelte
+index 934a6e244bb3b3e3e6f61d2af59516340c9c53de..3ce3b994e0ae528296781afeb9ba679be529cefa 100644
+--- a/dist/components/tooltip/TooltipContext.svelte
++++ b/dist/components/tooltip/TooltipContext.svelte
+@@ -177,7 +177,7 @@
+     }
+   }
+ 
+-  function showTooltip(e: PointerEvent, tooltipData?: any) {
++  function showTooltip(e: PointerEvent, tooltipData: any | undefined) {
+     // Cancel hiding tooltip if from previous event loop
+     if (hideTimeoutId) {
+       clearTimeout(hideTimeoutId);

@@ -1,31 +1,46 @@
 <script lang="ts">
-	import { Loader2 } from 'lucide-svelte';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import { Alert } from '$lib/components/ui/alert';
+	import { FormField } from '$lib/components/ui/form-field';
 	import { buttonVariants } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
 	import * as Card from '$lib/components/ui/card';
 	import { supabase } from '$lib/supabaseClient';
+	import { getRateLimitSeconds } from '$lib/rateLimitError';
 	import { cn } from '$lib/utils';
 	import * as m from '$lib/paraglide/messages.js';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 
+	let { reset = false }: { reset?: boolean } = $props();
+
 	let email = $state('');
 	let password = $state('');
 	let errorMessage = $state('');
 	let isLoading = $state(false);
+	let lastSubmitAt = 0;
 
 	async function signInWithEmail() {
+		// ponytail: client-side cooldown only; real protection is Supabase auth rate limits.
+		const now = Date.now();
+		if (now - lastSubmitAt < 1000) return;
+		lastSubmitAt = now;
 		isLoading = true;
-		const { error } = await supabase.auth.signInWithPassword({
-			email: email,
-			password: password
-		});
-		errorMessage = error ? error.message : '';
-		isLoading = false;
+		try {
+			const { error } = await supabase.auth.signInWithPassword({
+				email: email,
+				password: password
+			});
+			const seconds = getRateLimitSeconds(error);
+			errorMessage = seconds ? m.rate_limited({ seconds }) : error?.message || '';
 
-		if (!error) {
-			window.location.href = '/dashboard';
+			if (!error) {
+				window.location.href = '/dashboard';
+			}
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : String(err);
+		} finally {
+			isLoading = false;
 		}
 	}
 </script>
@@ -40,6 +55,7 @@
 	>
 		<div class="mx-auto flex max-w-6xl items-center justify-between">
 			<div class="flex items-center gap-2">
+				<img src="/icon.png" alt="" class="h-7 w-7" />
 				<a class="text-xl font-bold" href="/">time2log</a>
 			</div>
 			<LanguageSwitcher />
@@ -65,16 +81,14 @@
 					}}
 					class="grid gap-8"
 				>
+					{#if reset}
+						<Alert variant="success">{m.reset_password_success()}</Alert>
+					{/if}
 					{#if errorMessage}
-						<div
-							class="rounded-md border border-destructive bg-destructive/10 p-3 text-sm text-destructive"
-						>
-							{errorMessage}
-						</div>
+						<Alert variant="error">{errorMessage}</Alert>
 					{/if}
 
-					<div class="grid gap-2">
-						<Label for="email">{m.email_label()}</Label>
+					<FormField label={m.email_label()} htmlFor="email">
 						<Input
 							id="email"
 							type="email"
@@ -83,11 +97,8 @@
 							required
 							disabled={isLoading}
 						/>
-					</div>
-					<div class="grid gap-2">
-						<div class="flex items-center">
-							<Label for="password">{m.password_label()}</Label>
-						</div>
+					</FormField>
+					<FormField label={m.password_label()} htmlFor="password">
 						<Input
 							id="password"
 							type="password"
@@ -95,16 +106,25 @@
 							required
 							disabled={isLoading}
 						/>
-					</div>
+					</FormField>
 					<button type="submit" class={cn(buttonVariants(), 'w-full')} disabled={isLoading}>
 						{#if isLoading}
-							<Loader2 class="mr-2 h-4 w-4 animate-spin" />
+							<Spinner size="sm" class="mr-2" />
 							{m.logging_in()}
 						{:else}
 							{m.login_button()}
 						{/if}
 					</button>
 				</form>
+
+				<div class="mt-4 text-center">
+					<a
+						href="/forgot-password"
+						class="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+					>
+						{m.forgot_password_link()}
+					</a>
+				</div>
 			</Card.Content>
 		</Card.Root>
 	</main>

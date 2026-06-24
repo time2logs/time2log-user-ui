@@ -1,18 +1,27 @@
 <script lang="ts">
 	import * as Dialog from '$lib/components/ui/dialog';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+	import { ConfirmDialog } from '$lib/components/ui/confirm-dialog';
 	import { Button } from '$lib/components/ui/button';
+	import { Alert } from '$lib/components/ui/alert';
 	import { Label } from '$lib/components/ui/label';
 	import { Input } from '$lib/components/ui/input';
 	import { Textarea } from '$lib/components/ui/textarea';
-	import { MAX_HOURS_PER_DAY } from '$lib/activityStorage';
+	import { DEFAULT_MAX_HOURS_PER_DAY } from '$lib/activityStorage';
 	import { absenceStore, getAbsenceFractionForDate } from '$lib/absenceStorage';
 	import type { AbsenceType, AbsenceRecord, ActivityRecord, TeamMember } from '$lib/types';
-	import { AlertCircle, Calendar, Info, Trash2 } from 'lucide-svelte';
+	import AlertCircle from '@lucide/svelte/icons/circle-alert';
+	import Calendar from '@lucide/svelte/icons/calendar';
+	import Info from '@lucide/svelte/icons/info';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
 	import { rrulestr, Frequency } from 'rrule';
-	import { getFrequencyString, buildRruleString } from '$lib/rruleUtils';
+	import { getFrequencyString, buildRruleString, byweekdayToIndex } from '$lib/rruleUtils';
+	import { getAbsenceTypeLabel } from '$lib/absence-types';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import { SegmentedControl } from '$lib/components/ui/segmented-control';
+	import { isAbsenceWithinEditWindow, EDIT_WINDOW_DAYS } from '$lib/utils';
+	import Lock from '@lucide/svelte/icons/lock';
 
 	const dateLocale = $derived(getDateLocale());
 
@@ -53,20 +62,23 @@
 		existingAbsences?: AbsenceRecord[];
 	} = $props();
 
+	const maxHoursPerDay = $derived(teamMember?.max_hours_per_day ?? DEFAULT_MAX_HOURS_PER_DAY);
+
 	let selectedAbsenceType = $state<AbsenceType | null>(null);
 	let isRecurring = $state(false);
 	let startDate = $state<string>('');
 	let endDate = $state<string>('');
 	let dayFraction = $state<number>(1);
-	let recurrenceFrequency = $state<'daily' | 'weekly' | 'monthly'>('weekly');
+	let recurrenceFrequency = $state<'daily' | 'weekly'>('weekly');
 	let selectedDays = $state<number[]>([]);
 	let recurrenceUntil = $state<string>('');
 	let notes = $state<string>('');
 	let isSubmitting = $state(false);
 	let hasInitialized = $state(false);
 	let submitError = $state<string | null>(null);
+	let lastSyncedStart = $state<string>('');
 	let deleteDialogOpen = $state(false);
-	let deleteChoice = $state<'this' | 'all' | null>(null);
+	let deleteChoice = $state<'all' | null>(null);
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
 	let showDayFractionInfo = $state(false);
@@ -108,6 +120,12 @@
 		return dates;
 	}
 
+	function weekdayIndexOf(dateStr: string): number | null {
+		if (!dateStr) return null;
+		const day = new Date(`${dateStr}T12:00:00`).getDay();
+		return Number.isNaN(day) ? null : day;
+	}
+
 	$effect(() => {
 		if (open && !hasInitialized) {
 			if (absenceToEdit) {
@@ -136,11 +154,7 @@
 									? byweekdayRaw
 									: [byweekdayRaw];
 						selectedDays = byweekday
-							.map((d) => {
-								if (typeof d === 'number') return d;
-								if (typeof d === 'string') return weekdays.find((day) => day.short === d)?.value;
-								return d.weekday;
-							})
+							.map((d) => byweekdayToIndex(d))
 							.filter((value): value is number => value !== undefined);
 					} catch (e) {
 						console.error('Failed to parse rrule:', e);
@@ -159,6 +173,7 @@
 			}
 			submitError = null;
 			deleteError = null;
+			lastSyncedStart = startDate;
 			hasInitialized = true;
 		} else if (!open) {
 			hasInitialized = false;
@@ -172,6 +187,16 @@
 		}
 	});
 
+	$effect(() => {
+		if (hasInitialized && startDate && startDate !== lastSyncedStart) {
+			const wd = weekdayIndexOf(startDate);
+			if (wd !== null) {
+				selectedDays = [wd];
+			}
+			lastSyncedStart = startDate;
+		}
+	});
+
 	function getRruleString(): string {
 		return buildRruleString({
 			startDate,
@@ -182,6 +207,24 @@
 		});
 	}
 
+	function toggleRecurring(checked: boolean) {
+		isRecurring = checked;
+		if (checked) {
+			if (endDate && endDate !== startDate) {
+				recurrenceUntil = endDate;
+			}
+			endDate = startDate;
+			const wd = weekdayIndexOf(startDate);
+			if (wd !== null) {
+				selectedDays = [wd];
+			}
+			lastSyncedStart = startDate;
+		} else if (recurrenceUntil) {
+			endDate = recurrenceUntil;
+			recurrenceUntil = '';
+		}
+	}
+
 	function toggleDay(day: number) {
 		if (selectedDays.includes(day)) {
 			selectedDays = selectedDays.filter((d) => d !== day);
@@ -190,33 +233,12 @@
 		}
 	}
 
-	function getAbsenceTypeLabel(typeId: AbsenceType): string {
-		const type = absenceTypes.find((t) => t.id === typeId);
-		if (!type) return typeId;
-
-		switch (type.labelKey) {
-			case 'absence_type_sick':
-				return m.absence_type_sick();
-			case 'absence_type_vacation':
-				return m.absence_type_vacation();
-			case 'absence_type_military':
-				return m.absence_type_military();
-			case 'absence_type_uk':
-				return m.absence_type_uk();
-			case 'absence_type_berufsschule':
-				return m.absence_type_berufsschule();
-			case 'absence_type_custom':
-				return m.absence_type_custom();
-			default:
-				return typeId;
-		}
-	}
-
 	const isValid = $derived(selectedAbsenceType !== null && startDate && endDate && !isSubmitting);
 	const showRecurrenceOptions = $derived(isRecurring && selectedAbsenceType !== null);
 	const canSubmitRecurring = $derived(
-		!isRecurring || recurrenceFrequency === 'monthly' || selectedDays.length > 0
+		!isRecurring || recurrenceFrequency === 'daily' || selectedDays.length > 0
 	);
+	const isLocked = $derived(!!absenceToEdit && !isAbsenceWithinEditWindow(absenceToEdit));
 
 	const selectedDateLabel = $derived(
 		selectedDate
@@ -229,7 +251,7 @@
 			: null
 	);
 
-	const previewDates = $derived(() => {
+	const previewDates = $derived.by(() => {
 		if (!showRecurrenceOptions || !startDate) return [];
 		try {
 			const rruleStr = getRruleString();
@@ -283,7 +305,7 @@
 
 		const otherAbsences = existingAbsences.filter((absence) => absence.id !== absenceToEdit?.id);
 		const affectedDates = isRecurring
-			? Array.from(new Set([startDate, ...previewDates()]))
+			? Array.from(new Set([startDate, ...previewDates]))
 			: getDatesInRange(startDate, endDate);
 
 		for (const date of affectedDates) {
@@ -294,7 +316,7 @@
 				1,
 				getAbsenceFractionForDate(date, otherAbsences) + Number(dayFraction)
 			);
-			const availableHours = Math.max(0, MAX_HOURS_PER_DAY * (1 - blockedFraction));
+			const availableHours = Math.max(0, maxHoursPerDay * (1 - blockedFraction));
 
 			if (activityHours > availableHours) {
 				submitError = m.error_absence_conflicts_with_activities({
@@ -314,12 +336,13 @@
 			}
 
 			const rrule = isRecurring ? getRruleString() : null;
+			const effectiveEndDate = isRecurring ? recurrenceUntil || startDate : endDate;
 
 			if (absenceToEdit) {
 				await absenceStore.update(absenceToEdit.id, {
 					absence_type_id: selectedAbsenceType,
 					start_date: startDate,
-					end_date: endDate,
+					end_date: effectiveEndDate,
 					day_fraction: dayFraction,
 					is_recurring: isRecurring,
 					rrule,
@@ -332,7 +355,7 @@
 					team_id: teamMember.team_id || null,
 					absence_type_id: selectedAbsenceType,
 					start_date: startDate,
-					end_date: endDate,
+					end_date: effectiveEndDate,
 					day_fraction: dayFraction,
 					is_recurring: isRecurring,
 					rrule,
@@ -362,14 +385,12 @@
 		deleteError = null;
 
 		try {
-			if (deleteChoice === 'all') {
-				await absenceStore.delete(absenceToEdit.id);
-			}
-
+			await absenceStore.delete(absenceToEdit.id);
 			deleteDialogOpen = false;
 			open = false;
 			onAbsenceAdded();
 		} catch (error) {
+			console.error('[AbsenceForm] Failed to delete:', error);
 			deleteError = error instanceof Error ? error.message : m.error_delete_absence_failed();
 		} finally {
 			isDeleting = false;
@@ -389,15 +410,23 @@
 		</Dialog.Header>
 
 		{#if submitError}
-			<div
-				class="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-900 dark:bg-red-950"
-			>
-				<AlertCircle class="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500 dark:text-red-400" />
+			<Alert variant="error" class="mb-4">
+				<AlertCircle class="mt-0.5 h-5 w-5 shrink-0" />
 				<div class="flex-1">
-					<p class="text-sm font-medium text-red-800 dark:text-red-300">{m.error_label()}</p>
-					<p class="text-sm text-red-600 dark:text-red-400">{submitError}</p>
+					<p class="text-sm font-medium">{m.error_label()}</p>
+					<p class="text-sm">{submitError}</p>
 				</div>
-			</div>
+			</Alert>
+		{/if}
+
+		{#if isLocked}
+			<Alert variant="warning" class="mb-4">
+				<Lock class="mt-0.5 h-5 w-5 shrink-0" />
+				<div class="flex-1">
+					<p class="text-sm font-medium">{m.entry_locked_title()}</p>
+					<p class="text-sm">{m.entry_locked_tooltip({ days: EDIT_WINDOW_DAYS })}</p>
+				</div>
+			</Alert>
 		{/if}
 
 		<div class="grid gap-4 py-4">
@@ -418,8 +447,8 @@
 							type="button"
 							onclick={() => {
 								selectedAbsenceType = type.id;
-								if (!type.recurring) {
-									isRecurring = false;
+								if (!type.recurring && isRecurring) {
+									toggleRecurring(false);
 								}
 							}}
 							class="flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors {selectedAbsenceType ===
@@ -435,15 +464,21 @@
 
 			{#if selectedAbsenceType}
 				<div class="grid gap-3 rounded-lg border border-border bg-muted/20 p-4">
-					<div class="grid gap-3 sm:grid-cols-3">
+					<div class="grid gap-3 {isRecurring ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}">
 						<div class="grid gap-2">
-							<Label for="startDate">{m.absence_start_date_label()}</Label>
-							<Input id="startDate" type="date" lang={dateLocale} bind:value={startDate} />
+							<Label for="startDate"
+								>{m.absence_start_date_label()} <span class="text-destructive">*</span></Label
+							>
+							<Input id="startDate" type="date" lang={dateLocale} bind:value={startDate} required />
 						</div>
-						<div class="grid gap-2">
-							<Label for="endDate">{m.absence_end_date_label()}</Label>
-							<Input id="endDate" type="date" lang={dateLocale} bind:value={endDate} />
-						</div>
+						{#if !isRecurring}
+							<div class="grid gap-2">
+								<Label for="endDate"
+									>{m.absence_end_date_label()} <span class="text-destructive">*</span></Label
+								>
+								<Input id="endDate" type="date" lang={dateLocale} bind:value={endDate} required />
+							</div>
+						{/if}
 						<div
 							class="relative grid gap-2"
 							role="presentation"
@@ -490,7 +525,8 @@
 							<input
 								id="recurring"
 								type="checkbox"
-								bind:checked={isRecurring}
+								checked={isRecurring}
+								onchange={(e) => toggleRecurring(e.currentTarget.checked)}
 								class="h-4 w-4 rounded border-border accent-primary"
 							/>
 							<Label for="recurring" class="cursor-pointer font-medium">{m.recurring_label()}</Label
@@ -502,58 +538,29 @@
 							<div class="mt-2 grid gap-3">
 								<div class="grid gap-2">
 									<Label>{m.recurring_frequency_label()}</Label>
-									<div class="flex gap-2">
-										<button
-											type="button"
-											onclick={() => (recurrenceFrequency = 'daily')}
-											class="flex-1 rounded-lg border px-3 py-2 text-sm transition-colors {recurrenceFrequency ===
-											'daily'
-												? 'border-primary bg-primary/10 text-primary'
-												: 'border-border bg-background text-foreground hover:bg-accent'}"
-										>
-											{m.recurring_frequency_daily()}
-										</button>
-										<button
-											type="button"
-											onclick={() => (recurrenceFrequency = 'weekly')}
-											class="flex-1 rounded-lg border px-3 py-2 text-sm transition-colors {recurrenceFrequency ===
-											'weekly'
-												? 'border-primary bg-primary/10 text-primary'
-												: 'border-border bg-background text-foreground hover:bg-accent'}"
-										>
-											{m.recurring_frequency_weekly()}
-										</button>
-										<button
-											type="button"
-											onclick={() => (recurrenceFrequency = 'monthly')}
-											class="flex-1 rounded-lg border px-3 py-2 text-sm transition-colors {recurrenceFrequency ===
-											'monthly'
-												? 'border-primary bg-primary/10 text-primary'
-												: 'border-border bg-background text-foreground hover:bg-accent'}"
-										>
-											{m.recurring_frequency_monthly()}
-										</button>
-									</div>
+									<SegmentedControl
+										items={[
+											{ value: 'daily', label: m.recurring_frequency_daily() },
+											{ value: 'weekly', label: m.recurring_frequency_weekly() }
+										]}
+										value={recurrenceFrequency}
+										onSelect={(v) => (recurrenceFrequency = v as typeof recurrenceFrequency)}
+									/>
 								</div>
 
-								{#if recurrenceFrequency !== 'monthly'}
+								{#if recurrenceFrequency === 'weekly'}
 									<div class="grid gap-2">
 										<Label>{m.recurring_days_of_week()}</Label>
-										<div class="flex flex-wrap gap-2">
-											{#each weekdays as day (day.value)}
-												<button
-													type="button"
-													onclick={() => toggleDay(day.value)}
-													class="min-w-[2.5rem] rounded-lg border px-2 py-1 text-xs font-medium transition-colors {selectedDays.includes(
-														day.value
-													)
-														? 'border-primary bg-primary text-primary-foreground'
-														: 'border-border bg-background text-foreground hover:bg-accent'}"
-												>
-													{day.short}
-												</button>
-											{/each}
-										</div>
+										<SegmentedControl
+											class="flex-wrap"
+											buttonClass="min-w-[2.5rem] px-2 py-1 text-xs"
+											items={weekdays.map((day) => ({
+												value: String(day.value),
+												label: day.short
+											}))}
+											selected={selectedDays.map(String)}
+											onToggle={(v) => toggleDay(Number(v))}
+										/>
 									</div>
 								{/if}
 
@@ -568,9 +575,9 @@
 								</div>
 
 								<div class="grid gap-2">
-									<Label>{m.recurring_preview({ count: previewDates().length })}</Label>
+									<Label>{m.recurring_preview({ count: previewDates.length })}</Label>
 									<div class="flex flex-wrap gap-1">
-										{#each previewDates() as date (date)}
+										{#each previewDates as date (date)}
 											<span class="rounded bg-primary/10 px-2 py-0.5 text-xs text-primary">
 												{new Date(`${date}T12:00:00`).toLocaleDateString(dateLocale, {
 													month: 'short',
@@ -578,7 +585,7 @@
 												})}
 											</span>
 										{/each}
-										{#if previewDates().length >= 6}
+										{#if previewDates.length >= 6}
 											<span class="px-2 py-0.5 text-xs text-muted-foreground">...</span>
 										{/if}
 									</div>
@@ -600,7 +607,7 @@
 				<Button
 					variant="destructive"
 					onclick={handleDelete}
-					disabled={isSubmitting || isDeleting}
+					disabled={isSubmitting || isDeleting || isLocked}
 					class="flex-1"
 				>
 					<Trash2 class="mr-2 h-4 w-4" />
@@ -621,11 +628,11 @@
 				<Button
 					variant="default"
 					onclick={handleSubmit}
-					disabled={!isValid || !canSubmitRecurring || isSubmitting}
+					disabled={!isValid || !canSubmitRecurring || isSubmitting || isLocked}
 				>
 					{#if isSubmitting}
 						<span class="flex items-center gap-2">
-							<span class="h-4 w-4 animate-spin">⟳</span>
+							<Spinner size="sm" />
 							{m.saving()}
 						</span>
 					{:else}
@@ -637,57 +644,26 @@
 	</Dialog.Content>
 </Dialog.Root>
 
-<AlertDialog.Root bind:open={deleteDialogOpen}>
-	<AlertDialog.Content>
-		<AlertDialog.Header>
-			<AlertDialog.Title>{m.delete_absence_title()}</AlertDialog.Title>
-			{#if deleteError}
-				<AlertDialog.Description class="text-red-500">{deleteError}</AlertDialog.Description>
-			{/if}
-		</AlertDialog.Header>
-		<AlertDialog.Description>
-			{#if absenceToEdit?.is_recurring}
-				{m.delete_absence_recurring_confirm()}
-			{:else}
-				{m.delete_absence_confirm()}
-			{/if}
-		</AlertDialog.Description>
-		<AlertDialog.Footer>
-			<AlertDialog.Cancel disabled={isDeleting}>{m.cancel()}</AlertDialog.Cancel>
-			{#if absenceToEdit?.is_recurring}
-				<Button
-					variant="outline"
-					onclick={() => {
-						deleteChoice = 'this';
-						handleDelete();
-					}}
-					disabled={isDeleting}
-				>
-					{m.delete_absence_this_occurrence()}
-				</Button>
-			{/if}
-			<AlertDialog.Action
-				onclick={() => {
-					deleteChoice = 'all';
-					handleDelete();
-				}}
-				disabled={isDeleting}
-				class="text-destructive-foreground bg-destructive hover:bg-destructive/90"
-			>
-				{#if isDeleting}
-					<span class="flex items-center gap-2">
-						<span class="h-4 w-4 animate-spin">⟳</span>
-						{m.deleting()}
-					</span>
-				{:else}
-					<Trash2 class="mr-2 h-4 w-4" />
-					{#if absenceToEdit?.is_recurring}
-						{m.delete_absence_all()}
-					{:else}
-						{m.delete_activity_confirm_button()}
-					{/if}
-				{/if}
-			</AlertDialog.Action>
-		</AlertDialog.Footer>
-	</AlertDialog.Content>
-</AlertDialog.Root>
+<ConfirmDialog
+	bind:open={deleteDialogOpen}
+	title={m.delete_absence_title()}
+	confirmLabel={absenceToEdit?.is_recurring
+		? m.delete_absence_all()
+		: m.delete_activity_confirm_button()}
+	cancelLabel={m.cancel()}
+	variant="destructive"
+	loading={isDeleting}
+	onConfirm={() => {
+		deleteChoice = 'all';
+		handleDelete();
+	}}
+>
+	{#if deleteError}
+		<Alert variant="error">{deleteError}</Alert>
+	{/if}
+	<p class="text-sm text-muted-foreground">
+		{absenceToEdit?.is_recurring
+			? m.delete_absence_recurring_confirm()
+			: m.delete_absence_confirm()}
+	</p>
+</ConfirmDialog>

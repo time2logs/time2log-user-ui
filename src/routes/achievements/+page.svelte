@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages.js';
 	import { Button } from '$lib/components/ui/button';
-	import { ArrowLeft } from 'lucide-svelte';
+	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import LevelHero from '$lib/components/achievements/level-hero.svelte';
 	import TopLocations from '$lib/components/achievements/top-locations.svelte';
@@ -9,8 +9,11 @@
 	import SicknessOverview from '$lib/components/achievements/sickness-overview.svelte';
 	import AchievementGrid from '$lib/components/achievements/achievement-grid.svelte';
 
-	import { activityStore } from '$lib/activityStorage';
-	import { absenceStore } from '$lib/absenceStorage';
+	import { Spinner } from '$lib/components/ui/spinner';
+	import { Alert } from '$lib/components/ui/alert';
+
+	import { activityStore, activityLoading, activityError } from '$lib/activityStorage';
+	import { absenceStore, absenceLoading, absenceError } from '$lib/absenceStorage';
 	import { computeActivityBreakdown, computeTotalHours } from '$lib/statsUtils';
 	import {
 		computeAchievements,
@@ -29,6 +32,8 @@
 
 	const activityRecords = $derived($activityStore);
 	const absenceRecords = $derived($absenceStore);
+	const isLoading = $derived($activityLoading || $absenceLoading);
+	const loadError = $derived($activityError || $absenceError);
 
 	$effect(() => {
 		activityStore.setCurriculumNodeSummaries(data.curriculumNodeSummaries);
@@ -84,23 +89,44 @@
 				{m.achievements_title()}
 			</h1>
 
-			<div class="flex flex-col gap-4">
-				<LevelHero
-					totalHours={totalLoggedHours}
-					currentStreak={currentStreakDays}
-					level={levelInfo}
-				/>
-				<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-					<TopLocations locations={topLocationStats} />
-					<TopActivitiesPodium items={topActivityStats} />
+			{#if loadError}
+				<div class="flex flex-col items-center gap-3 py-12 text-center">
+					<Alert variant="error">{m.error_loading_data()}</Alert>
+					<Button
+						variant="outline"
+						size="sm"
+						onclick={() => {
+							void activityStore.load();
+							void absenceStore.load();
+						}}
+					>
+						{m.retry()}
+					</Button>
 				</div>
-				<SicknessOverview
-					sickThisYear={sickDaysThisYear}
-					sickAllTime={sickDaysAllTime}
-					workdays={loggedWorkdayCount}
-				/>
-				<AchievementGrid achievements={achievementStatuses} />
-			</div>
+			{:else if isLoading}
+				<div class="flex items-center justify-center gap-2 py-12">
+					<Spinner size="sm" />
+					<span class="text-sm text-muted-foreground">{m.loading_data()}</span>
+				</div>
+			{:else}
+				<div class="flex flex-col gap-4">
+					<LevelHero
+						totalHours={totalLoggedHours}
+						currentStreak={currentStreakDays}
+						level={levelInfo}
+					/>
+					<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+						<TopLocations locations={topLocationStats} />
+						<TopActivitiesPodium items={topActivityStats} />
+					</div>
+					<SicknessOverview
+						sickThisYear={sickDaysThisYear}
+						sickAllTime={sickDaysAllTime}
+						workdays={loggedWorkdayCount}
+					/>
+					<AchievementGrid achievements={achievementStatuses} />
+				</div>
+			{/if}
 		</div>
 	</main>
 </div>

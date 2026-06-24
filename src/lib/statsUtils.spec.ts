@@ -7,7 +7,8 @@ import {
 	computeTotalHours,
 	computeActiveDaysThisMonth,
 	computeActivityBreakdown,
-	computeWeeklyData
+	computeWeeklyData,
+	computeAbsencesBySemester
 } from './statsUtils';
 
 function makeActivity(entry_date: string, hours: number, activity_name = 'Task'): ActivityRecord {
@@ -257,5 +258,120 @@ describe('computeWeeklyData', () => {
 		const result = computeWeeklyData([], today, 1);
 		// Monday of 2024-01-10's week is 2024-01-08
 		expect(result[result.length - 1].weekStart).toBe('2024-01-08');
+	});
+});
+
+// ── computeAbsencesBySemester ───────────────────────────────────────────────
+
+import type { AbsenceRecord } from './types';
+
+function makeAbsence(overrides: Partial<AbsenceRecord> = {}): AbsenceRecord {
+	return {
+		id: 'abs-1',
+		user_id: 'user-1',
+		team_id: null,
+		organization_id: 'org-1',
+		absence_type_id: 'sick',
+		start_date: '2024-01-01',
+		end_date: '2024-01-01',
+		day_fraction: 1,
+		is_recurring: false,
+		rrule: null,
+		notes: null,
+		created_at: '2024-01-01T00:00:00Z',
+		updated_at: '2024-01-01T00:00:00Z',
+		absence_type_label: 'Sick',
+		...overrides
+	};
+}
+
+describe('computeAbsencesBySemester', () => {
+	it('returns empty array for no absences', () => {
+		expect(computeAbsencesBySemester([])).toEqual([]);
+	});
+
+	it('assigns an autumn start (Aug-Dec) to semester 1 of that academic year', () => {
+		const absences = [
+			makeAbsence({
+				start_date: '2024-09-01',
+				end_date: '2024-09-01',
+				absence_type_id: 'sick',
+				day_fraction: 1
+			})
+		];
+		const result = computeAbsencesBySemester(absences);
+		expect(result).toHaveLength(1);
+		expect(result[0].semester).toBe('2024/S1');
+		expect(result[0].type).toBe('sick');
+		expect(result[0].days).toBe(1);
+	});
+
+	it('assigns a spring start (Jan-Jul) to semester 2 of the previous academic year', () => {
+		const absences = [
+			makeAbsence({
+				start_date: '2024-03-01',
+				end_date: '2024-03-01',
+				absence_type_id: 'vacation',
+				day_fraction: 1
+			})
+		];
+		const result = computeAbsencesBySemester(absences);
+		expect(result[0].semester).toBe('2023/S2');
+	});
+
+	it('calculates multi-day absence totals with day_fraction', () => {
+		const absences = [
+			makeAbsence({
+				start_date: '2024-09-01',
+				end_date: '2024-09-05',
+				day_fraction: 0.5
+			})
+		];
+		const result = computeAbsencesBySemester(absences);
+		// 5 days × 0.5 = 2.5, rounded to 3
+		expect(result[0].days).toBe(3);
+	});
+
+	it('groups different absence types within the same semester', () => {
+		const absences = [
+			makeAbsence({
+				id: 'a',
+				start_date: '2024-09-01',
+				end_date: '2024-09-01',
+				absence_type_id: 'sick'
+			}),
+			makeAbsence({
+				id: 'b',
+				start_date: '2024-10-01',
+				end_date: '2024-10-01',
+				absence_type_id: 'vacation'
+			})
+		];
+		const result = computeAbsencesBySemester(absences);
+		expect(result).toHaveLength(2);
+		expect(result.every((r) => r.semester === '2024/S1')).toBe(true);
+		expect(result.map((r) => r.type).sort()).toEqual(['sick', 'vacation']);
+	});
+
+	it('sorts semesters chronologically', () => {
+		const absences = [
+			makeAbsence({ start_date: '2024-03-01', end_date: '2024-03-01', absence_type_id: 'sick' }),
+			makeAbsence({ start_date: '2024-09-01', end_date: '2024-09-01', absence_type_id: 'sick' })
+		];
+		const result = computeAbsencesBySemester(absences);
+		expect(result[0].semester).toBe('2023/S2');
+		expect(result[1].semester).toBe('2024/S1');
+	});
+
+	it('rounds fractional days to whole numbers', () => {
+		const absences = [
+			makeAbsence({
+				start_date: '2024-09-01',
+				end_date: '2024-09-01',
+				day_fraction: 0.3
+			})
+		];
+		const result = computeAbsencesBySemester(absences);
+		expect(result[0].days).toBe(0);
 	});
 });

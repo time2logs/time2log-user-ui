@@ -2,6 +2,9 @@ import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import * as m from '$lib/paraglide/messages.js';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
+import { checkRateLimit, rateKey } from '$lib/server/rateLimiter';
+
+const WINDOW_1HOUR = 60 * 60 * 1000;
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const session = await locals.safeGetSession();
@@ -11,7 +14,10 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}
 
 	const userId = session.user.id;
-	const email = session.user.email;
+	const {
+		data: { user }
+	} = await locals.supabase.auth.getUser();
+	const email = user?.email ?? session.user.email;
 
 	const profileResult = await locals.supabase
 		.from('profiles')
@@ -21,38 +27,24 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const profile = profileResult.error ? null : profileResult.data;
 
-	type UserLocation = {
-		user_id: string;
-		location: string;
-		is_default: boolean;
-		created_at: string;
-	};
-
-	let locations: UserLocation[] = [];
-	let defaultLocation: string | null = null;
-
-	try {
-		const locationsResult = await locals.supabase
-			.from('user_locations')
-			.select('*')
-			.eq('user_id', userId)
-			.order('created_at', { ascending: false });
-
-		if (!locationsResult.error && locationsResult.data) {
-			locations = locationsResult.data as UserLocation[];
-			defaultLocation = locations.find((l) => l.is_default)?.location ?? null;
-		}
-	} catch (e) {
-		console.warn('user_locations table not available:', e);
-	}
-
-	return { profile, email, defaultLocation, pastLocations: locations };
+	return { profile, email };
 };
 
 export const actions: Actions = {
 	updateProfile: async ({ request, locals }) => {
 		const session = await locals.safeGetSession();
 		if (!session) throw redirect(302, '/login');
+
+		const profileLimit = checkRateLimit(
+			rateKey('settings:profile', session.user.id),
+			10,
+			WINDOW_1HOUR
+		);
+		if (!profileLimit.allowed) {
+			return fail(429, {
+				profileError: m.rate_limited({ seconds: profileLimit.retryAfterSeconds.toString() })
+			});
+		}
 
 		const formData = await request.formData();
 		const firstName = formData.get('first_name')?.toString().trim() ?? '';
@@ -81,9 +73,7 @@ export const actions: Actions = {
 
 		if (profileError) {
 			console.error('[Settings] Failed to update profile:', profileError.message);
-			return fail(500, {
-				profileError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
-			});
+			return fail(500, { profileError: m.error_server() });
 		}
 
 		if (avatarFile && avatarFile.size > 0 && avatarExt) {
@@ -99,157 +89,17 @@ export const actions: Actions = {
 					.getPublicUrl(filePath);
 
 				if (publicUrlData) {
-					await locals.supabase
+					const { error: avatarUrlError } = await locals.supabase
 						.from('profiles')
 						.update({ avatar_url: publicUrlData.publicUrl })
 						.eq('id', session.user.id);
+					if (avatarUrlError) {
+						console.error('Failed to link avatar URL to profile:', avatarUrlError);
+					}
 				}
 			}
 		}
 
 		return { profileSuccess: true };
-	},
-
-	updateEmail: async ({ request, locals }) => {
-		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
-
-		const formData = await request.formData();
-		const email = formData.get('email')?.toString().trim() ?? '';
-
-		if (!email) {
-			return fail(400, { emailError: m.onboarding_error_email_missing() });
-		}
-
-		if (email === session.user.email) {
-			return fail(400, { emailError: m.settings_error_email_unchanged() });
-		}
-
-		const { error } = await locals.supabase.auth.updateUser({ email });
-		if (error) {
-			console.error('[Settings] Failed to update email:', error.message);
-			return fail(500, {
-				emailError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
-			});
-		}
-
-		return { emailSuccess: true };
-	},
-
-	updatePassword: async ({ request, locals }) => {
-		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
-
-		const formData = await request.formData();
-		const password = formData.get('password')?.toString() ?? '';
-		const confirmPassword = formData.get('confirm_password')?.toString() ?? '';
-
-		if (password !== confirmPassword) {
-			return fail(400, { passwordError: m.settings_error_password_mismatch() });
-		}
-
-		if (!password || password.length < 8) {
-			return fail(400, { passwordError: m.onboarding_error_password_length() });
-		}
-
-		if (!/[A-Z]/.test(password)) {
-			return fail(400, { passwordError: m.onboarding_error_password_uppercase() });
-		}
-
-		if (!/[0-9]/.test(password)) {
-			return fail(400, { passwordError: m.onboarding_error_password_number() });
-		}
-
-		if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password)) {
-			return fail(400, { passwordError: m.onboarding_error_password_special() });
-		}
-
-		const { error } = await locals.supabase.auth.updateUser({ password });
-		if (error) {
-			console.error('[Settings] Failed to update password:', error.message);
-			return fail(500, {
-				passwordError: 'Ein Serverfehler ist aufgetreten. Bitte versuche es erneut.'
-			});
-		}
-
-		return { passwordSuccess: true };
-	},
-
-	addLocation: async ({ request, locals }) => {
-		const session = await locals.safeGetSession();
-
-		if (!session) throw redirect(302, '/login');
-
-		const formData = await request.formData();
-		const location = formData.get('location')?.toString().trim() ?? '';
-
-		if (!location) {
-			return fail(400, { locationError: 'Standort darf nicht leer sein.' });
-		}
-
-		const { error } = await locals.supabase
-			.from('user_locations')
-			.insert({ user_id: session.user.id, location, is_default: false });
-
-		if (error) {
-			if (error.code === '23505') {
-				return fail(400, { locationError: m.location_already_exists() });
-			}
-			return fail(500, { locationError: 'Fehler beim Speichern.' });
-		}
-		return { locationSuccess: true };
-	},
-	deleteLocation: async ({ request, locals }) => {
-		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
-
-		const formData = await request.formData();
-		const location = formData.get('location')?.toString() ?? '';
-
-		await locals.supabase
-			.from('user_locations')
-			.delete()
-			.eq('user_id', session.user.id)
-			.eq('location', location);
-
-		return { locationDeleteSuccess: true };
-	},
-	updateColorblindType: async ({ request, locals }) => {
-		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
-
-		const formData = await request.formData();
-		const colorblindType = formData.get('colorblind_type')?.toString() ?? 'none';
-
-		const { error } = await locals.supabase
-			.from('profiles')
-			.update({ colorblind_type: colorblindType })
-			.eq('id', session.user.id);
-
-		if (error) return fail(500, { colorblindError: 'Fehler beim Speichern.' });
-
-		return { colorblindSuccess: true };
-	},
-
-	updateTargetHours: async ({ request, locals }) => {
-		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
-
-		const formData = await request.formData();
-		const raw = formData.get('target_hours')?.toString() ?? '';
-		const targetHours = parseInt(raw, 10);
-
-		if (isNaN(targetHours) || targetHours < 1 || targetHours > 24) {
-			return fail(400, { targetHoursError: m.settings_target_hours_error() });
-		}
-
-		const { error } = await locals.supabase
-			.from('profiles')
-			.update({ target_hours: targetHours })
-			.eq('id', session.user.id);
-
-		if (error) return fail(500, { targetHoursError: 'Fehler beim Speichern.' });
-
-		return { targetHoursSuccess: true };
 	}
 };

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getLocale, setLocale } from '$lib/paraglide/runtime';
 	import * as Select from '$lib/components/ui/select';
+	import { STORAGE_KEYS } from '$lib/storageKeys';
 
 	type Locale = 'en' | 'de-ch' | 'it' | 'fr';
 
@@ -22,12 +23,12 @@
 				selectedLocale = current as Locale;
 				return;
 			}
-		} catch {
-			// Continue to fallbacks
+		} catch (e) {
+			console.warn('[LanguageSwitcher] getLocale() failed, falling back:', e);
 		}
 
 		// Fall back to localStorage
-		const stored = localStorage.getItem('PARAGLIDE_LOCALE');
+		const stored = localStorage.getItem(STORAGE_KEYS.paraglideLocale);
 		if (stored && locales.some((l) => l.code === stored)) {
 			selectedLocale = stored as Locale;
 			return;
@@ -53,7 +54,7 @@
 
 		// Store in localStorage
 		if (typeof window !== 'undefined') {
-			localStorage.setItem('PARAGLIDE_LOCALE', selectedLocale);
+			localStorage.setItem(STORAGE_KEYS.paraglideLocale, selectedLocale);
 		}
 
 		// Update cookie and reload
@@ -77,7 +78,7 @@
 				<span class="flex items-center gap-2">
 					<span class="text-lg">{locale.flag}</span>
 					<span>{locale.name}</span>
-					<span class="text-xs text-gray-400">{locale.display}</span>
+					<span class="text-xs text-muted-foreground">{locale.display}</span>
 				</span>
 			</Select.Item>
 		{/each}
