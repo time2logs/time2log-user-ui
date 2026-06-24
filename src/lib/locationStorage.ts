@@ -8,13 +8,8 @@ import { unwrapSupabase } from './supabaseUtils';
  *
  * @param location   Workplace label, e.g. "Office" or "Home office"
  * @param userId     auth.users id of the current user
- * @param organizationId  Optional org id for multi-tenant scoping
  */
-export async function addUserLocation(
-	location: string,
-	userId: string,
-	organizationId?: string | null
-): Promise<string> {
+export async function addUserLocation(location: string, userId: string): Promise<string> {
 	const trimmed = location.trim();
 	if (!trimmed) throw new Error('Location must not be empty.');
 
@@ -32,11 +27,14 @@ export async function addUserLocation(
 	}
 
 	unwrapSupabase(
-		await supabase.from('user_locations').insert({
-			location: trimmed,
-			user_id: userId,
-			organization_id: organizationId ?? null
-		}),
+		await supabase
+			.from('user_locations')
+			.insert({
+				location: trimmed,
+				user_id: userId
+			})
+			.select()
+			.single(),
 		'Failed to save location'
 	);
 

@@ -125,8 +125,8 @@
 
 	// Inline location creation state
 	let locationsList = $state<string[]>([]);
-	let pendingNewLocations = $state<string[]>([]);
 	let isAddingLocation = $state(false);
+	let isSavingLocation = $state(false);
 	let newLocationInput = $state('');
 	let locationError = $state<string | null>(null);
 
@@ -164,7 +164,6 @@
 		} else if (!open) {
 			hasInitialized = false;
 			pendingActivities = [];
-			pendingNewLocations = [];
 		}
 	});
 
@@ -194,7 +193,7 @@
 		locationError = null;
 	}
 
-	function saveNewLocation() {
+	async function saveNewLocation() {
 		const trimmed = newLocationInput.trim();
 		if (!trimmed) {
 			return;
@@ -203,13 +202,27 @@
 			locationError = m.location_already_exists();
 			return;
 		}
+		if (!teamMember?.user_id) {
+			locationError = m.error_save_location_failed();
+			return;
+		}
 
+		isSavingLocation = true;
 		locationError = null;
-		locationsList = [...locationsList, trimmed];
-		pendingNewLocations = [...pendingNewLocations, trimmed];
-		location = trimmed;
-		isAddingLocation = false;
-		newLocationInput = '';
+		try {
+			await addUserLocation(trimmed, teamMember.user_id);
+			locationsList = [...locationsList, trimmed];
+			location = trimmed;
+			isAddingLocation = false;
+			newLocationInput = '';
+		} catch (err) {
+			locationError =
+				err instanceof Error && err.message === 'DUPLICATE_LOCATION'
+					? m.location_already_exists()
+					: m.error_save_location_failed();
+		} finally {
+			isSavingLocation = false;
+		}
 	}
 
 	function handleAddAnother() {
@@ -339,20 +352,6 @@
 				} else {
 					await activityStore.add(activityData, maxHoursPerDay);
 				}
-			}
-
-			// Persist any new locations created inline (best-effort, non-blocking)
-			if (pendingNewLocations.length > 0 && teamMember?.user_id) {
-				const userId = teamMember.user_id;
-				const orgId = teamMember.organization_id;
-				for (const loc of pendingNewLocations) {
-					try {
-						await addUserLocation(loc, userId, orgId);
-					} catch (err) {
-						console.warn('[ActivityForm] Failed to persist location:', loc, err);
-					}
-				}
-				pendingNewLocations = [];
 			}
 
 			open = false;
@@ -653,17 +652,24 @@
 						onkeydown={(e) => {
 							if (e.key === 'Enter') {
 								e.preventDefault();
-								saveNewLocation();
+								if (!isSavingLocation) saveNewLocation();
 							} else if (e.key === 'Escape') {
 								cancelAddLocation();
 							}
 						}}
 						class="min-w-40 flex-1"
+						disabled={isSavingLocation}
 					/>
-					<Button type="button" size="sm" onclick={saveNewLocation}>
+					<Button type="button" size="sm" onclick={saveNewLocation} disabled={isSavingLocation}>
 						{m.save()}
 					</Button>
-					<Button type="button" size="sm" variant="outline" onclick={cancelAddLocation}>
+					<Button
+						type="button"
+						size="sm"
+						variant="outline"
+						onclick={cancelAddLocation}
+						disabled={isSavingLocation}
+					>
 						{m.cancel()}
 					</Button>
 				</div>

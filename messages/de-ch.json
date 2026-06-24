@@ -128,6 +128,7 @@
 	"add_location_success": "Arbeitsplatz gespeichert.",
 	"delete_location_success": "Arbeitsplatz gelöscht.",
 	"location_already_exists": "Dieser Arbeitsplatz existiert bereits.",
+	"error_save_location_failed": "Arbeitsplatz konnte nicht gespeichert werden. Bitte versuche es erneut.",
 	"save": "Speichern",
 	"error_hours_min": "Mindestens {min} Stunde(n) erforderlich",
 	"error_hours_max_entry": "Maximal {max} Stunden pro Eintrag erlaubt",

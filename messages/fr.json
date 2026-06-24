@@ -128,6 +128,7 @@
 	"add_location_success": "Lieu de travail enregistré.",
 	"delete_location_success": "Lieu de travail supprimé.",
 	"location_already_exists": "Ce lieu de travail existe déjà.",
+	"error_save_location_failed": "Échec de l'enregistrement du lieu de travail. Veuillez réessayer.",
 	"save": "Enregistrer",
 	"error_hours_min": "Minimum {min} heure(s) requis(e)s",
 	"error_hours_max_entry": "Maximum {max} heures par entrée autorisées",

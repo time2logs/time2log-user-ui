@@ -128,6 +128,7 @@
 	"add_location_success": "Luogo di lavoro salvato.",
 	"delete_location_success": "Luogo di lavoro eliminato.",
 	"location_already_exists": "Questo luogo di lavoro esiste già.",
+	"error_save_location_failed": "Impossibile salvare il luogo di lavoro. Riprova.",
 	"save": "Salva",
 	"error_hours_min": "Minimo {min} ora(e) richieste",
 	"error_hours_max_entry": "Massimo {max} ore per voce consentite",
