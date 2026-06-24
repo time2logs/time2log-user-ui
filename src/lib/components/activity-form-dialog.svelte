@@ -107,7 +107,7 @@
 	}
 
 	function handleHoursInput(event: Event) {
-		inputHours = cleanNumberInput(event.currentTarget as HTMLInputElement, 0, MAX_HOURS_PER_ENTRY);
+		inputHours = cleanNumberInput(event.currentTarget as HTMLInputElement, 0, maxHoursPerDay);
 	}
 
 	function handleMinutesInput(event: Event) {
