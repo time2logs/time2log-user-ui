@@ -11,6 +11,16 @@ import {
 } from '$lib/server/onboarding';
 import { sendSwisscomVerificationSms } from '$lib/server/swisscomSms';
 import { randomInt } from 'node:crypto';
+import {
+	checkRateLimit,
+	getClientId,
+	hashId,
+	rateKey
+} from '$lib/server/rateLimiter';
+
+const WINDOW_10MIN = 10 * 60 * 1000;
+const WINDOW_15MIN = 15 * 60 * 1000;
+const WINDOW_1HOUR = 60 * 60 * 1000;
 
 type ResolvedInviteUser =
 	| { ok: true; user: { id: string; email?: string } }
@@ -96,7 +106,8 @@ export const load: PageServerLoad = async ({
 };
 
 export const actions: Actions = {
-	sendPhoneCode: async ({ request, locals }) => {
+	sendPhoneCode: async (event) => {
+		const { request, locals } = event;
 		if (!isSmsEnabled()) {
 			return fail(404, { error: 'SMS verification is disabled.' });
 		}
@@ -116,6 +127,14 @@ export const actions: Actions = {
 		if (!phoneNumber) {
 			return fail(400, {
 				error: m.onboarding_phone_invalid()
+			});
+		}
+
+		// Rate limit by client to blunt SMS-flooding attempts before they reach the provider.
+		const ipSmsLimit = checkRateLimit(rateKey('onboard:sms:ip', getClientId(event)), 10, WINDOW_15MIN);
+		if (!ipSmsLimit.allowed) {
+			return fail(429, {
+				error: m.rate_limited({ seconds: ipSmsLimit.retryAfterSeconds.toString() })
 			});
 		}
 
@@ -225,7 +244,8 @@ export const actions: Actions = {
 
 		return { phoneSent: true };
 	},
-	verifyPhoneCode: async ({ request, locals }) => {
+	verifyPhoneCode: async (event) => {
+		const { request, locals } = event;
 		if (!isSmsEnabled()) {
 			return fail(404, { error: 'SMS verification is disabled.' });
 		}
@@ -243,6 +263,21 @@ export const actions: Actions = {
 		}
 		if (!/^\d{6}$/.test(code)) {
 			return fail(400, { error: m.onboarding_phone_code_invalid() });
+		}
+
+		// Throttle OTP guessing: 5 attempts per 10 min per invite token + per client.
+		const verifyTokenLimit = checkRateLimit(
+			rateKey('onboard:verify:token', hashId(token)),
+			5,
+			WINDOW_10MIN
+		);
+		const verifyIpLimit = checkRateLimit(rateKey('onboard:verify:ip', getClientId(event)), 20, WINDOW_10MIN);
+		if (!verifyTokenLimit.allowed || !verifyIpLimit.allowed) {
+			const seconds = Math.max(
+				verifyTokenLimit.retryAfterSeconds,
+				verifyIpLimit.retryAfterSeconds
+			);
+			return fail(429, { error: m.rate_limited({ seconds: seconds.toString() }) });
 		}
 
 		const resolved = await resolveInvitedUser(locals, token, email);
@@ -296,7 +331,8 @@ export const actions: Actions = {
 
 		return { phoneVerified: true };
 	},
-	complete: async ({ request, locals }) => {
+	complete: async (event) => {
+		const { request, locals } = event;
 		const formData = await request.formData();
 		const firstName = formData.get('first_name')?.toString().trim() ?? '';
 		const lastName = formData.get('last_name')?.toString().trim() ?? '';
@@ -377,6 +413,28 @@ export const actions: Actions = {
 		if (useSms && !phoneNumber) {
 			return fail(400, {
 				error: m.onboarding_phone_required(),
+				values: { firstName, lastName }
+			});
+		}
+
+		// Rate limit completion attempts to stop token probing / account-provisioning spam.
+		const completeTokenLimit = checkRateLimit(
+			rateKey('onboard:complete:token', hashId(token)),
+			5,
+			WINDOW_1HOUR
+		);
+		const completeIpLimit = checkRateLimit(
+			rateKey('onboard:complete:ip', getClientId(event)),
+			10,
+			WINDOW_1HOUR
+		);
+		if (!completeTokenLimit.allowed || !completeIpLimit.allowed) {
+			const seconds = Math.max(
+				completeTokenLimit.retryAfterSeconds,
+				completeIpLimit.retryAfterSeconds
+			);
+			return fail(429, {
+				error: m.rate_limited({ seconds: seconds.toString() }),
 				values: { firstName, lastName }
 			});
 		}

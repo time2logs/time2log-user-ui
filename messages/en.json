@@ -294,6 +294,7 @@
 	"forgot_password_send_link": "Send link",
 	"forgot_password_email_sent": "If an account with this email exists, a password reset link has been sent.",
 	"forgot_password_error_email_missing": "Please enter your email address.",
+	"rate_limited": "Too many requests. Please try again in {seconds}s.",
 	"forgot_password_back_to_login": "Back to login",
 	"back_to_login": "Back to login",
 	"reset_password_title": "Set new password",

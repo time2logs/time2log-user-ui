@@ -17,8 +17,13 @@
 	let password = $state('');
 	let errorMessage = $state('');
 	let isLoading = $state(false);
+	let lastSubmitAt = 0;
 
 	async function signInWithEmail() {
+		// ponytail: client-side cooldown only; real protection is Supabase auth rate limits.
+		const now = Date.now();
+		if (now - lastSubmitAt < 1000) return;
+		lastSubmitAt = now;
 		isLoading = true;
 		const { error } = await supabase.auth.signInWithPassword({
 			email: email,
