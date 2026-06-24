@@ -32,6 +32,7 @@
 		profileSuccess?: boolean;
 		emailError?: string;
 		emailSuccess?: boolean;
+		emailOtpSent?: boolean;
 		passwordError?: string;
 		passwordSuccess?: boolean;
 	} | null;
@@ -43,18 +44,18 @@
 	let logoutDialogOpen = $state(false);
 	let isSaving = $state(false);
 	let isSavingEmail = $state(false);
+	let isSendingEmailOtp = $state(false);
 	let isSavingPassword = $state(false);
 	let isCompressing = $state(false);
 	let currentTheme = $state<'light' | 'dark'>('light');
 
-	let firstName = $state('');
-	let lastName = $state('');
+	let firstName = $state(data.profile?.first_name ?? '');
+	let lastName = $state(data.profile?.last_name ?? '');
 	let emailValue = $state('');
 
 	$effect(() => {
 		firstName = data.profile?.first_name ?? '';
 		lastName = data.profile?.last_name ?? '';
-		emailValue = data.email ?? '';
 	});
 
 	let avatarFile: File | null = $state(null);
@@ -423,6 +424,27 @@
 							<!-- Change email -->
 							<form
 								method="POST"
+								action="?/sendEmailOtp"
+								use:enhance={() => {
+									isSendingEmailOtp = true;
+									return async ({ update }) => {
+										isSendingEmailOtp = false;
+										await update();
+									};
+								}}
+							>
+								<Button type="submit" variant="outline" class="w-full" disabled={isSendingEmailOtp}>
+									{#if isSendingEmailOtp}
+										<Spinner size="sm" class="mr-2" />
+										{m.saving()}
+									{:else}
+										{m.settings_send_email_otp()}
+									{/if}
+								</Button>
+							</form>
+
+							<form
+								method="POST"
 								action="?/updateEmail"
 								use:enhance={() => {
 									isSavingEmail = true;
@@ -436,7 +458,25 @@
 								<p class="text-sm font-medium text-foreground">
 									{m.change_email()}
 								</p>
-								<FormField label={m.email_label()} htmlFor="email">
+								<FormField label={m.settings_current_email_label()} htmlFor="current_email">
+									<Input
+										id="current_email"
+										name="current_email"
+										type="email"
+										placeholder={data.email ?? ''}
+										disabled={isSavingEmail}
+									/>
+								</FormField>
+								<FormField label={m.settings_email_otp_label()} htmlFor="otp">
+									<Input
+										id="otp"
+										name="otp"
+										inputmode="numeric"
+										autocomplete="one-time-code"
+										disabled={isSavingEmail}
+									/>
+								</FormField>
+								<FormField label={m.settings_new_email_label()} htmlFor="email">
 									<Input
 										id="email"
 										name="email"
@@ -447,6 +487,9 @@
 								</FormField>
 								{#if form?.emailError}
 									<Alert variant="error">{form.emailError}</Alert>
+								{/if}
+								{#if form?.emailOtpSent}
+									<Alert variant="success">{m.settings_email_otp_sent()}</Alert>
 								{/if}
 								{#if form?.emailSuccess}
 									<Alert variant="success">{m.settings_email_confirmation_sent()}</Alert>

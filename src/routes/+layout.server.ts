@@ -11,6 +11,10 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				url.pathname === '/' ||
 				url.pathname === '/login' ||
 				url.pathname.startsWith('/login/') ||
+				url.pathname === '/forgot-password' ||
+				url.pathname.startsWith('/forgot-password/') ||
+				url.pathname === '/reset-password' ||
+				url.pathname.startsWith('/reset-password/') ||
 				url.pathname === '/impressum' ||
 				url.pathname.startsWith('/impressum/') ||
 				url.pathname === '/privacy' ||
@@ -43,7 +47,9 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			url.pathname === '/onboarding' ||
 			url.pathname.startsWith('/onboarding/') ||
 			url.pathname === '/login' ||
-			url.pathname.startsWith('/login/');
+			url.pathname.startsWith('/login/') ||
+			url.pathname === '/reset-password' ||
+			url.pathname.startsWith('/reset-password/');
 		if (profile && profile.onboarding_status !== 'completed' && !isAllowedPath) {
 			throw redirect(303, '/onboarding');
 		}

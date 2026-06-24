@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
-
 type FailResult = { status: number; data: Record<string, unknown> };
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import type { RequestEvent } from '@sveltejs/kit';
+import { resetRateLimiter } from '$lib/server/rateLimiter';
 
 vi.mock('$lib/paraglide/messages.js', () => ({
 	onboarding_no_invite_token: () => 'no_invite_token',

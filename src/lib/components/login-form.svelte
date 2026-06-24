@@ -6,23 +6,32 @@
 	import { Input } from '$lib/components/ui/input';
 	import * as Card from '$lib/components/ui/card';
 	import { supabase } from '$lib/supabaseClient';
+	import { getRateLimitSeconds } from '$lib/rateLimitError';
 	import { cn } from '$lib/utils';
 	import * as m from '$lib/paraglide/messages.js';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 
+	let { reset = false }: { reset?: boolean } = $props();
+
 	let email = $state('');
 	let password = $state('');
 	let errorMessage = $state('');
 	let isLoading = $state(false);
+	let lastSubmitAt = 0;
 
 	async function signInWithEmail() {
+		// ponytail: client-side cooldown only; real protection is Supabase auth rate limits.
+		const now = Date.now();
+		if (now - lastSubmitAt < 1000) return;
+		lastSubmitAt = now;
 		isLoading = true;
 		const { error } = await supabase.auth.signInWithPassword({
 			email: email,
 			password: password
 		});
-		errorMessage = error ? error.message : '';
+		const seconds = getRateLimitSeconds(error);
+		errorMessage = seconds ? m.rate_limited({ seconds }) : error?.message || '';
 		isLoading = false;
 
 		if (!error) {
@@ -66,6 +75,9 @@
 					}}
 					class="grid gap-8"
 				>
+					{#if reset}
+						<Alert variant="success">{m.reset_password_success()}</Alert>
+					{/if}
 					{#if errorMessage}
 						<Alert variant="error">{errorMessage}</Alert>
 					{/if}
@@ -98,6 +110,15 @@
 						{/if}
 					</button>
 				</form>
+
+				<div class="mt-4 text-center">
+					<a
+						href="/forgot-password"
+						class="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground"
+					>
+						{m.forgot_password_link()}
+					</a>
+				</div>
 			</Card.Content>
 		</Card.Root>
 	</main>

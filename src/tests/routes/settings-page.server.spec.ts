@@ -7,6 +7,8 @@ vi.mock('$lib/paraglide/messages.js', () => ({
 	settings_error_file_too_large: () => 'file_too_large',
 	settings_error_file_type: () => 'file_type',
 	onboarding_error_email_missing: () => 'email_missing',
+	settings_error_current_email_required: () => 'current_email_required',
+	settings_error_email_otp_required: () => 'otp_required',
 	settings_error_email_unchanged: () => 'email_unchanged',
 	settings_error_password_mismatch: () => 'password_mismatch',
 	onboarding_error_password_length: () => 'password_length',
@@ -21,9 +23,14 @@ vi.mock('$lib/server/avatarValidation', () => ({
 
 import { actions } from '../../routes/settings/+page.server';
 
+beforeEach(() => {
+	resetRateLimiter();
+});
+
 function makeLocals(email = 'current@example.com'): App.Locals {
 	return {
-		safeGetSession: vi.fn().mockResolvedValue({ user: { id: 'user-1', email } })
+		safeGetSession: vi.fn().mockResolvedValue({ user: { id: 'user-1', email } }),
+		supabase: { auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { email } } }) } }
 	} as unknown as App.Locals;
 }
 
@@ -85,6 +92,32 @@ describe('updatePassword action', () => {
 // ── updateEmail ───────────────────────────────────────────────────────────
 
 describe('updateEmail action', () => {
+	it('fails 400 when current email is not confirmed', async () => {
+		const result = await actions.updateEmail({
+			request: makeRequest({
+				current_email: 'wrong@example.com',
+				email: 'new@example.com',
+				otp: '123456'
+			}),
+			locals: makeLocals()
+		} as RequestEvent);
+		expect(result.status).toBe(400);
+		expect(result.data.emailError).toBe('current_email_required');
+	});
+
+	it('fails 400 when otp is empty', async () => {
+		const result = await actions.updateEmail({
+			request: makeRequest({
+				current_email: 'current@example.com',
+				email: 'new@example.com',
+				otp: ''
+			}),
+			locals: makeLocals()
+		} as RequestEvent);
+		expect(result.status).toBe(400);
+		expect(result.data.emailError).toBe('otp_required');
+	});
+
 	it('fails 400 when email is empty', async () => {
 		const result = (await actions.updateEmail({
 			request: makeRequest({ email: '' }),
