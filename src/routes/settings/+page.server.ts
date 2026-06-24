@@ -1,12 +1,9 @@
 import { redirect, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import * as m from '$lib/paraglide/messages.js';
-import { getRateLimitSeconds } from '$lib/rateLimitError';
 import { validateImageMagicBytes } from '$lib/server/avatarValidation';
 import { checkRateLimit, rateKey } from '$lib/server/rateLimiter';
-import { validatePassword } from '$lib/passwordValidation';
 
-const WINDOW_10MIN = 10 * 60 * 1000;
 const WINDOW_1HOUR = 60 * 60 * 1000;
 
 export const load: PageServerLoad = async ({ locals }) => {
@@ -104,141 +101,5 @@ export const actions: Actions = {
 		}
 
 		return { profileSuccess: true };
-	},
-
-	sendEmailOtp: async ({ locals }) => {
-		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
-
-		const otpLimit = checkRateLimit(rateKey('settings:emailOtp', session.user.id), 3, WINDOW_10MIN);
-		if (!otpLimit.allowed) {
-			return fail(429, {
-				emailError: m.rate_limited({ seconds: otpLimit.retryAfterSeconds.toString() })
-			});
-		}
-
-		const { error } = await locals.supabase.auth.reauthenticate();
-		if (error) {
-			const seconds = getRateLimitSeconds(error);
-			if (seconds) {
-				return fail(429, { emailError: m.rate_limited({ seconds }) });
-			}
-
-			console.error('[Settings] Failed to send email OTP:', error.message);
-			return fail(500, {
-				emailError: m.error_server()
-			});
-		}
-
-		return { emailOtpSent: true };
-	},
-
-	updateEmail: async ({ request, locals, url }) => {
-		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
-
-		const emailChangeLimit = checkRateLimit(
-			rateKey('settings:updateEmail', session.user.id),
-			5,
-			WINDOW_1HOUR
-		);
-		if (!emailChangeLimit.allowed) {
-			return fail(429, {
-				emailError: m.rate_limited({ seconds: emailChangeLimit.retryAfterSeconds.toString() })
-			});
-		}
-
-		const formData = await request.formData();
-		const currentEmail = formData.get('current_email')?.toString().trim() ?? '';
-		const email = formData.get('email')?.toString().trim() ?? '';
-		const otp = formData.get('otp')?.toString().trim() ?? '';
-		const {
-			data: { user }
-		} = await locals.supabase.auth.getUser();
-		const currentUserEmail = user?.email ?? session.user.email ?? '';
-
-		if (!currentEmail || currentEmail.toLowerCase() !== currentUserEmail.toLowerCase()) {
-			return fail(400, { emailError: m.settings_error_current_email_required() });
-		}
-
-		if (!otp) {
-			return fail(400, { emailError: m.settings_error_email_otp_required() });
-		}
-
-		if (!email) {
-			return fail(400, { emailError: m.onboarding_error_email_missing() });
-		}
-
-		if (email.toLowerCase() === currentUserEmail.toLowerCase()) {
-			return fail(400, { emailError: m.settings_error_email_unchanged() });
-		}
-
-		const { error } = await locals.supabase.auth.updateUser(
-			{ email, nonce: otp },
-			{ emailRedirectTo: `${url.origin}/settings` }
-		);
-		if (error) {
-			const seconds = getRateLimitSeconds(error);
-			if (seconds) {
-				return fail(429, { emailError: m.rate_limited({ seconds }) });
-			}
-
-			console.error('[Settings] Failed to update email:', error.message);
-			return fail(500, {
-				emailError: m.error_server()
-			});
-		}
-
-		return { emailSuccess: true };
-	},
-
-	updatePassword: async ({ request, locals }) => {
-		const session = await locals.safeGetSession();
-		if (!session) throw redirect(302, '/login');
-
-		const pwLimit = checkRateLimit(
-			rateKey('settings:updatePassword', session.user.id),
-			5,
-			WINDOW_1HOUR
-		);
-		if (!pwLimit.allowed) {
-			return fail(429, {
-				passwordError: m.rate_limited({ seconds: pwLimit.retryAfterSeconds.toString() })
-			});
-		}
-
-		const formData = await request.formData();
-		const password = formData.get('password')?.toString() ?? '';
-		const confirmPassword = formData.get('confirm_password')?.toString() ?? '';
-
-		if (password !== confirmPassword) {
-			return fail(400, { passwordError: m.settings_error_password_mismatch() });
-		}
-
-		const pwRule = validatePassword(password);
-		if (pwRule) {
-			const pwMessages = {
-				length: m.onboarding_error_password_length(),
-				uppercase: m.onboarding_error_password_uppercase(),
-				number: m.onboarding_error_password_number(),
-				special: m.onboarding_error_password_special()
-			};
-			return fail(400, { passwordError: pwMessages[pwRule] });
-		}
-
-		const { error } = await locals.supabase.auth.updateUser({ password });
-		if (error) {
-			const seconds = getRateLimitSeconds(error);
-			if (seconds) {
-				return fail(429, { passwordError: m.rate_limited({ seconds }) });
-			}
-
-			console.error('[Settings] Failed to update password:', error.message);
-			return fail(500, {
-				passwordError: m.error_server()
-			});
-		}
-
-		return { passwordSuccess: true };
 	}
 };

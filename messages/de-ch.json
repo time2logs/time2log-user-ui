@@ -269,8 +269,8 @@
 	"achievement_streak_15_desc": "15 Arbeitstage in Folge erfasst",
 	"achievement_thousand_hours": "Tausendsassa",
 	"achievement_thousand_hours_desc": "Erreiche 1000 erfasste Stunden",
-	"settings_send_email_otp": "Code an aktuelle E-Mail senden",
-	"settings_email_otp_sent": "Ein Bestätigungscode wurde an deine aktuelle E-Mail gesendet.",
+	"settings_send_email_otp": "Verifizierungscode senden",
+	"settings_email_otp_sent": "Ein Bestätigungscode wurde an deine neue E-Mail-Adresse gesendet.",
 	"settings_current_email_label": "Aktuelle E-Mail bestätigen",
 	"settings_new_email_label": "Neue E-Mail",
 	"settings_email_otp_label": "Bestätigungscode",
@@ -315,5 +315,9 @@
 	"avatar_process_failed": "Bild konnte nicht verarbeitet werden. Bitte versuche ein anderes.",
 	"remove": "Entfernen",
 	"theme_switch_light": "Zum hellen Modus wechseln",
-	"theme_switch_dark": "Zum dunklen Modus wechseln"
+	"theme_switch_dark": "Zum dunklen Modus wechseln",
+	"security_check_description": "Bitte gib dein aktuelles Passwort ein, um fortzufahren.",
+	"current_password_label": "Aktuelles Passwort",
+	"security_check_verify": "Bestätigen",
+	"close": "Schliessen"
 }

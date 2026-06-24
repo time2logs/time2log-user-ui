@@ -8,7 +8,9 @@
 	import { Alert } from '$lib/components/ui/alert';
 	import { Spinner } from '$lib/components/ui/spinner';
 	import { FormField } from '$lib/components/ui/form-field';
+	import AccountChangeDialog from '$lib/components/account-change-dialog.svelte';
 	import { enhance } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
 	import User from '@lucide/svelte/icons/user';
 	import Globe from '@lucide/svelte/icons/globe';
@@ -17,6 +19,8 @@
 	import Sun from '@lucide/svelte/icons/sun';
 	import Camera from '@lucide/svelte/icons/camera';
 	import ShieldAlert from '@lucide/svelte/icons/shield-alert';
+	import Mail from '@lucide/svelte/icons/mail';
+	import KeyRound from '@lucide/svelte/icons/key-round';
 	import { theme } from '$lib/themeStore';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import * as Select from '$lib/components/ui/select';
@@ -30,11 +34,6 @@
 	type SettingsForm = {
 		profileError?: string;
 		profileSuccess?: boolean;
-		emailError?: string;
-		emailSuccess?: boolean;
-		emailOtpSent?: boolean;
-		passwordError?: string;
-		passwordSuccess?: boolean;
 	} | null;
 
 	let { data, form: rawForm } = $props();
@@ -43,15 +42,13 @@
 	let isLoggingOut = $state(false);
 	let logoutDialogOpen = $state(false);
 	let isSaving = $state(false);
-	let isSavingEmail = $state(false);
-	let isSendingEmailOtp = $state(false);
-	let isSavingPassword = $state(false);
 	let isCompressing = $state(false);
+	let dialogOpen = $state(false);
+	let dialogMode = $state<'email' | 'password'>('email');
 	let currentTheme = $derived<'light' | 'dark'>($theme);
 
 	let firstName = $state(untrack(() => data.profile?.first_name ?? ''));
 	let lastName = $state(untrack(() => data.profile?.last_name ?? ''));
-	let emailValue = $state('');
 
 	$effect(() => {
 		firstName = data.profile?.first_name ?? '';
@@ -338,168 +335,46 @@
 							<h3 class="font-semibold">{m.danger_zone()}</h3>
 						</div>
 
-						<div class="space-y-6">
-							<!-- Change email -->
-							<form
-								method="POST"
-								action="?/sendEmailOtp"
-								use:enhance={() => {
-									isSendingEmailOtp = true;
-									return async ({ update }) => {
-										isSendingEmailOtp = false;
-										await update();
-									};
+						<div class="space-y-3">
+							<p class="text-sm text-muted-foreground">
+								{data.email ?? '—'}
+							</p>
+
+							<Button
+								variant="outline"
+								class="w-full justify-start gap-2 border-destructive/20 text-destructive hover:bg-destructive/10"
+								onclick={() => {
+									dialogMode = 'email';
+									dialogOpen = true;
 								}}
 							>
-								<Button type="submit" variant="outline" class="w-full" disabled={isSendingEmailOtp}>
-									{#if isSendingEmailOtp}
-										<Spinner size="sm" class="mr-2" />
-										{m.saving()}
-									{:else}
-										{m.settings_send_email_otp()}
-									{/if}
-								</Button>
-							</form>
+								<Mail class="h-4 w-4" />
+								{m.change_email()}
+							</Button>
 
-							<form
-								method="POST"
-								action="?/updateEmail"
-								use:enhance={() => {
-									isSavingEmail = true;
-									return async ({ update }) => {
-										isSavingEmail = false;
-										await update();
-									};
+							<Button
+								variant="outline"
+								class="w-full justify-start gap-2 border-destructive/20 text-destructive hover:bg-destructive/10"
+								onclick={() => {
+									dialogMode = 'password';
+									dialogOpen = true;
 								}}
-								class="space-y-3"
 							>
-								<p class="text-sm font-medium text-foreground">
-									{m.change_email()}
-								</p>
-								<FormField label={m.settings_current_email_label()} htmlFor="current_email">
-									<Input
-										id="current_email"
-										name="current_email"
-										type="email"
-										placeholder={data.email ?? ''}
-										disabled={isSavingEmail}
-									/>
-								</FormField>
-								<FormField label={m.settings_email_otp_label()} htmlFor="otp">
-									<Input
-										id="otp"
-										name="otp"
-										inputmode="numeric"
-										autocomplete="one-time-code"
-										disabled={isSavingEmail}
-									/>
-								</FormField>
-								<FormField label={m.settings_new_email_label()} htmlFor="email">
-									<Input
-										id="email"
-										name="email"
-										type="email"
-										bind:value={emailValue}
-										disabled={isSavingEmail}
-									/>
-								</FormField>
-								{#if form?.emailError}
-									<Alert variant="error">{form.emailError}</Alert>
-								{/if}
-								{#if form?.emailOtpSent}
-									<Alert variant="success">{m.settings_email_otp_sent()}</Alert>
-								{/if}
-								{#if form?.emailSuccess}
-									<Alert variant="success">{m.settings_email_confirmation_sent()}</Alert>
-								{/if}
-								<Button
-									type="submit"
-									variant="outline"
-									class="w-full border-destructive/20 text-destructive hover:bg-destructive/10"
-									disabled={isSavingEmail}
-								>
-									{#if isSavingEmail}
-										<Spinner size="sm" class="mr-2" />
-										{m.saving()}
-									{:else}
-										{m.change_email()}
-									{/if}
-								</Button>
-							</form>
+								<KeyRound class="h-4 w-4" />
+								{m.change_password_title()}
+							</Button>
 
-							<Separator class="border-destructive/20 " />
-
-							<!-- Change password -->
-							<form
-								method="POST"
-								action="?/updatePassword"
-								use:enhance={() => {
-									isSavingPassword = true;
-									return async ({ update }) => {
-										isSavingPassword = false;
-										await update();
-									};
-								}}
-								class="space-y-3"
-							>
-								<p class="text-sm font-medium text-foreground">
-									{m.change_password_title()}
-								</p>
-								<FormField label={m.new_password_label()} htmlFor="password">
-									<Input
-										id="password"
-										name="password"
-										type="password"
-										placeholder={m.onboarding_password_placeholder()}
-										disabled={isSavingPassword}
-									/>
-								</FormField>
-								<FormField label={m.confirm_password_label()} htmlFor="confirm_password">
-									<Input
-										id="confirm_password"
-										name="confirm_password"
-										type="password"
-										placeholder={m.onboarding_password_placeholder()}
-										disabled={isSavingPassword}
-									/>
-								</FormField>
-								{#if form?.passwordError}
-									<Alert variant="error">{form.passwordError}</Alert>
-								{/if}
-								{#if form?.passwordSuccess}
-									<Alert variant="success">{m.settings_password_saved()}</Alert>
-								{/if}
-								<Button
-									type="submit"
-									variant="outline"
-									class="w-full border-destructive/20 text-destructive hover:bg-destructive/10"
-									disabled={isSavingPassword}
-								>
-									{#if isSavingPassword}
-										<Spinner size="sm" class="mr-2" />
-										{m.saving()}
-									{:else}
-										{m.change_password_title()}
-									{/if}
-								</Button>
-							</form>
-
-							<Separator class="border-destructive/20 " />
+							<Separator class="border-destructive/20" />
 
 							<!-- Logout -->
-							<div>
-								<p class="mb-3 text-sm font-medium text-foreground">
-									{m.account()}
-								</p>
-								<Button
-									variant="outline"
-									onclick={() => (logoutDialogOpen = true)}
-									class="w-full justify-start gap-2 border-destructive/20 bg-destructive/5 text-destructive hover:bg-destructive/10"
-								>
-									<LogOut class="h-4 w-4" />
-									{m.logout()}
-								</Button>
-							</div>
+							<Button
+								variant="outline"
+								onclick={() => (logoutDialogOpen = true)}
+								class="w-full justify-start gap-2 border-destructive/20 bg-destructive/5 text-destructive hover:bg-destructive/10"
+							>
+								<LogOut class="h-4 w-4" />
+								{m.logout()}
+							</Button>
 						</div>
 					</div>
 				</div>
@@ -517,4 +392,11 @@
 	variant="destructive"
 	loading={isLoggingOut}
 	onConfirm={handleLogout}
+/>
+
+<AccountChangeDialog
+	bind:open={dialogOpen}
+	mode={dialogMode}
+	currentEmail={data.email ?? ''}
+	onsuccess={() => invalidateAll()}
 />

@@ -269,8 +269,8 @@
 	"achievement_streak_15_desc": "Enregistre 15 jours ouvrables d'affilée",
 	"achievement_thousand_hours": "Quatre chiffres",
 	"achievement_thousand_hours_desc": "Atteins 1000 heures enregistrées",
-	"settings_send_email_otp": "Envoyer le code à l’e-mail actuel",
-	"settings_email_otp_sent": "Un code de vérification a été envoyé à votre e-mail actuel.",
+	"settings_send_email_otp": "Envoyer le code de vérification",
+	"settings_email_otp_sent": "Un code de vérification a été envoyé à votre nouvelle adresse e-mail.",
 	"settings_current_email_label": "Confirmer l’e-mail actuel",
 	"settings_new_email_label": "Nouvel e-mail",
 	"settings_email_otp_label": "Code de vérification",
@@ -315,5 +315,9 @@
 	"avatar_process_failed": "Échec du traitement de l'image. Veuillez en essayer une autre.",
 	"remove": "Retirer",
 	"theme_switch_light": "Passer en mode clair",
-	"theme_switch_dark": "Passer en mode sombre"
+	"theme_switch_dark": "Passer en mode sombre",
+	"security_check_description": "Veuillez saisir votre mot de passe actuel pour continuer.",
+	"current_password_label": "Mot de passe actuel",
+	"security_check_verify": "Vérifier",
+	"close": "Fermer"
 }
