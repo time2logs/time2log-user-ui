@@ -266,9 +266,9 @@
 						locale={dateLocale}
 						{activityDates}
 						isAbsenceDate={(dateStr) => {
-						const matching = absences.find((a) => isDateInAbsence(dateStr, a));
-						return matching?.absence_type_id ?? null;
-					}}
+							const matching = absences.find((a) => isDateInAbsence(dateStr, a));
+							return matching?.absence_type_id ?? null;
+						}}
 					/>
 				</div>
 

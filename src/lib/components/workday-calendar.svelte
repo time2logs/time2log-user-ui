@@ -13,7 +13,16 @@
 		today,
 		type DateValue
 	} from '@internationalized/date';
-	import { ChevronLeft, ChevronRight, Palmtree, HeartPulse, Shield, Presentation, GraduationCap, Tag } from 'lucide-svelte';
+	import {
+		ChevronLeft,
+		ChevronRight,
+		Palmtree,
+		HeartPulse,
+		Shield,
+		Presentation,
+		GraduationCap,
+		Tag
+	} from 'lucide-svelte';
 	import type { AbsenceType } from '$lib/types';
 
 	const ABSENCE_INDICATORS: Record<AbsenceType, { icon: typeof Palmtree; color: string }> = {

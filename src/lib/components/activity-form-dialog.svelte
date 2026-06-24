@@ -600,32 +600,32 @@
 			{/if}
 		</div>
 
-			<!-- Location -->
-			<div class="grid gap-2">
-				<Label>{m.location_label()}</Label>
-				{#if userLocations.length === 0}
-					<p class="text-sm text-muted-foreground">
-						{m.no_locations_for_activity()}
-					</p>
-				{:else}
-					<Select.Root bind:value={location} type="single">
-						<Select.Trigger>
-							{location || m.location_placeholder()}
-						</Select.Trigger>
-						<Select.Content>
-							{#each userLocations as loc (loc)}
-								<Select.Item value={loc} label={loc}>{loc}</Select.Item>
-							{/each}
-						</Select.Content>
-					</Select.Root>
-				{/if}
-			</div>
+		<!-- Location -->
+		<div class="grid gap-2">
+			<Label>{m.location_label()}</Label>
+			{#if userLocations.length === 0}
+				<p class="text-sm text-muted-foreground">
+					{m.no_locations_for_activity()}
+				</p>
+			{:else}
+				<Select.Root bind:value={location} type="single">
+					<Select.Trigger>
+						{location || m.location_placeholder()}
+					</Select.Trigger>
+					<Select.Content>
+						{#each userLocations as loc (loc)}
+							<Select.Item value={loc} label={loc}>{loc}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			{/if}
+		</div>
 
-			<!-- Notes (Optional) -->
-			<div class="grid gap-2">
-				<Label for="notes">{m.notes_optional()}</Label>
-				<Textarea id="notes" bind:value={notes} placeholder={m.notes_placeholder()} />
-			</div>
+		<!-- Notes (Optional) -->
+		<div class="grid gap-2">
+			<Label for="notes">{m.notes_optional()}</Label>
+			<Textarea id="notes" bind:value={notes} placeholder={m.notes_placeholder()} />
+		</div>
 
 		<Dialog.Footer class={activityToEdit ? 'flex gap-2' : ''}>
 			{#if activityToEdit}
