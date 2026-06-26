@@ -309,13 +309,16 @@ export const actions: Actions = {
 			});
 		}
 
-		// Profil anlegen / aktualisieren
+		// Profil anlegen / aktualisieren.
+		// onboarding_status wird hier NICHT gesetzt: accept_invite (SECURITY DEFINER)
+		// hat das Profil bereits auf 'completed' gesetzt. Ein erneutes Setzen ueber den
+		// user-gebundenen Client wuerde am Guard guard_profile_privileged_columns
+		// scheitern (42501 "onboarding_status cannot be set by the user").
 		const { error: statusError } = await locals.supabase.from('profiles').upsert(
 			{
 				id: existingUser.id,
 				first_name: firstName,
-				last_name: lastName,
-				onboarding_status: 'completed'
+				last_name: lastName
 			},
 			{ onConflict: 'id' }
 		);
