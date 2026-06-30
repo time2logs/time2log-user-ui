@@ -11,7 +11,6 @@
 	import type { AbsenceType, AbsenceRecord, ActivityRecord, TeamMember } from '$lib/types';
 	import AlertCircle from '@lucide/svelte/icons/circle-alert';
 	import Calendar from '@lucide/svelte/icons/calendar';
-	import Info from '@lucide/svelte/icons/info';
 	import Trash2 from '@lucide/svelte/icons/trash-2';
 	import * as m from '$lib/paraglide/messages.js';
 	import { getDateLocale } from '$lib/dateLocale';
@@ -81,19 +80,6 @@
 	let deleteChoice = $state<'all' | null>(null);
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
-	let showDayFractionInfo = $state(false);
-
-	function closeDayFractionInfoIfFocusLeaves(event: FocusEvent) {
-		const nextTarget = event.relatedTarget;
-		const currentTarget = event.currentTarget;
-		if (
-			!(currentTarget instanceof Node) ||
-			!(nextTarget instanceof Node) ||
-			!currentTarget.contains(nextTarget)
-		) {
-			showDayFractionInfo = false;
-		}
-	}
 
 	function formatHoursValue(value: number): string {
 		const rounded = Math.round(value * 10) / 10;
@@ -132,7 +118,7 @@
 				selectedAbsenceType = absenceToEdit.absence_type_id;
 				startDate = absenceToEdit.start_date;
 				endDate = absenceToEdit.end_date;
-				dayFraction = absenceToEdit.day_fraction ?? 1;
+				dayFraction = (absenceToEdit.day_fraction ?? 1) < 1 ? 0.5 : 1;
 				isRecurring = absenceToEdit.is_recurring;
 				notes = absenceToEdit.notes || '';
 
@@ -184,6 +170,12 @@
 	$effect(() => {
 		if (hasInitialized && startDate && (!endDate || endDate < startDate)) {
 			endDate = startDate;
+		}
+	});
+
+	$effect(() => {
+		if (hasInitialized && startDate && endDate && startDate !== endDate && dayFraction !== 1) {
+			dayFraction = 1;
 		}
 	});
 
@@ -290,11 +282,6 @@
 
 		if (startDate > endDate) {
 			submitError = m.error_end_date_after_start();
-			return;
-		}
-
-		if (dayFraction <= 0 || dayFraction > 1) {
-			submitError = m.error_day_fraction_range();
 			return;
 		}
 
@@ -464,7 +451,7 @@
 
 			{#if selectedAbsenceType}
 				<div class="grid gap-3 rounded-lg border border-border bg-muted/20 p-4">
-					<div class="grid gap-3 {isRecurring ? 'sm:grid-cols-2' : 'sm:grid-cols-3'}">
+					<div class="grid gap-3 {isRecurring ? 'sm:grid-cols-1' : 'sm:grid-cols-2'}">
 						<div class="grid gap-2">
 							<Label for="startDate"
 								>{m.absence_start_date_label()} <span class="text-destructive">*</span></Label
@@ -479,43 +466,21 @@
 								<Input id="endDate" type="date" lang={dateLocale} bind:value={endDate} required />
 							</div>
 						{/if}
-						<div
-							class="relative grid gap-2"
-							role="presentation"
-							onmouseleave={() => (showDayFractionInfo = false)}
-							onfocusout={closeDayFractionInfoIfFocusLeaves}
-						>
-							<div class="flex items-center gap-2">
-								<Label for="dayFraction">{m.absence_day_fraction_label()}</Label>
-								<button
-									type="button"
-									class="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-									aria-label={m.absence_day_fraction_hint()}
-									aria-expanded={showDayFractionInfo}
-									onmouseenter={() => (showDayFractionInfo = true)}
-									onfocus={() => (showDayFractionInfo = true)}
-									onclick={() => (showDayFractionInfo = !showDayFractionInfo)}
-								>
-									<Info class="h-3.5 w-3.5" />
-								</button>
-							</div>
-							<Input
-								id="dayFraction"
-								type="number"
-								min="0.1"
-								max="1"
-								step="0.1"
-								bind:value={dayFraction}
-							/>
-							{#if showDayFractionInfo}
-								<div
-									class="absolute top-full left-0 z-20 mt-2 w-full rounded-lg border border-border bg-popover p-3 text-xs text-popover-foreground shadow-lg sm:w-64"
-								>
-									{m.absence_day_fraction_hint()}
-								</div>
-							{/if}
-						</div>
 					</div>
+					{#if startDate && startDate === endDate}
+						<div class="flex items-center gap-2">
+							<input
+								id="halfDay"
+								type="checkbox"
+								checked={dayFraction < 1}
+								onchange={(e) => (dayFraction = e.currentTarget.checked ? 0.5 : 1)}
+								class="h-4 w-4 rounded border-border accent-primary"
+							/>
+							<Label for="halfDay" class="cursor-pointer font-medium"
+								>{m.absence_half_day_label()}</Label
+							>
+						</div>
+					{/if}
 				</div>
 
 				{@const selectedType = absenceTypes.find((t) => t.id === selectedAbsenceType)}
