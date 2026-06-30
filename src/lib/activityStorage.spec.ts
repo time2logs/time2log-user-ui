@@ -118,7 +118,7 @@ describe('getLastLocation', () => {
 
 describe('add', () => {
 	it('returns null when hours < MIN_HOURS', async () => {
-		const result = await activityStore.add(makeActivityInput({ hours: 0.5 }));
+		const result = await activityStore.add(makeActivityInput({ hours: 0.1 }));
 		expect(result).toBeNull();
 	});
 
@@ -253,7 +253,7 @@ describe('delete', () => {
 
 describe('update', () => {
 	it('returns null when hours < MIN_HOURS', async () => {
-		const result = await activityStore.update('rec-1', { hours: 0.5 });
+		const result = await activityStore.update('rec-1', { hours: 0.1 });
 		expect(result).toBeNull();
 	});
 
