@@ -11,7 +11,7 @@ const debug = createDebugLogger('ActivityStorage');
 
 export const DEFAULT_MAX_HOURS_PER_DAY = 10;
 export const MAX_HOURS_PER_ENTRY = 10;
-export const MIN_HOURS = 1;
+export const MIN_HOURS = 0.5;
 
 type ActivityRecordSource = Omit<
 	ActivityRecord,

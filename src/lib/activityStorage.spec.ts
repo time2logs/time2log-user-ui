@@ -78,7 +78,7 @@ function makeActivityRow(overrides: Record<string, unknown> = {}) {
 
 describe('exported constants', () => {
 	it('MIN_HOURS equals 1', () => {
-		expect(MIN_HOURS).toBe(1);
+		expect(MIN_HOURS).toBe(0.5);
 	});
 
 	it('DEFAULT_MAX_HOURS_PER_DAY equals 10', () => {
