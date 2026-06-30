@@ -231,7 +231,9 @@
 								</Badge>
 								<Badge variant="warning">
 									{absence.day_fraction}
-									{m.absence_day_fraction_short()}
+									{absence.day_fraction === 1
+										? m.absence_day_fraction_short_one()
+										: m.absence_day_fraction_short()}
 								</Badge>
 								{#if absence.is_recurring}
 									<Badge variant="warning">{m.recurring_label()}</Badge>
