@@ -78,7 +78,7 @@ function makeActivityRow(overrides: Record<string, unknown> = {}) {
 
 describe('exported constants', () => {
 	it('MIN_HOURS equals 1', () => {
-		expect(MIN_HOURS).toBe(1);
+		expect(MIN_HOURS).toBe(0.5);
 	});
 
 	it('DEFAULT_MAX_HOURS_PER_DAY equals 10', () => {
@@ -118,7 +118,7 @@ describe('getLastLocation', () => {
 
 describe('add', () => {
 	it('returns null when hours < MIN_HOURS', async () => {
-		const result = await activityStore.add(makeActivityInput({ hours: 0.5 }));
+		const result = await activityStore.add(makeActivityInput({ hours: 0.1 }));
 		expect(result).toBeNull();
 	});
 
@@ -253,7 +253,7 @@ describe('delete', () => {
 
 describe('update', () => {
 	it('returns null when hours < MIN_HOURS', async () => {
-		const result = await activityStore.update('rec-1', { hours: 0.5 });
+		const result = await activityStore.update('rec-1', { hours: 0.1 });
 		expect(result).toBeNull();
 	});
 
