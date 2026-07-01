@@ -10,8 +10,19 @@
 	import WorkdayCalendar from '$lib/components/workday-calendar.svelte';
 	import * as m from '$lib/paraglide/messages.js';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
-	import { activityStore, activityLoading, activityError } from '$lib/activityStorage';
-	import { absenceStore, isDateInAbsence, absenceLoading, absenceError } from '$lib/absenceStorage';
+	import {
+		activityStore,
+		activityLoading,
+		activityError,
+		DEFAULT_MAX_HOURS_PER_DAY
+	} from '$lib/activityStorage';
+	import {
+		absenceStore,
+		isDateInAbsence,
+		getAbsenceFractionForDate,
+		absenceLoading,
+		absenceError
+	} from '$lib/absenceStorage';
 	import type {
 		ActivityRecord,
 		AbsenceRecord,
@@ -108,6 +119,26 @@
 		absences
 			.filter((absence) => isDateInAbsence(selectedDateIso, absence))
 			.reduce((sum, absence) => sum + absence.day_fraction, 0)
+	);
+
+	const maxHoursPerDay = $derived(data.teamMember?.max_hours_per_day ?? DEFAULT_MAX_HOURS_PER_DAY);
+	const selectedDateAbsenceFraction = $derived(
+		getAbsenceFractionForDate(selectedDateIso, absences)
+	);
+	const maxHoursForSelectedDate = $derived(
+		Math.max(0, maxHoursPerDay * (1 - selectedDateAbsenceFraction))
+	);
+	const canLogActivity = $derived(
+		!isDateDisabled(selectedDate) && selectedDateLoggedHours < maxHoursForSelectedDate
+	);
+	const logActivityDisabledReason = $derived(
+		canLogActivity
+			? undefined
+			: selectedDateAbsenceFraction >= 1
+				? m.log_activity_disabled_absence()
+				: selectedDateLoggedHours >= maxHoursForSelectedDate
+					? m.log_activity_disabled_max_hours()
+					: undefined
 	);
 
 	const targetHours = $derived(data.organization?.target_hours ?? 8);
@@ -296,6 +327,8 @@
 								onclick={() => (activityDialogOpen = true)}
 								class="hidden sm:inline-flex"
 								size="lg"
+								disabled={!canLogActivity}
+								title={logActivityDisabledReason}
 							>
 								<Plus class="mr-2 h-5 w-5" />
 								{m.log_activity_button()}
@@ -380,6 +413,9 @@
 		<Button
 			onclick={() => (activityDialogOpen = true)}
 			class="h-14 w-14 rounded-full p-0 shadow-lg"
+			disabled={!canLogActivity}
+			title={logActivityDisabledReason}
+			aria-label={m.log_activity_button()}
 		>
 			<Plus class="h-6 w-6" />
 		</Button>
