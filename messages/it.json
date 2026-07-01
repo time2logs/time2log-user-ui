@@ -24,6 +24,8 @@
 	"log_activity_button": "Registra Attività",
 	"log_activity_title": "Registra Attività",
 	"log_activity_description": "Registra la tua attività completata con tempo e valutazione.",
+	"log_activity_disabled_absence": "Non è possibile registrare attività per questo giorno a causa di un'assenza.",
+	"log_activity_disabled_max_hours": "Per questo giorno sono già state registrate le ore massime.",
 	"activity_label": "Attività",
 	"no_activities_available": "Nessuna attività disponibile",
 	"selected_activity": "Selezionato: {name}",

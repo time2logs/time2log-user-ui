@@ -22,6 +22,8 @@
 	"log_activity_button": "Log Activity",
 	"log_activity_title": "Log Activity",
 	"log_activity_description": "Record your completed activity with time and rating.",
+	"log_activity_disabled_absence": "No activity can be logged for this day due to an absence.",
+	"log_activity_disabled_max_hours": "The maximum hours for this day have already been logged.",
 	"activity_label": "Activity",
 	"no_activities_available": "No activities available",
 	"selected_activity": "Selected: {name}",

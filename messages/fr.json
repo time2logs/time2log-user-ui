@@ -24,6 +24,8 @@
 	"log_activity_button": "Enregistrer l'Activité",
 	"log_activity_title": "Enregistrer l'Activité",
 	"log_activity_description": "Enregistrez votre activité terminée avec le temps et la note.",
+	"log_activity_disabled_absence": "Aucune activité ne peut être enregistrée ce jour-là en raison d'une absence.",
+	"log_activity_disabled_max_hours": "Le nombre maximal d'heures pour ce jour a déjà été enregistré.",
 	"activity_label": "Activité",
 	"no_activities_available": "Aucune activité disponible",
 	"selected_activity": "Sélectionné: {name}",
