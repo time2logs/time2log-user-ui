@@ -69,6 +69,7 @@
 	"calendar_no_date_selected": "Nessuna data selezionata",
 	"calendar_previous_month": "Mostra il mese precedente",
 	"calendar_next_month": "Mostra il mese successivo",
+	"calendar_go_to_today": "Torna al mese corrente",
 	"activity_log_showing_for": "Visualizzazione delle attività per {date}",
 	"welcome_back": "Bentornato",
 	"settings_title": "Impostazioni",

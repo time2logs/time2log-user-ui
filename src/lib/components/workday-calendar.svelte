@@ -16,6 +16,7 @@
 	import { ABSENCE_TYPES } from '$lib/absence-types';
 	import ChevronLeft from '@lucide/svelte/icons/chevron-left';
 	import ChevronRight from '@lucide/svelte/icons/chevron-right';
+	import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
 	import type { AbsenceType } from '$lib/types';
 
 	type WorkdayCalendarProps = {
@@ -95,7 +96,10 @@
 		});
 	});
 
-	const canGoToNextMonth = $derived(visibleMonth.compare(currentMonth) < 0);
+	const maxMonth = $derived(currentMonth.add({ years: 1 }));
+
+	const canGoToNextMonth = $derived(visibleMonth.compare(maxMonth) < 0);
+	const canGoToToday = $derived(!isEqualMonth(visibleMonth, currentMonth));
 
 	function formatFullDate(date: DateValue) {
 		return new DateFormatter(locale, {
@@ -114,9 +118,14 @@
 		if (!canGoToNextMonth) return;
 
 		const nextMonth = startOfMonth(visibleMonth.add({ months: 1 }));
-		if (nextMonth.compare(currentMonth) <= 0) {
+		if (nextMonth.compare(maxMonth) <= 0) {
 			visibleMonth = nextMonth;
 		}
+	}
+
+	function goToToday() {
+		visibleMonth = currentMonth;
+		value = today(timeZone);
 	}
 
 	function selectDate(date: DateValue, disabled: boolean) {
@@ -133,6 +142,17 @@
 			<h3 class="text-base font-semibold text-card-foreground sm:text-lg">{monthLabel}</h3>
 		</div>
 		<div class="flex items-center gap-1 sm:gap-2">
+			{#if canGoToToday}
+				<Button
+					variant="outline"
+					size="icon-sm"
+					class="h-8 w-8 rounded-full sm:h-9 sm:w-9"
+					onclick={goToToday}
+					aria-label={m.calendar_go_to_today()}
+				>
+					<RotateCcw class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+				</Button>
+			{/if}
 			<Button
 				variant="outline"
 				size="icon-sm"
