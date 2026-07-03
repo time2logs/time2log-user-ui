@@ -2,6 +2,23 @@ type FailResult = { status: number; data: Record<string, unknown> };
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { resetRateLimiter } from '$lib/server/rateLimiter';
 
+const { mockResetPasswordForEmail } = vi.hoisted(() => ({
+	mockResetPasswordForEmail: vi.fn()
+}));
+
+vi.mock('$env/static/public', () => ({
+	PUBLIC_SUPABASE_URL: 'http://localhost:54321',
+	PUBLIC_SUPABASE_PUBLISHABLE_KEY: 'test-key'
+}));
+
+vi.mock('@supabase/supabase-js', () => ({
+	createClient: vi.fn(() => ({
+		auth: {
+			resetPasswordForEmail: mockResetPasswordForEmail
+		}
+	}))
+}));
+
 vi.mock('$lib/paraglide/messages.js', () => ({
 	forgot_password_error_email_missing: () => 'email_missing',
 	rate_limited: ({ seconds }: { seconds: string }) => `rate_limited_${seconds}`,
@@ -12,20 +29,9 @@ import { actions } from '../../routes/forgot-password/+page.server';
 
 beforeEach(() => {
 	resetRateLimiter();
+	mockResetPasswordForEmail.mockReset();
+	mockResetPasswordForEmail.mockResolvedValue({ data: {}, error: null });
 });
-
-function makeLocals(resetError: unknown = null): App.Locals {
-	return {
-		supabase: {
-			auth: {
-				resetPasswordForEmail: vi.fn().mockResolvedValue({
-					data: {},
-					error: resetError
-				})
-			}
-		}
-	} as unknown as App.Locals;
-}
 
 function makeRequest(email: string): Request {
 	const fd = new FormData();
@@ -36,7 +42,7 @@ function makeRequest(email: string): Request {
 function makeEvent(overrides: Record<string, unknown> = {}) {
 	return {
 		request: makeRequest('user@example.com'),
-		locals: makeLocals(),
+		locals: {} as App.Locals,
 		url: new URL('http://localhost/forgot-password'),
 		getClientAddress: () => '127.0.0.1',
 		...overrides
@@ -84,24 +90,24 @@ describe('sendResetLink — rate limiting', () => {
 
 describe('sendResetLink — supabase errors', () => {
 	it('returns 429 when supabase returns a rate limit error', async () => {
-		const result = (await actions.sendResetLink(
-			makeEvent({
-				locals: makeLocals({
-					status: 429,
-					message: 'For security purposes, you can only request this after 60 seconds.'
-				})
-			})
-		)) as FailResult;
+		mockResetPasswordForEmail.mockResolvedValueOnce({
+			data: {},
+			error: {
+				status: 429,
+				message: 'For security purposes, you can only request this after 60 seconds.'
+			}
+		});
+		const result = (await actions.sendResetLink(makeEvent())) as FailResult;
 		expect(result.status).toBe(429);
 		expect(result.data.error).toBe('rate_limited_60');
 	});
 
 	it('returns 500 on a generic supabase error', async () => {
-		const result = (await actions.sendResetLink(
-			makeEvent({
-				locals: makeLocals({ message: 'Internal error' })
-			})
-		)) as FailResult;
+		mockResetPasswordForEmail.mockResolvedValueOnce({
+			data: {},
+			error: { message: 'Internal error' }
+		});
+		const result = (await actions.sendResetLink(makeEvent())) as FailResult;
 		expect(result.status).toBe(500);
 		expect(result.data.error).toBe('server_error');
 	});
@@ -111,10 +117,8 @@ describe('sendResetLink — supabase errors', () => {
 
 describe('sendResetLink — success', () => {
 	it('calls resetPasswordForEmail with the email and redirect URL', async () => {
-		const locals = makeLocals();
-		const event = makeEvent({ locals });
-		await actions.sendResetLink(event);
-		expect(locals.supabase.auth.resetPasswordForEmail).toHaveBeenCalledWith('user@example.com', {
+		await actions.sendResetLink(makeEvent());
+		expect(mockResetPasswordForEmail).toHaveBeenCalledWith('user@example.com', {
 			redirectTo: 'http://localhost/reset-password'
 		});
 	});
