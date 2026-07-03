@@ -25,7 +25,7 @@ export const load: PageServerLoad = async () => {
 
 export const actions: Actions = {
 	sendResetLink: async (event) => {
-		const { request, locals, url } = event;
+		const { request, url } = event;
 		const formData = await request.formData();
 		const email = formData.get('email')?.toString().trim() ?? '';
 
