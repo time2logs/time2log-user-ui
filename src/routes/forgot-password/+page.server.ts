@@ -1,11 +1,23 @@
 import { fail } from '@sveltejs/kit';
+import { createClient } from '@supabase/supabase-js';
 import type { Actions, PageServerLoad } from './$types';
 import * as m from '$lib/paraglide/messages.js';
 import { getRateLimitSeconds } from '$lib/rateLimitError';
 import { checkRateLimit, getClientId, hashId, rateKey } from '$lib/server/rateLimiter';
+import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
 
 const WINDOW_1MIN = 60 * 1000;
 const WINDOW_15MIN = 15 * 60 * 1000;
+
+const passwordResetClient = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
+	db: { schema: 'app' },
+	auth: {
+		autoRefreshToken: false,
+		detectSessionInUrl: false,
+		flowType: 'implicit',
+		persistSession: false
+	}
+});
 
 export const load: PageServerLoad = async () => {
 	return {};
@@ -13,7 +25,7 @@ export const load: PageServerLoad = async () => {
 
 export const actions: Actions = {
 	sendResetLink: async (event) => {
-		const { request, locals, url } = event;
+		const { request, url } = event;
 		const formData = await request.formData();
 		const email = formData.get('email')?.toString().trim() ?? '';
 
@@ -49,7 +61,7 @@ export const actions: Actions = {
 			});
 		}
 
-		const { error } = await locals.supabase.auth.resetPasswordForEmail(email, {
+		const { error } = await passwordResetClient.auth.resetPasswordForEmail(email, {
 			redirectTo: `${url.origin}/reset-password`
 		});
 
