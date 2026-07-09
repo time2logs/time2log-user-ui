@@ -38,7 +38,12 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 
 		const [profileResult, teamMemberResult] = await Promise.all([
 			locals.supabase.from('profiles').select('*').eq('id', userId).single(),
-			locals.supabase.schema('admin').from('team_members').select('*').eq('user_id', userId).limit(1)
+			locals.supabase
+				.schema('admin')
+				.from('team_members')
+				.select('*')
+				.eq('user_id', userId)
+				.limit(1)
 		]);
 
 		const profile = profileResult.error ? null : profileResult.data;
@@ -117,7 +122,12 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				.select('id, name, target_hours')
 				.eq('id', team.organization_id)
 				.single(),
-			locals.supabase.schema('admin').from('professions').select('label').eq('id', team.profession_id).single()
+			locals.supabase
+				.schema('admin')
+				.from('professions')
+				.select('label')
+				.eq('id', team.profession_id)
+				.single()
 		]);
 
 		if (nodesResult.error) {

@@ -7,8 +7,7 @@ import type { RequestHandler } from './$types';
  * any Supabase Auth "Redirect URL" pointing here keep working instead of 404-ing.
  */
 export const GET: RequestHandler = ({ url }) => {
-	const inviteToken =
-		url.searchParams.get('invite_token') ?? url.searchParams.get('token') ?? '';
+	const inviteToken = url.searchParams.get('invite_token') ?? url.searchParams.get('token') ?? '';
 	const target = inviteToken
 		? `/onboarding?invite_token=${encodeURIComponent(inviteToken)}`
 		: '/onboarding';
