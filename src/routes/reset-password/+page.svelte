@@ -10,7 +10,8 @@
 	import * as m from '$lib/paraglide/messages.js';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
-	import { supabase } from '$lib/supabaseClient';
+	import { createClient } from '@supabase/supabase-js';
+	import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
 	import { getRateLimitSeconds } from '$lib/rateLimitError';
 	import { validatePassword } from '$lib/passwordValidation';
 
@@ -20,6 +21,20 @@
 	let linkInvalid = $state(false);
 	let isLoading = $state(false);
 	let isReady = $state(false);
+
+	// The reset email is sent using the implicit flow (see forgot-password/+page.server.ts).
+	// The app's shared browser client is forced to PKCE by @supabase/ssr's createBrowserClient,
+	// which throws "Not a valid PKCE flow url" when consuming an implicit recovery link —
+	// so a dedicated implicit-flow client is used here to consume the link correctly.
+	const supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
+		db: { schema: 'app' },
+		auth: {
+			flowType: 'implicit',
+			detectSessionInUrl: true,
+			autoRefreshToken: false,
+			persistSession: true
+		}
+	});
 
 	onMount(async () => {
 		const hash = new URLSearchParams(window.location.hash.slice(1));
