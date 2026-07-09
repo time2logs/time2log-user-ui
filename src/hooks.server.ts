@@ -5,30 +5,17 @@ import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/stati
 import { env } from '$env/dynamic/private';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	// NOTE: Only ONE cookie-backed SSR client is created per request.
-	// @supabase/ssr's createServerClient registers an async onAuthStateChange
-	// callback that writes cookies when the session refreshes, and each client
-	// instance refreshes the single shared refresh token independently. Two
-	// clients → two concurrent refreshes → "refresh_token_already_used" (400)
-	// and "session state changed mid-flight" (409). Admin-schema queries use
-	// `supabase.schema('admin')` on this same client instead.
 	const supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
 		cookies: {
 			getAll: () => event.cookies.getAll(),
 			setAll: (
 				cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]
 			) => {
-				// A token refresh can resolve asynchronously after the response has
-				// already been generated (the auth-js subscriber notification runs in
-				// a detached Promise). Once the response is out, event.cookies.set
-				// throws and would crash the node process (adapter-node). Swallow it
-				// gracefully — the refreshed token is persisted on the next request
-				// that mutates cookies while the response is still being built.
 				for (const { name, value, options } of cookiesToSet) {
 					try {
 						event.cookies.set(name, value, { ...options, path: '/' });
 					} catch {
-						// response already generated; cookie cannot be set for this response
+						// response already generated
 					}
 				}
 			}

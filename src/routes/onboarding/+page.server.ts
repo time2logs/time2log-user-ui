@@ -369,9 +369,6 @@ type FindUserByEmailResult =
 async function findUserByEmail(locals: App.Locals, email: string): Promise<FindUserByEmailResult> {
 	const normalizedEmail = email.toLowerCase();
 
-	// The `auth` schema is not exposed via PostgREST, so resolve the user through
-	// the Auth Admin API instead of `supabaseSecret.schema('auth').from('users')`
-	// (which always fails with "Invalid schema: auth").
 	const {
 		data: { users },
 		error: listUsersError

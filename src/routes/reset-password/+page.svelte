@@ -22,10 +22,6 @@
 	let isLoading = $state(false);
 	let isReady = $state(false);
 
-	// The reset email is sent using the implicit flow (see forgot-password/+page.server.ts).
-	// The app's shared browser client is forced to PKCE by @supabase/ssr's createBrowserClient,
-	// which throws "Not a valid PKCE flow url" when consuming an implicit recovery link —
-	// so a dedicated implicit-flow client is used here to consume the link correctly.
 	const supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
 		db: { schema: 'app' },
 		auth: {
