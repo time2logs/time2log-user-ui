@@ -10,7 +10,8 @@
 	import * as m from '$lib/paraglide/messages.js';
 	import LanguageSwitcher from '$lib/components/language-switcher.svelte';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
-	import { supabase } from '$lib/supabaseClient';
+	import { createClient } from '@supabase/supabase-js';
+	import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
 	import { getRateLimitSeconds } from '$lib/rateLimitError';
 	import { validatePassword } from '$lib/passwordValidation';
 
@@ -20,6 +21,16 @@
 	let linkInvalid = $state(false);
 	let isLoading = $state(false);
 	let isReady = $state(false);
+
+	const supabase = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
+		db: { schema: 'app' },
+		auth: {
+			flowType: 'implicit',
+			detectSessionInUrl: true,
+			autoRefreshToken: false,
+			persistSession: true
+		}
+	});
 
 	onMount(async () => {
 		const hash = new URLSearchParams(window.location.hash.slice(1));
