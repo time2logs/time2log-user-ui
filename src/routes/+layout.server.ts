@@ -38,7 +38,12 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 
 		const [profileResult, teamMemberResult] = await Promise.all([
 			locals.supabase.from('profiles').select('*').eq('id', userId).single(),
-			locals.supabaseAdmin.from('team_members').select('*').eq('user_id', userId).limit(1)
+			locals.supabase
+				.schema('admin')
+				.from('team_members')
+				.select('*')
+				.eq('user_id', userId)
+				.limit(1)
 		]);
 
 		const profile = profileResult.error ? null : profileResult.data;
@@ -68,7 +73,8 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 			};
 		}
 
-		const { data: team, error: teamError } = await locals.supabaseAdmin
+		const { data: team, error: teamError } = await locals.supabase
+			.schema('admin')
 			.from('teams')
 			.select('organization_id, profession_id')
 			.eq('id', teamMember.team_id)
@@ -93,7 +99,8 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 		};
 
 		const [nodesResult, summaryResult, orgResult, professionResult] = await Promise.all([
-			locals.supabaseAdmin
+			locals.supabase
+				.schema('admin')
 				.from('curriculum_nodes')
 				.select('*')
 				.eq('organization_id', team.organization_id)
@@ -101,19 +108,26 @@ export const load: LayoutServerLoad = async ({ locals, url }) => {
 				.eq('is_active', true)
 				.order('sort_order')
 				.order('key'),
-			locals.supabaseAdmin
+			locals.supabase
+				.schema('admin')
 				.from('curriculum_nodes')
 				.select('id, key, label, is_active')
 				.eq('organization_id', team.organization_id)
 				.eq('profession_id', team.profession_id)
 				.order('sort_order')
 				.order('key'),
-			locals.supabaseAdmin
+			locals.supabase
+				.schema('admin')
 				.from('organizations')
 				.select('id, name, target_hours')
 				.eq('id', team.organization_id)
 				.single(),
-			locals.supabaseAdmin.from('professions').select('label').eq('id', team.profession_id).single()
+			locals.supabase
+				.schema('admin')
+				.from('professions')
+				.select('label')
+				.eq('id', team.profession_id)
+				.single()
 		]);
 
 		if (nodesResult.error) {

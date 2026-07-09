@@ -368,22 +368,7 @@ type FindUserByEmailResult =
 
 async function findUserByEmail(locals: App.Locals, email: string): Promise<FindUserByEmailResult> {
 	const normalizedEmail = email.toLowerCase();
-	const { data: authUser, error: authUserError } = await locals.supabaseSecret
-		.schema('auth')
-		.from('users')
-		.select('id, email')
-		.ilike('email', normalizedEmail)
-		.maybeSingle();
 
-	if (!authUserError && authUser?.id) {
-		return { ok: true, user: { id: authUser.id, email: authUser.email ?? undefined } };
-	}
-
-	if (authUserError) {
-		console.error('[Onboarding] Failed to query auth.users by email:', authUserError.message);
-	}
-
-	// Compatibility fallback for environments where querying auth schema via PostgREST is restricted.
 	const {
 		data: { users },
 		error: listUsersError

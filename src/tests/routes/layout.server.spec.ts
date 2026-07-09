@@ -39,38 +39,36 @@ function makeLocals(
 		};
 	}
 
-	const supabaseAdmin = {
-		from: vi.fn((table: string) => {
-			if (table === 'team_members') {
-				return chain({ data: opts.teamMembers ?? [], error: null });
+	const adminFrom = (table: string) => {
+		if (table === 'team_members') {
+			return chain({ data: opts.teamMembers ?? [], error: null });
+		}
+		if (table === 'teams') {
+			return chain({ data: opts.team ?? null, error: opts.teamError ?? null });
+		}
+		if (table === 'curriculum_nodes') {
+			if (opts.summary && !opts.nodes) {
+				return chain({ data: opts.summary, error: null });
 			}
-			if (table === 'teams') {
-				return chain({ data: opts.team ?? null, error: opts.teamError ?? null });
-			}
-			if (table === 'curriculum_nodes') {
-				if (opts.summary && !opts.nodes) {
-					return chain({ data: opts.summary, error: null });
-				}
-				return chain({ data: opts.nodes ?? null, error: opts.nodesError ?? null });
-			}
-			if (table === 'organizations') {
-				return chain({ data: opts.org ?? null, error: null });
-			}
-			if (table === 'professions') {
-				return chain({ data: opts.profession ?? null, error: null });
-			}
-			return chain({ data: null, error: null });
-		})
+			return chain({ data: opts.nodes ?? null, error: opts.nodesError ?? null });
+		}
+		if (table === 'organizations') {
+			return chain({ data: opts.org ?? null, error: null });
+		}
+		if (table === 'professions') {
+			return chain({ data: opts.profession ?? null, error: null });
+		}
+		return chain({ data: null, error: null });
 	};
 
 	const supabase = {
-		from: vi.fn(() => chain({ data: opts.profile ?? null, error: opts.profileError ?? null }))
+		from: vi.fn(() => chain({ data: opts.profile ?? null, error: opts.profileError ?? null })),
+		schema: vi.fn(() => ({ from: vi.fn(adminFrom) }))
 	};
 
 	return {
 		safeGetSession: vi.fn().mockResolvedValue(session),
-		supabase,
-		supabaseAdmin
+		supabase
 	} as unknown as App.Locals;
 }
 
