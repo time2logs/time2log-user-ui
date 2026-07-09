@@ -1,34 +1,42 @@
 import { createServerClient } from '@supabase/ssr';
-import { type Handle, redirect } from '@sveltejs/kit';
+import { type Handle } from '@sveltejs/kit';
 import { createClient } from '@supabase/supabase-js';
 import { PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY } from '$env/static/public';
 import { env } from '$env/dynamic/private';
 
 export const handle: Handle = async ({ event, resolve }) => {
-	const cookieOptions = {
-		getAll: () => event.cookies.getAll(),
-		setAll: (
-			cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]
-		) => {
-			cookiesToSet.forEach(({ name, value, options }) => {
-				event.cookies.set(name, value, { ...options, path: '/' });
-			});
-		}
-	};
-
-	event.locals.supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
-		cookies: cookieOptions,
+	// NOTE: Only ONE cookie-backed SSR client is created per request.
+	// @supabase/ssr's createServerClient registers an async onAuthStateChange
+	// callback that writes cookies when the session refreshes, and each client
+	// instance refreshes the single shared refresh token independently. Two
+	// clients → two concurrent refreshes → "refresh_token_already_used" (400)
+	// and "session state changed mid-flight" (409). Admin-schema queries use
+	// `supabase.schema('admin')` on this same client instead.
+	const supabase = createServerClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_PUBLISHABLE_KEY, {
+		cookies: {
+			getAll: () => event.cookies.getAll(),
+			setAll: (
+				cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]
+			) => {
+				// A token refresh can resolve asynchronously after the response has
+				// already been generated (the auth-js subscriber notification runs in
+				// a detached Promise). Once the response is out, event.cookies.set
+				// throws and would crash the node process (adapter-node). Swallow it
+				// gracefully — the refreshed token is persisted on the next request
+				// that mutates cookies while the response is still being built.
+				for (const { name, value, options } of cookiesToSet) {
+					try {
+						event.cookies.set(name, value, { ...options, path: '/' });
+					} catch {
+						// response already generated; cookie cannot be set for this response
+					}
+				}
+			}
+		},
 		db: { schema: 'app' }
 	});
 
-	event.locals.supabaseAdmin = createServerClient(
-		PUBLIC_SUPABASE_URL,
-		PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-		{
-			cookies: cookieOptions,
-			db: { schema: 'admin' }
-		}
-	);
+	event.locals.supabase = supabase;
 
 	// Secret client — bypasses RLS, used for admin operations (e.g. creating users, invite lookups).
 	// Support both key names for compatibility across local/remote environments.
@@ -44,13 +52,13 @@ export const handle: Handle = async ({ event, resolve }) => {
 		const {
 			data: { user },
 			error
-		} = await event.locals.supabase.auth.getUser();
+		} = await supabase.auth.getUser();
 		if (error || !user) return null;
 
 		const {
 			data: { session },
 			error: sessionError
-		} = await event.locals.supabase.auth.getSession();
+		} = await supabase.auth.getSession();
 		if (sessionError) return null;
 		return session;
 	};
@@ -60,13 +68,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 			return name === 'content-range' || name === 'x-supabase-api-version';
 		}
 	});
-
-	if (response.status === 404) {
-		const session = await event.locals.safeGetSession();
-		if (!session) {
-			throw redirect(302, '/login');
-		}
-	}
 
 	// Security headers
 	const supabaseOrigin = new URL(PUBLIC_SUPABASE_URL).origin;
