@@ -7,6 +7,7 @@ export default defineConfig({
 		globals: true,
 		include: ['src/**/*.spec.ts'],
 		exclude: ['tests/**', 'node_modules/**'],
+		setupFiles: ['./src/tests/setup/happy-dom-storage.ts'],
 		alias: {
 			$lib: resolve(__dirname, 'src/lib'),
 			'$app/environment': resolve(__dirname, 'src/tests/mocks/app-environment.ts'),
