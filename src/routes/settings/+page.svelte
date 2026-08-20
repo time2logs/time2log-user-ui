@@ -21,6 +21,11 @@
 	import ShieldAlert from '@lucide/svelte/icons/shield-alert';
 	import Mail from '@lucide/svelte/icons/mail';
 	import KeyRound from '@lucide/svelte/icons/key-round';
+	import MapPin from '@lucide/svelte/icons/map-pin';
+	import Pencil from '@lucide/svelte/icons/pencil';
+	import Trash2 from '@lucide/svelte/icons/trash-2';
+	import Plus from '@lucide/svelte/icons/plus';
+	import { addUserLocation, renameUserLocation, deleteUserLocation } from '$lib/locationStorage';
 	import { theme } from '$lib/themeStore';
 	import AmbientGlow from '$lib/components/ambient-glow.svelte';
 	import * as Select from '$lib/components/ui/select';
@@ -117,6 +122,97 @@
 			if (avatarPreviewUrl) URL.revokeObjectURL(avatarPreviewUrl);
 		};
 	});
+
+	let locations = $derived(data.userLocations);
+	let newLocation = $state('');
+	let locationError = $state('');
+	let isSavingLocation = $state(false);
+	let editingLocation = $state<string | null>(null);
+	let editValue = $state('');
+	let isRenaming = $state(false);
+	let editInput: HTMLInputElement | undefined = $state();
+	let deleteDialogOpen = $state(false);
+	let deleteTarget = $state<string | null>(null);
+	let isDeletingLocation = $state(false);
+	let deleteLocationError = $state('');
+
+	$effect(() => {
+		if (editingLocation !== null) editInput?.focus();
+	});
+
+	async function handleAddLocation() {
+		const trimmed = newLocation.trim();
+		if (!trimmed || isSavingLocation) return;
+		isSavingLocation = true;
+		locationError = '';
+		try {
+			await addUserLocation(trimmed, data.userId);
+			newLocation = '';
+			await invalidateAll();
+		} catch (err) {
+			locationError =
+				err instanceof Error && err.message === 'DUPLICATE_LOCATION'
+					? m.location_already_exists()
+					: m.error_save_location_failed();
+		} finally {
+			isSavingLocation = false;
+		}
+	}
+
+	function startRename(loc: string) {
+		editingLocation = loc;
+		editValue = loc;
+		locationError = '';
+	}
+
+	function cancelRename() {
+		editingLocation = null;
+		editValue = '';
+	}
+
+	async function handleRename() {
+		const trimmed = editValue.trim();
+		if (editingLocation === null || isRenaming) return;
+		if (!trimmed || trimmed === editingLocation) {
+			cancelRename();
+			return;
+		}
+		isRenaming = true;
+		locationError = '';
+		try {
+			await renameUserLocation(editingLocation, trimmed, data.userId);
+			cancelRename();
+			await invalidateAll();
+		} catch (err) {
+			locationError =
+				err instanceof Error && err.message === 'DUPLICATE_LOCATION'
+					? m.location_already_exists()
+					: m.error_rename_location_failed();
+		} finally {
+			isRenaming = false;
+		}
+	}
+
+	function requestDeleteLocation(loc: string) {
+		deleteTarget = loc;
+		deleteLocationError = '';
+		deleteDialogOpen = true;
+	}
+
+	async function confirmDeleteLocation() {
+		if (!deleteTarget || isDeletingLocation) return;
+		isDeletingLocation = true;
+		try {
+			await deleteUserLocation(deleteTarget, data.userId);
+			deleteDialogOpen = false;
+			deleteTarget = null;
+			await invalidateAll();
+		} catch {
+			deleteLocationError = m.error_delete_location_failed();
+		} finally {
+			isDeletingLocation = false;
+		}
+	}
 </script>
 
 <div class="relative flex min-h-screen flex-col overflow-hidden bg-background text-foreground">
@@ -320,6 +416,112 @@
 				<div class="rounded-xl border border-border bg-card shadow-sm">
 					<div class="p-4">
 						<div class="mb-4 flex items-center gap-2 text-foreground">
+							<MapPin class="h-5 w-5" />
+							<h3 class="font-semibold">{m.locations_settings()}</h3>
+						</div>
+
+						{#if locations.length > 0}
+							<ul class="mb-4 space-y-1">
+								{#each locations as loc (loc)}
+									<li class="flex items-center gap-1">
+										{#if editingLocation === loc}
+											<div class="flex flex-1 flex-wrap gap-2">
+												<Input
+													ref={editInput}
+													bind:value={editValue}
+													class="min-w-40 flex-1"
+													disabled={isRenaming}
+													onkeydown={(e) => {
+														if (e.key === 'Enter') {
+															e.preventDefault();
+															handleRename();
+														} else if (e.key === 'Escape') {
+															cancelRename();
+														}
+													}}
+												/>
+												<Button
+													type="button"
+													size="sm"
+													onclick={handleRename}
+													disabled={isRenaming}
+												>
+													{m.save()}
+												</Button>
+												<Button
+													type="button"
+													size="sm"
+													variant="outline"
+													onclick={cancelRename}
+													disabled={isRenaming}
+												>
+													{m.cancel()}
+												</Button>
+											</div>
+										{:else}
+											<span class="flex-1 truncate text-sm" title={loc}>{loc}</span>
+											<Button
+												variant="ghost"
+												size="icon-sm"
+												class="text-muted-foreground"
+												aria-label={m.rename_location()}
+												onclick={() => startRename(loc)}
+												disabled={isRenaming}
+											>
+												<Pencil class="h-4 w-4" />
+											</Button>
+											<Button
+												variant="ghost"
+												size="icon-sm"
+												class="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+												aria-label={m.delete_location_confirm_title()}
+												onclick={() => requestDeleteLocation(loc)}
+												disabled={isRenaming}
+											>
+												<Trash2 class="h-4 w-4" />
+											</Button>
+										{/if}
+									</li>
+								{/each}
+							</ul>
+						{:else}
+							<p class="mb-4 text-sm text-muted-foreground">{m.no_locations_hint()}</p>
+						{/if}
+
+						<div class="flex flex-wrap gap-2">
+							<Input
+								bind:value={newLocation}
+								placeholder={m.add_location_placeholder()}
+								class="min-w-40 flex-1"
+								disabled={isSavingLocation}
+								onkeydown={(e) => {
+									if (e.key === 'Enter') {
+										e.preventDefault();
+										handleAddLocation();
+									}
+								}}
+							/>
+							<Button
+								type="button"
+								size="sm"
+								variant="outline"
+								onclick={handleAddLocation}
+								disabled={isSavingLocation || !newLocation.trim()}
+							>
+								<Plus class="h-4 w-4" />
+								{m.add_location_action()}
+							</Button>
+						</div>
+
+						{#if locationError}
+							<p class="mt-2 text-sm text-destructive">{locationError}</p>
+						{/if}
+					</div>
+				</div>
+
+				<div class="rounded-xl border border-border bg-card shadow-sm">
+					<div class="p-4">
+						<div class="mb-4 flex items-center gap-2 text-foreground">
 							<Globe class="h-5 w-5" />
 							<h3 class="font-semibold">{m.language_settings()}</h3>
 						</div>
@@ -393,6 +595,21 @@
 	loading={isLoggingOut}
 	onConfirm={handleLogout}
 />
+
+<ConfirmDialog
+	bind:open={deleteDialogOpen}
+	title={m.delete_location_confirm_title()}
+	description={m.delete_location_confirm_description()}
+	confirmLabel={m.delete_activity_confirm_button()}
+	cancelLabel={m.cancel()}
+	variant="destructive"
+	loading={isDeletingLocation}
+	onConfirm={confirmDeleteLocation}
+>
+	{#if deleteLocationError}
+		<Alert variant="error">{deleteLocationError}</Alert>
+	{/if}
+</ConfirmDialog>
 
 <AccountChangeDialog
 	bind:open={dialogOpen}
