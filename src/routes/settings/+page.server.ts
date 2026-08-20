@@ -27,7 +27,17 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const profile = profileResult.error ? null : profileResult.data;
 
-	return { profile, email };
+	const locationsResult = await locals.supabase
+		.from('user_locations')
+		.select('location')
+		.eq('user_id', userId)
+		.order('created_at', { ascending: false });
+
+	const userLocations = locationsResult.error
+		? []
+		: locationsResult.data.map((l: { location: string }) => l.location);
+
+	return { profile, email, userLocations, userId };
 };
 
 export const actions: Actions = {

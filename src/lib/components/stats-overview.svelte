@@ -112,8 +112,10 @@
 							<Axis placement="left" grid />
 							<Bars radius={4} rounded="top" fill="var(--chart-1)" />
 						</Svg>
-						<Tooltip.Root let:data>
-							<Tooltip.Item label={data.label} value={formatHoursMinutes(data.hours)} />
+						<Tooltip.Root>
+							{#snippet children({ data }: { data: { label: string; hours: number } })}
+								<Tooltip.Item label={data.label} value={formatHoursMinutes(data.hours)} />
+							{/snippet}
 						</Tooltip.Root>
 					</Chart>
 				</div>
