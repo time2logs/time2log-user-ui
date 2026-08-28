@@ -20,6 +20,7 @@
 	import { Spinner } from '$lib/components/ui/spinner';
 	import { SegmentedControl } from '$lib/components/ui/segmented-control';
 	import { isAbsenceWithinEditWindow, EDIT_WINDOW_DAYS } from '$lib/utils';
+	import { countWeekdaysInRange, isWeekendIsoDate } from '$lib/dateUtils';
 	import Lock from '@lucide/svelte/icons/lock';
 
 	const dateLocale = $derived(getDateLocale());
@@ -141,7 +142,8 @@
 									: [byweekdayRaw];
 						selectedDays = byweekday
 							.map((d) => byweekdayToIndex(d))
-							.filter((value): value is number => value !== undefined);
+							.filter((value): value is number => value !== undefined)
+							.filter(isSelectableWeekday);
 					} catch (e) {
 						console.error('Failed to parse rrule:', e);
 					}
@@ -179,12 +181,18 @@
 		}
 	});
 
+	function isSelectableWeekday(day: number): boolean {
+		return day !== 0 && day !== 6;
+	}
+
+	function syncSelectedDaysToStartDate() {
+		const wd = weekdayIndexOf(startDate);
+		selectedDays = wd !== null && isSelectableWeekday(wd) ? [wd] : [];
+	}
+
 	$effect(() => {
 		if (hasInitialized && startDate && startDate !== lastSyncedStart) {
-			const wd = weekdayIndexOf(startDate);
-			if (wd !== null) {
-				selectedDays = [wd];
-			}
+			syncSelectedDaysToStartDate();
 			lastSyncedStart = startDate;
 		}
 	});
@@ -206,10 +214,7 @@
 				recurrenceUntil = endDate;
 			}
 			endDate = startDate;
-			const wd = weekdayIndexOf(startDate);
-			if (wd !== null) {
-				selectedDays = [wd];
-			}
+			syncSelectedDaysToStartDate();
 			lastSyncedStart = startDate;
 		} else if (recurrenceUntil) {
 			endDate = recurrenceUntil;
@@ -218,6 +223,7 @@
 	}
 
 	function toggleDay(day: number) {
+		if (!isSelectableWeekday(day)) return;
 		if (selectedDays.includes(day)) {
 			selectedDays = selectedDays.filter((d) => d !== day);
 		} else {
@@ -231,6 +237,11 @@
 		!isRecurring || recurrenceFrequency === 'daily' || selectedDays.length > 0
 	);
 	const isLocked = $derived(!!absenceToEdit && !isAbsenceWithinEditWindow(absenceToEdit));
+
+	const rangeWeekdayCount = $derived.by(() => {
+		if (isRecurring || !startDate || !endDate || startDate > endDate) return null;
+		return countWeekdaysInRange(startDate, endDate);
+	});
 
 	const selectedDateLabel = $derived(
 		selectedDate
@@ -291,9 +302,11 @@
 		}
 
 		const otherAbsences = existingAbsences.filter((absence) => absence.id !== absenceToEdit?.id);
-		const affectedDates = isRecurring
-			? Array.from(new Set([startDate, ...previewDates]))
-			: getDatesInRange(startDate, endDate);
+		const affectedDates = (
+			isRecurring
+				? Array.from(new Set([startDate, ...previewDates]))
+				: getDatesInRange(startDate, endDate)
+		).filter((date) => !isWeekendIsoDate(date));
 
 		for (const date of affectedDates) {
 			const activityHours = existingActivities
@@ -481,6 +494,13 @@
 							>
 						</div>
 					{/if}
+					{#if rangeWeekdayCount !== null}
+						<p class="text-xs text-muted-foreground">
+							{rangeWeekdayCount === 1
+								? m.absence_workday_count_one({ count: rangeWeekdayCount })
+								: m.absence_workday_count({ count: rangeWeekdayCount })}
+						</p>
+					{/if}
 				</div>
 
 				{@const selectedType = absenceTypes.find((t) => t.id === selectedAbsenceType)}
@@ -521,7 +541,8 @@
 											buttonClass="min-w-[2.5rem] px-2 py-1 text-xs"
 											items={weekdays.map((day) => ({
 												value: String(day.value),
-												label: day.short
+												label: day.short,
+												disabled: !isSelectableWeekday(day.value)
 											}))}
 											selected={selectedDays.map(String)}
 											onToggle={(v) => toggleDay(Number(v))}

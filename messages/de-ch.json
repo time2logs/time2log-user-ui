@@ -96,6 +96,8 @@
 	"absence_day_fraction_short": "Tage",
 	"absence_day_fraction_short_one": "Tag",
 	"absence_half_day_label": "Halber Tag",
+	"absence_workday_count": "{count} Arbeitstage",
+	"absence_workday_count_one": "{count} Arbeitstag",
 	"absence_hours_consumed": "Zählt als {hours} vom täglichen Limit von {max}.",
 	"recurring_label": "Wiederkehrend",
 	"absence_chart_title": "Absenzen pro Semester",
