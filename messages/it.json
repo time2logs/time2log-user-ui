@@ -96,6 +96,8 @@
 	"absence_day_fraction_short": "giorni",
 	"absence_day_fraction_short_one": "giorno",
 	"absence_half_day_label": "Mezza giornata",
+	"absence_workday_count": "{count} giorni lavorativi",
+	"absence_workday_count_one": "{count} giorno lavorativo",
 	"absence_hours_consumed": "Conta come {hours} del limite giornaliero di {max}.",
 	"recurring_label": "Ricorrente",
 	"recurring_description": "Questa assenza si verifica regolarmente (es: scuola professionale)",
