@@ -96,6 +96,8 @@
 	"absence_day_fraction_short": "days",
 	"absence_day_fraction_short_one": "day",
 	"absence_half_day_label": "Half day",
+	"absence_workday_count": "{count} working days",
+	"absence_workday_count_one": "{count} working day",
 	"absence_hours_consumed": "Counts as {hours} of the {max} daily limit.",
 	"recurring_label": "Recurring",
 	"recurring_description": "This absence occurs regularly (e.g., vocational school)",

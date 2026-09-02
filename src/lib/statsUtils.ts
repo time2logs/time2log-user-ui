@@ -1,4 +1,5 @@
-import type { ActivityRecord } from './types';
+import type { AbsenceRecord, ActivityRecord } from './types';
+import { expandAbsenceDates, isoFromDate, semesterKeyForIsoDate } from './dateUtils';
 
 export function getMondayOfWeek(date: Date): Date {
 	const day = date.getDay(); // 0 = Sun
@@ -7,13 +8,6 @@ export function getMondayOfWeek(date: Date): Date {
 	monday.setDate(date.getDate() + diff);
 	monday.setHours(0, 0, 0, 0);
 	return monday;
-}
-
-export function isoFromDate(date: Date): string {
-	const year = date.getFullYear();
-	const month = String(date.getMonth() + 1).padStart(2, '0');
-	const day = String(date.getDate()).padStart(2, '0');
-	return `${year}-${month}-${day}`;
 }
 
 export function computeHoursThisWeek(activities: ActivityRecord[], today: Date): number {
@@ -80,33 +74,37 @@ export function computeWeeklyData(
 	return weeks;
 }
 
+/**
+ * Aggregates absence days by semester and absence type. Weekends never count;
+ * each covered weekday is attributed to the semester it falls in, so ranges
+ * spanning a semester boundary are split accordingly. Recurring absences are
+ * expanded from their rrule (see {@link expandAbsenceDates}).
+ */
 export function computeAbsencesBySemester(
-	absences: import('./types').AbsenceRecord[]
+	absences: AbsenceRecord[],
+	todayIsoDate?: string
 ): { semester: string; type: string; days: number }[] {
-	const map = new Map<string, Map<string, number>>();
+	const semesterByType = new Map<string, Map<string, number>>();
 
-	for (const a of absences) {
-		const start = new Date(`${a.start_date}T12:00:00`);
-		const end = new Date(`${a.end_date}T12:00:00`);
-		const year = start.getFullYear();
-		const month = start.getMonth() + 1;
-
-		const semesterNum = month >= 8 ? 1 : 2;
-		const semesterYear = month >= 8 ? year : year - 1;
-		const semesterKey = `${semesterYear}/S${semesterNum}`;
-
-		const daysDiff = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-		const totalDays = daysDiff * Number(a.day_fraction);
-
-		if (!map.has(semesterKey)) map.set(semesterKey, new Map());
-		const typeMap = map.get(semesterKey)!;
-		const current = typeMap.get(a.absence_type_id) ?? 0;
-		typeMap.set(a.absence_type_id, current + totalDays);
+	for (const absence of absences) {
+		const dayFraction = Number(absence.day_fraction ?? 1);
+		for (const isoDate of expandAbsenceDates(absence, todayIsoDate)) {
+			const semester = semesterKeyForIsoDate(isoDate);
+			let typeDays = semesterByType.get(semester);
+			if (!typeDays) {
+				typeDays = new Map();
+				semesterByType.set(semester, typeDays);
+			}
+			typeDays.set(
+				absence.absence_type_id,
+				(typeDays.get(absence.absence_type_id) ?? 0) + dayFraction
+			);
+		}
 	}
 
 	const result: { semester: string; type: string; days: number }[] = [];
-	for (const [semester, typeMap] of [...map.entries()].sort()) {
-		for (const [type, days] of typeMap.entries()) {
+	for (const [semester, typeDays] of [...semesterByType.entries()].sort()) {
+		for (const [type, days] of typeDays) {
 			result.push({ semester, type, days: Math.round(days) });
 		}
 	}

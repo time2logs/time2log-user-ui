@@ -4,6 +4,7 @@
 	type Item = {
 		value: string;
 		label: string;
+		disabled?: boolean;
 	};
 
 	type Props = {
@@ -46,6 +47,7 @@
 		<button
 			type="button"
 			aria-pressed={isActive(item)}
+			disabled={item.disabled}
 			onclick={() => {
 				if (selected.length > 0 || onToggle) {
 					onToggle?.(item.value);
@@ -53,7 +55,7 @@
 					onSelect?.(item.value);
 				}
 			}}
-			class={baseClass(isActive(item))}
+			class={cn(baseClass(isActive(item)), item.disabled && 'cursor-not-allowed opacity-40')}
 		>
 			{item.label}
 		</button>

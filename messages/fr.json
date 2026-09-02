@@ -96,6 +96,8 @@
 	"absence_day_fraction_short": "jours",
 	"absence_day_fraction_short_one": "jour",
 	"absence_half_day_label": "Demi-journée",
+	"absence_workday_count": "{count} jours ouvrables",
+	"absence_workday_count_one": "{count} jour ouvrable",
 	"absence_hours_consumed": "Compte pour {hours} sur la limite quotidienne de {max}.",
 	"recurring_label": "Récurrent",
 	"recurring_description": "Cette absence se produit régulièrement (ex: école professionnelle)",
