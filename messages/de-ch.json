@@ -62,7 +62,7 @@
 	"onboarding_error_email_missing": "E-Mail-Adresse fehlt.",
 	"onboarding_error_signin_failed": "Konto wurde erstellt, aber Anmeldung fehlgeschlagen: ",
 	"onboarding_error_profile_save": "Dein Konto wurde erstellt, aber das Profil konnte nicht gespeichert werden. Bitte versuche es erneut.",
-	"onboarding_error_auth_secret_mismatch": "Server-Konfiguration: SUPABASE_SECRET_KEY passt nicht zu PUBLIC_SUPABASE_URL oder ist kein gültiger service_role-Schlüssel. Im Supabase-Dashboard unter Einstellungen → API den service_role-Schlüssel dieses Projekts in .env eintragen und den Server neu starten.",
+	"onboarding_error_auth_secret_mismatch": "Server-Konfiguration: SUPABASE_SECRET_KEY passt nicht zu PUBLIC_SUPABASE_URL oder ist kein gültiger Secret Key. Im Supabase-Dashboard unter Einstellungen → API-Schlüssel den Secret Key (sb_secret_…) dieses Projekts in .env eintragen und den Server neu starten.",
 	"onboarding_first_name_placeholder": "Vorname",
 	"onboarding_last_name_placeholder": "Nachname",
 	"calendar_title": "Kalender",

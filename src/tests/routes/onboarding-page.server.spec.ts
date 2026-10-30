@@ -43,6 +43,9 @@ const emptyLocals = {} as App.Locals;
 
 describe('isSupabaseAuthSecretError', () => {
 	it.each([
+		'Invalid API key',
+		'invalid_api_key',
+		'No API key found in request',
 		'invalid jwt',
 		'INVALID JWT',
 		'unable to parse or verify signature',
