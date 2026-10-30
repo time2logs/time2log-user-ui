@@ -26,10 +26,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.supabase = supabase;
 
 	// Secret client — bypasses RLS, used for admin operations (e.g. creating users, invite lookups).
-	// Support both key names for compatibility across local/remote environments.
-	const secretKey = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+	// Only the new-style secret key (sb_secret_…) is accepted; legacy service_role JWTs are rejected.
+	const secretKey = env.SUPABASE_SECRET_KEY;
 	if (!secretKey) {
-		throw new Error('SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY) is not configured');
+		throw new Error('SUPABASE_SECRET_KEY is not configured');
+	}
+	if (!secretKey.startsWith('sb_secret_')) {
+		throw new Error(
+			'SUPABASE_SECRET_KEY must be a Supabase secret key (sb_secret_…). Legacy service_role keys are no longer supported.'
+		);
 	}
 	event.locals.supabaseSecret = createClient(PUBLIC_SUPABASE_URL, secretKey, {
 		db: { schema: 'admin' }
