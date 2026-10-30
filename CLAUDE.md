@@ -23,11 +23,13 @@ This is a **SvelteKit** time-logging app (Node adapter) backed by **Supabase** (
 
 Three client instances are set up in `src/hooks.server.ts` and exposed via `event.locals`:
 
-| Local            | Key used                   | Schema  | Purpose                                                   |
-| ---------------- | -------------------------- | ------- | --------------------------------------------------------- |
-| `supabase`       | `SUPABASE_PUBLISHABLE_KEY` | `app`   | Standard RLS-protected client                             |
-| `supabaseAdmin`  | `SUPABASE_PUBLISHABLE_KEY` | `admin` | Admin schema, still RLS-protected                         |
-| `supabaseSecret` | `SUPABASE_SECRET_KEY`      | `admin` | Bypasses RLS — only for auth admin ops and invite lookups |
+| Local            | Key used                          | Schema  | Purpose                                                   |
+| ---------------- | --------------------------------- | ------- | --------------------------------------------------------- |
+| `supabase`       | `PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `app`   | Standard RLS-protected client                             |
+| `supabaseSecret` | `SUPABASE_SECRET_KEY`             | `admin` | Bypasses RLS — only for auth admin ops and invite lookups |
+
+`SUPABASE_SECRET_KEY` must be a new-style secret key (`sb_secret_…`); `hooks.server.ts` throws on
+startup otherwise. Legacy `anon` / `service_role` JWT keys are no longer supported anywhere.
 
 Browser-side clients live in `src/lib/supabaseClient.ts`.
 
@@ -71,6 +73,6 @@ Paraglide JS is used for i18n. The base locale is **de-ch**; also supported: `en
 
 ```
 PUBLIC_SUPABASE_URL=
-PUBLIC_SUPABASE_PUBLISHABLE_KEY=   # sb_publishable_... (was: anon key)
-SUPABASE_SECRET_KEY=               # sb_secret_... (was: service_role key)
+PUBLIC_SUPABASE_PUBLISHABLE_KEY=   # sb_publishable_... (replaces the legacy anon key)
+SUPABASE_SECRET_KEY=               # sb_secret_... (replaces the legacy service_role key)
 ```

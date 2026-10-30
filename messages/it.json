@@ -62,7 +62,7 @@
 	"onboarding_error_email_missing": "L'indirizzo email è mancante.",
 	"onboarding_error_signin_failed": "Account creato ma accesso non riuscito: ",
 	"onboarding_error_profile_save": "Il tuo account è stato creato ma non è stato possibile salvare il profilo. Riprova.",
-	"onboarding_error_auth_secret_mismatch": "Configurazione server: SUPABASE_SECRET_KEY non corrisponde a PUBLIC_SUPABASE_URL o non è il secret service_role valido. Nella dashboard Supabase (Impostazioni → API) copia il secret service_role di questo progetto in .env e riavvia il server.",
+	"onboarding_error_auth_secret_mismatch": "Configurazione server: SUPABASE_SECRET_KEY non corrisponde a PUBLIC_SUPABASE_URL o non è una secret key valida. Nella dashboard Supabase (Impostazioni → Chiavi API) copia la secret key (sb_secret_…) di questo progetto in .env e riavvia il server.",
 	"onboarding_first_name_placeholder": "Nome",
 	"onboarding_last_name_placeholder": "Cognome",
 	"calendar_title": "Calendario",
